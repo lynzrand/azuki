@@ -3,6 +3,9 @@
 [[package]]
 name = "azuki"
 version = "0.1.0"
+dependencies = [
+ "azuki-tac",
+]
 
 [[package]]
 name = "azuki-tac"
