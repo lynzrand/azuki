@@ -1,4 +1,5 @@
 pub mod err;
+pub mod serde;
 pub mod ty;
 
 use std::collections::HashMap;
@@ -16,8 +17,14 @@ type OpRef = Index;
 /// of its instructions.
 #[derive(Debug, Clone)]
 pub struct TacFunc {
-    pub arena: Arena<Tac>,
+    arena: Arena<Tac>,
     pub basic_blocks: HashMap<usize, BasicBlock>,
+}
+
+impl Default for TacFunc {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TacFunc {
@@ -33,12 +40,19 @@ impl TacFunc {
         self.arena.insert(Tac::independent(inst))
     }
 
+    #[inline]
+    pub fn arena_get(&mut self, idx: OpRef) -> TacResult<&Tac> {
+        self.arena.get(idx).ok_or(Error::NoSuchTacIdx(idx))
+    }
+
+    #[inline]
+    pub fn arena_get_mut(&mut self, idx: OpRef) -> TacResult<&mut Tac> {
+        self.arena.get_mut(idx).ok_or(Error::NoSuchTacIdx(idx))
+    }
+
     /// Insert a new TAC after the given instruction
     pub fn tac_insert_after(&mut self, idx: OpRef, inst: Inst) -> TacResult<OpRef> {
-        let target = self
-            .arena
-            .get_mut(idx)
-            .ok_or_else(|| Error::NoSuchTacIdx(idx))?;
+        let target = self.arena_get(idx)?;
         let n = target.next;
         let tac = Tac {
             inst,
@@ -46,16 +60,10 @@ impl TacFunc {
             next: n,
         };
         let new_idx = self.arena.insert(tac);
-        let target = self
-            .arena
-            .get_mut(idx)
-            .ok_or_else(|| Error::NoSuchTacIdx(idx))?;
+        let target = self.arena_get_mut(idx)?;
         target.next = Some(new_idx);
         if let Some(idx) = n {
-            let next = self
-                .arena
-                .get_mut(idx)
-                .ok_or_else(|| Error::NoSuchTacIdx(idx))?;
+            let next = self.arena_get_mut(idx)?;
             next.prev = Some(new_idx);
         }
         Ok(new_idx)
@@ -65,26 +73,17 @@ impl TacFunc {
     ///
     /// Errors if the given instruction does not exist.
     pub fn tac_remove_at(&mut self, idx: OpRef) -> TacResult<Inst> {
-        let target = self
-            .arena
-            .get(idx)
-            .ok_or_else(|| Error::NoSuchTacIdx(idx))?;
+        let target = self.arena_get(idx)?;
 
         let next_idx = target.next;
         let prev_idx = target.prev;
 
         if let Some(prev_idx) = prev_idx {
-            let prev = self
-                .arena
-                .get_mut(prev_idx)
-                .ok_or_else(|| Error::NoSuchTacIdx(idx))?;
+            let prev = self.arena_get_mut(prev_idx)?;
             prev.next = next_idx;
         }
         if let Some(next_idx) = next_idx {
-            let next = self
-                .arena
-                .get_mut(next_idx)
-                .ok_or_else(|| Error::NoSuchTacIdx(idx))?;
+            let next = self.arena_get_mut(next_idx)?;
             next.prev = prev_idx;
         }
         Ok(self.arena.remove(idx).unwrap().inst)
@@ -96,8 +95,8 @@ impl TacFunc {
     /// does not check for availability of `head`._
     pub fn tac_connect(&mut self, tail: OpRef, head: OpRef) -> TacResult<()> {
         let (tail_tac, head_tac) = self.arena.get2_mut(tail, head);
-        let tail_tac = tail_tac.ok_or_else(|| Error::NoSuchTacIdx(tail))?;
-        let head_tac = head_tac.ok_or_else(|| Error::NoSuchTacIdx(head))?;
+        let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
+        let head_tac = head_tac.ok_or(Error::NoSuchTacIdx(head))?;
         if tail_tac.next.is_some() || head_tac.prev.is_some() {
             return Err(Error::AlreadyConnected);
         }
@@ -111,10 +110,7 @@ impl TacFunc {
     ///
     /// Errors if `pos` does not exist or there is no code after `tail`.
     pub fn tac_break_off_after(&mut self, pos: OpRef) -> TacResult<OpRef> {
-        let tail = self
-            .arena
-            .get_mut(pos)
-            .ok_or_else(|| Error::NoSuchTacIdx(pos))?;
+        let tail = self.arena_get_mut(pos)?;
         if tail.next.is_none() {
             return Err(Error::NotConnected);
         }
@@ -165,6 +161,8 @@ pub enum Inst {
     Binary(BinaryInst),
     FunctionCall(FunctionCall),
     Const(Immediate),
+    Jump(usize),
+    CondJump { cond: OpRef, target: usize },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -173,17 +171,18 @@ pub enum BinaryOp {
     Sub,
     Mul,
     Div,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+    Eq,
+    Ne,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Value {
     Dest(OpRef),
-    Jump(usize),
-    CondJump { cond: OpRef, target: usize },
+    Imm(Immediate),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Immediate {
-    Int(i64),
-    UInt(u64),
-}
+type Immediate = i64;

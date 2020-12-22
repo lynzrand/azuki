@@ -1,5 +1,6 @@
 use generational_arena::Index;
 
+#[derive(Debug)]
 pub enum Error {
     NoSuchTacIdx(Index),
     NoCodeAfterInst(Index),
