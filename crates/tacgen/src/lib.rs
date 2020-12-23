@@ -1,24 +1,29 @@
 use azuki_tac as tac;
-use tac::{BasicBlock, BinaryInst, Inst, TacFunc, Value};
+use tac::{BasicBlock, BinaryInst, Inst, InstKind, TacFunc, Value};
 
 #[test]
 fn test() {
-    let mut f = TacFunc::new();
-    let start = f.tac_new(Inst::Const(123));
-    f.basic_blocks.insert(
-        0,
-        BasicBlock {
-            op_start: Some(start),
-        },
-    );
-    let _2 = f.tac_insert_after(start, Inst::Const(456)).unwrap();
-    f.tac_insert_after(
-        _2,
-        Inst::Binary(BinaryInst {
+    let mut func_builder = tac::builder::FuncBuilder::new("add".into());
+    let a = func_builder.insert_after_current_place(Inst {
+        kind: InstKind::Param(0),
+        ty: tac::Ty::Int,
+    });
+    let b = func_builder.insert_after_current_place(Inst {
+        kind: InstKind::Param(1),
+        ty: tac::Ty::Int,
+    });
+    let res = func_builder.insert_after_current_place(Inst {
+        kind: InstKind::Binary(BinaryInst {
             op: tac::BinaryOp::Add,
-            lhs: Value::Dest(start),
-            rhs: Value::Dest(_2),
+            lhs: a.into(),
+            rhs: b.into(),
         }),
-    )
-    .unwrap();
+        ty: tac::Ty::Int,
+    });
+    func_builder.insert_after_current_place(Inst {
+        kind: InstKind::Return(res.into()),
+        ty: tac::Ty::Unit,
+    });
+    let f = func_builder.build();
+    println!("{}", f);
 }

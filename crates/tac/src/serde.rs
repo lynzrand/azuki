@@ -4,14 +4,14 @@ use std::{cell::Cell, fmt::Display};
 use crate::*;
 
 trait FormatContext<C> {
-    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut C) -> std::fmt::Result;
+    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: C) -> std::fmt::Result;
 }
 
 impl<T, C> FormatContext<C> for &T
 where
     T: FormatContext<C>,
 {
-    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut C) -> std::fmt::Result {
+    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: C) -> std::fmt::Result {
         (*self).fmt_ctx(f, ctx)
     }
 }
@@ -37,7 +37,7 @@ impl Display for VarId {
     }
 }
 
-impl FormatContext<TacFormatCtx> for Value {
+impl FormatContext<&mut TacFormatCtx> for Value {
     fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut TacFormatCtx) -> std::fmt::Result {
         match self {
             Value::Dest(i) => {
@@ -50,26 +50,64 @@ impl FormatContext<TacFormatCtx> for Value {
     }
 }
 
-impl FormatContext<(VarId, TacFormatCtx)> for Tac {
+impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
     fn fmt_ctx(
         &self,
         f: &mut std::fmt::Formatter<'_>,
-        ctx: &mut (VarId, TacFormatCtx),
+        ctx: (VarId, &mut TacFormatCtx),
     ) -> std::fmt::Result {
         write!(f, "{} = ", ctx.0)?;
-        match &self.inst {
-            Inst::Binary(i) => {
+        match &self.inst.kind {
+            InstKind::Binary(i) => {
                 write!(f, "{:?} ", i.op)?;
-                i.lhs.fmt_ctx(f, &mut ctx.1)?;
+                i.lhs.fmt_ctx(f, ctx.1)?;
                 write!(f, " ")?;
-                i.rhs.fmt_ctx(f, &mut ctx.1)?;
-                writeln!(f)?;
+                i.rhs.fmt_ctx(f, ctx.1)?;
             }
-            Inst::FunctionCall(_) => {}
-            Inst::Const(_) => {}
-            Inst::Jump(_) => {}
-            Inst::CondJump { cond, target } => {}
+            InstKind::FunctionCall(_) => {}
+            InstKind::Const(i) => {
+                write!(f, "const {:?} {}", self.inst.ty, i)?;
+            }
+            InstKind::Jump(_) => {}
+            InstKind::CondJump { cond, target } => {}
+            InstKind::Param(idx) => {
+                write!(f, "param {}", idx)?;
+            }
+            InstKind::Return(v) => {
+                write!(f, "return ")?;
+                v.fmt_ctx(f, ctx.1)?;
+            }
         }
-        todo!()
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for TacFunc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "fn {} {{", &self.name)?;
+        let mut ctx = TacFormatCtx {
+            i_set: IndexSet::new(),
+        };
+        for (k, v) in &self.basic_blocks {
+            writeln!(f, "bb {}:", k)?;
+            if let Some(x) = v.op_start {
+                let mut cur_idx = x;
+                loop {
+                    let i = self.arena.get(cur_idx).unwrap();
+                    let cur_id = ctx.var_id(cur_idx);
+                    write!(f, "\t")?;
+                    i.fmt_ctx(f, (cur_id, &mut ctx))?;
+                    writeln!(f)?;
+                    match i.next {
+                        Some(x) => cur_idx = x,
+                        None => {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        writeln!(f, "}}")?;
+        Ok(())
     }
 }

@@ -1,8 +1,10 @@
+pub mod builder;
 pub mod err;
+mod linkedlist;
 pub mod serde;
 pub mod ty;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use err::{Error, TacResult};
 use generational_arena::{Arena, Index};
@@ -17,21 +19,17 @@ type OpRef = Index;
 /// of its instructions.
 #[derive(Debug, Clone)]
 pub struct TacFunc {
+    name: SmolStr,
     arena: Arena<Tac>,
-    pub basic_blocks: HashMap<usize, BasicBlock>,
-}
-
-impl Default for TacFunc {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub basic_blocks: BTreeMap<usize, BasicBlock>,
 }
 
 impl TacFunc {
-    pub fn new() -> TacFunc {
+    pub fn new(name: SmolStr) -> TacFunc {
         TacFunc {
+            name,
             arena: Arena::new(),
-            basic_blocks: HashMap::new(),
+            basic_blocks: BTreeMap::new(),
         }
     }
 
@@ -51,22 +49,41 @@ impl TacFunc {
     }
 
     /// Insert a new TAC after the given instruction
-    pub fn tac_insert_after(&mut self, idx: OpRef, inst: Inst) -> TacResult<OpRef> {
-        let target = self.arena_get(idx)?;
-        let n = target.next;
-        let tac = Tac {
-            inst,
-            prev: Some(idx),
-            next: n,
-        };
-        let new_idx = self.arena.insert(tac);
-        let target = self.arena_get_mut(idx)?;
-        target.next = Some(new_idx);
+    pub fn tac_set_after(&mut self, after: OpRef, inst: OpRef) -> TacResult<()> {
+        let after_inst = self.arena_get(after)?;
+        let n = after_inst.next;
+
+        let current_inst = self.arena_get_mut(inst)?;
+        current_inst.prev = Some(after);
+        current_inst.next = n;
+
+        let after_inst = self.arena_get_mut(after)?;
+        after_inst.next = Some(inst);
+
         if let Some(idx) = n {
             let next = self.arena_get_mut(idx)?;
-            next.prev = Some(new_idx);
+            next.prev = Some(inst);
+        };
+        Ok(())
+    }
+
+    /// Insert a new TAC before the given instruction
+    pub fn tac_set_before(&mut self, before: OpRef, inst: OpRef) -> TacResult<()> {
+        let before_inst = self.arena_get(before)?;
+        let n = before_inst.prev;
+
+        let current_inst = self.arena_get_mut(inst)?;
+        current_inst.next = Some(before);
+        current_inst.prev = n;
+
+        let before_inst = self.arena_get_mut(before)?;
+        before_inst.prev = Some(inst);
+
+        if let Some(idx) = n {
+            let next = self.arena_get_mut(idx)?;
+            next.next = Some(inst);
         }
-        Ok(new_idx)
+        Ok(())
     }
 
     /// Remove the next instruction of the given instruction
@@ -117,9 +134,13 @@ impl TacFunc {
         Ok(tail.next.take().unwrap())
     }
 }
+
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
-    pub op_start: Option<OpRef>,
+    pub(crate) params: Option<OpRef>,
+    pub(crate) jumps: Option<OpRef>,
+    pub(crate) op_start: Option<OpRef>,
+    pub(crate) op_end: Option<OpRef>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -143,6 +164,30 @@ impl Tac {
     }
 }
 
+impl linkedlist::SinglyLinkedList for Tac {
+    type Key = OpRef;
+
+    type Context = Arena<Tac>;
+
+    fn next_value_key(&self) -> Option<Self::Key> {
+        self.next
+    }
+
+    fn get_value(ctx: &Self::Context, key: Self::Key) -> &Self {
+        ctx.get(key).unwrap()
+    }
+
+    fn get_value_mut(ctx: &mut Self::Context, key: Self::Key) -> &mut Self {
+        ctx.get_mut(key).unwrap()
+    }
+}
+
+impl linkedlist::DoublyLinkedList for Tac {
+    fn prev_value_key(&self) -> Option<Self::Key> {
+        self.prev
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BinaryInst {
     pub op: BinaryOp,
@@ -157,12 +202,26 @@ pub struct FunctionCall {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Inst {
+pub struct Inst {
+    pub kind: InstKind,
+    pub ty: Ty,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum InstKind {
     Binary(BinaryInst),
     FunctionCall(FunctionCall),
     Const(Immediate),
-    Jump(usize),
-    CondJump { cond: OpRef, target: usize },
+    Param(usize),
+    Return(Value),
+    Jump(JumpTarget),
+    CondJump { cond: OpRef, target: JumpTarget },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct JumpTarget {
+    bb: usize,
+    params: Vec<Value>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -185,4 +244,16 @@ pub enum Value {
     Imm(Immediate),
 }
 
+impl From<OpRef> for Value {
+    fn from(x: OpRef) -> Self {
+        Value::Dest(x)
+    }
+}
+
 type Immediate = i64;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Ty {
+    Unit,
+    Int,
+}
