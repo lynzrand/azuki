@@ -14,6 +14,9 @@ pub mod ast;
 /// Parser for r0 programs
 pub mod parser;
 
+/// Visitor trait for working with AST
+pub mod visitor;
+
 pub use lexer::Lexer;
 pub use token::Token;
 
