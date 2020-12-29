@@ -1,8 +1,9 @@
 use std::ops::Deref;
 
-use azuki_syntax::{ast::IfStmt, ast::Program, visitor::AstVisitor};
+use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
 use bit_set::BitSet;
+
 use tac::{BasicBlock, BinaryInst, Inst, InstKind, OpRef, TacFunc, Value};
 
 fn compile(tac: &Program) {}
@@ -37,6 +38,14 @@ impl FuncCompiler {
     pub fn is_filled(&self, bb_id: usize) -> bool {
         self.filled_bbs.contains(bb_id)
     }
+
+    fn mark_current_bb_as_sealed(&mut self) {
+        self.mark_sealed(self.func_builder.curr_bb());
+    }
+
+    fn mark_current_bb_as_filled(&mut self) {
+        self.mark_filled(self.func_builder.curr_bb());
+    }
 }
 
 fn empty_jump_target(bb_id: usize) -> tac::JumpTarget {
@@ -46,31 +55,6 @@ fn empty_jump_target(bb_id: usize) -> tac::JumpTarget {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-struct OpRefWrapper(pub OpRef);
-
-impl Deref for OpRefWrapper {
-    type Target = OpRef;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Default for OpRefWrapper {
-    fn default() -> Self {
-        Self(OpRef::from_raw_parts(usize::max_value(), u64::max_value()))
-    }
-}
-
-impl From<OpRef> for OpRefWrapper {
-    fn from(x: OpRef) -> Self {
-        Self(x)
-    }
-}
-
-impl FuncCompiler {}
-
 // This implementation is the main tac-generation part.
 //
 // I try to use the method in https://pp.ipd.kit.edu/uploads/publikationen/braun13cc.pdf
@@ -78,66 +62,79 @@ impl FuncCompiler {}
 impl AstVisitor for FuncCompiler {
     type LExprResult = ();
 
-    type ExprResult = OpRefWrapper;
+    type ExprResult = Value;
 
     type TyResult = ();
 
-    type StmtResult = usize;
+    type StmtResult = ();
 
     type ProgramResult = ();
 
     type FuncResult = ();
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt) -> Self::StmtResult {
-        self.visit_expr(&stmt.cond);
+        let expr_val = self.visit_expr(&stmt.cond);
 
-        self.mark_filled(self.func_builder.curr_bb());
-        self.mark_sealed(self.func_builder.curr_bb());
+        // TODO: add conditional jump instruction
 
+        self.mark_current_bb_as_filled();
+        self.mark_current_bb_as_sealed();
+
+        // Create if block
         let if_bb = self.func_builder.new_bb();
         self.func_builder.set_current_bb(if_bb).unwrap();
-        let if_end_bb = self.visit_block_stmt(&stmt.if_block);
 
-        let next_bb = self.func_builder.new_bb();
+        self.visit_block_stmt(&stmt.if_block);
+        let if_end_bb = self.func_builder.curr_bb();
 
-        self.func_builder.insert_after_current_place(Inst {
-            kind: InstKind::Jump(empty_jump_target(next_bb)),
-            ty: tac::Ty::Unit,
-        });
+        self.mark_current_bb_as_filled();
+        self.mark_current_bb_as_sealed();
 
-        self.mark_filled(if_end_bb);
-        self.mark_sealed(if_end_bb);
-
-        match &stmt.else_block {
+        // Deal with else block
+        let else_end_bb = match &stmt.else_block {
             azuki_syntax::ast::IfElseBlock::None => None,
-            azuki_syntax::ast::IfElseBlock::If(i) => {
+            other => {
                 let else_bb = self.func_builder.new_bb();
                 self.func_builder.set_current_bb(else_bb).unwrap();
-                let else_end = self.visit_if_stmt(&i);
-                self.func_builder.insert_after_current_place(Inst {
-                    kind: InstKind::Jump(empty_jump_target(next_bb)),
-                    ty: tac::Ty::Unit,
-                });
-                self.mark_filled(else_end);
-                self.mark_sealed(else_end);
-                Some(else_end)
-            }
-            azuki_syntax::ast::IfElseBlock::Block(b) => {
-                let else_bb = self.func_builder.new_bb();
-                self.func_builder.set_current_bb(else_bb).unwrap();
-                let else_end = self.visit_block_stmt(&b);
-                self.func_builder.insert_after_current_place(Inst {
-                    kind: InstKind::Jump(empty_jump_target(next_bb)),
-                    ty: tac::Ty::Unit,
-                });
-                self.mark_filled(else_end);
-                self.mark_sealed(else_end);
-                Some(else_end)
+
+                match other {
+                    IfElseBlock::None => unreachable!(),
+                    IfElseBlock::If(i) => self.visit_if_stmt(&i),
+                    IfElseBlock::Block(b) => self.visit_block_stmt(&b),
+                }
+
+                self.mark_current_bb_as_filled();
+                self.mark_current_bb_as_sealed();
+
+                Some(self.func_builder.curr_bb())
             }
         };
 
-        self.func_builder.set_current_bb(next_bb).unwrap();
+        // The basic block after the if statement
+        let next_bb = self.func_builder.new_bb();
 
-        next_bb
+        self.func_builder
+            .insert_at_end_of(
+                Inst {
+                    kind: InstKind::Jump(empty_jump_target(next_bb)),
+                    ty: tac::Ty::Unit,
+                },
+                if_end_bb,
+            )
+            .unwrap();
+
+        if let Some(bb) = else_end_bb {
+            self.func_builder
+                .insert_at_end_of(
+                    Inst {
+                        kind: InstKind::Jump(empty_jump_target(next_bb)),
+                        ty: tac::Ty::Unit,
+                    },
+                    bb,
+                )
+                .unwrap();
+        }
+
+        self.func_builder.set_current_bb(next_bb).unwrap();
     }
 }

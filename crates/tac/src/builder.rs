@@ -69,4 +69,14 @@ impl FuncBuilder {
     pub fn build(self) -> TacFunc {
         self.func
     }
+
+    pub fn insert_at_end_of(&mut self, inst: Inst, bb_id: usize) -> TacResult<Index> {
+        let curr_bb = self.current_bb;
+        let curr_idx = self.current_idx;
+        self.set_current_bb(bb_id)?;
+        let insert_pos = self.insert_after_current_place(inst);
+        self.current_bb = curr_bb;
+        self.current_idx = curr_idx;
+        Ok(insert_pos)
+    }
 }
