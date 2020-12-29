@@ -1,10 +1,4 @@
-use std::default::Default;
-
 use crate::{ast::*, span::Span};
-
-fn default<T: Default>() -> T {
-    T::default()
-}
 
 macro_rules! walk {
     ($name:ident ($v:ident , $tgt:ident : $ty:ty) $(-> $r:ty )? $body:block) => {
@@ -19,12 +13,12 @@ macro_rules! walk {
 /// Every function inside this visitor should call the corresponding
 /// `walk_<type>` function in order to traverse deeper into the tree.
 pub trait AstVisitor {
-    type LexprResult: Default;
-    type ExprResult: Default;
-    type TyResult: Default;
-    type StmtResult: Default;
-    type ProgramResult: Default;
-    type FuncResult: Default;
+    type LExprResult;
+    type ExprResult;
+    type TyResult;
+    type StmtResult;
+    type ProgramResult;
+    type FuncResult;
 
     fn visit_program(&mut self, program: &Program) -> Self::ProgramResult {
         for decl in &program.decls {
@@ -33,7 +27,7 @@ pub trait AstVisitor {
         for func in &program.funcs {
             self.visit_func(func);
         }
-        default()
+        todo!("Visit program")
     }
 
     fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
@@ -41,61 +35,61 @@ pub trait AstVisitor {
             self.visit_func_param(param);
         }
         self.visit_block_stmt(&func.body);
-        default()
+        todo!("Visit function")
     }
 
-    fn visit_func_param(&mut self, param: &FuncParam) -> Self::StmtResult {
-        default()
+    fn visit_func_param(&mut self, _param: &FuncParam) -> Self::StmtResult {
+        todo!("Visit function param")
     }
 
-    fn visit_ty(&mut self, ty: &TyDef) -> Self::TyResult {
-        default()
+    fn visit_ty(&mut self, _ty: &TyDef) -> Self::TyResult {
+        todo!("Visit type")
     }
 
     fn visit_expr(&mut self, expr: &Expr) -> Self::ExprResult {
         walk_expr(self, expr)
     }
 
-    fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> Self::ExprResult {
-        default()
+    fn visit_literal_expr(&mut self, _expr: &LiteralExpr) -> Self::ExprResult {
+        todo!("Visit literal expr")
     }
 
-    fn visit_ident_expr(&mut self, expr: &Ident) -> Self::ExprResult {
-        default()
+    fn visit_ident_expr(&mut self, _expr: &Ident) -> Self::ExprResult {
+        todo!("visit")
     }
 
     fn visit_assign_expr(&mut self, expr: &AssignExpr) -> Self::ExprResult {
         self.visit_lexpr(&expr.lhs);
         self.visit_expr(&expr.rhs);
-        default()
+        todo!("visit")
     }
 
-    fn visit_lexpr(&mut self, expr: &Expr) -> Self::LexprResult {
-        default()
+    fn visit_lexpr(&mut self, _expr: &Expr) -> Self::LExprResult {
+        todo!("visit")
     }
 
     fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> Self::ExprResult {
         self.visit_expr(&expr.lhs);
         self.visit_expr(&expr.rhs);
-        default()
+        todo!("visit")
     }
 
     fn visit_unary_expr(&mut self, expr: &UnaryExpr) -> Self::ExprResult {
         self.visit_expr(&expr.expr);
-        default()
+        todo!("visit")
     }
 
     fn visit_call_expr(&mut self, expr: &CallExpr) -> Self::ExprResult {
-        for subexpr in &sexpr.params {
+        for subexpr in &expr.params {
             self.visit_expr(&subexpr);
         }
-        default()
+        todo!("visit")
     }
 
     fn visit_as_expr(&mut self, expr: &AsExpr) -> Self::ExprResult {
         self.visit_ty(&expr.ty);
         self.visit_expr(&expr.val);
-        default()
+        todo!("visit")
     }
 
     fn visit_stmt(&mut self, stmt: &Stmt) -> Self::StmtResult {
@@ -106,13 +100,13 @@ pub trait AstVisitor {
         for substmt in &stmt.stmts {
             self.visit_stmt(substmt);
         }
-        default()
+        todo!("visit")
     }
 
     fn visit_while_stmt(&mut self, stmt: &WhileStmt) -> Self::StmtResult {
         self.visit_expr(&stmt.cond);
         self.visit_block_stmt(&stmt.body);
-        default()
+        todo!("visit")
     }
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt) -> Self::StmtResult {
@@ -127,39 +121,39 @@ pub trait AstVisitor {
                 self.visit_block_stmt(&blk);
             }
         }
-        default()
+        todo!("visit")
     }
 
     fn visit_expr_stmt(&mut self, stmt: &Expr) -> Self::StmtResult {
         self.visit_expr(stmt);
-        default()
+        todo!("visit")
     }
 
     fn visit_decl_stmt(&mut self, stmt: &DeclStmt) -> Self::StmtResult {
-        self.visit_ty(stmt.ty);
+        self.visit_ty(&stmt.ty);
         if let Some(expr) = &stmt.val {
             self.visit_expr(expr);
         }
-        default()
+        todo!("visit")
     }
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt) -> Self::StmtResult {
-        if let Some(res) = stmt.val {
+        if let Some(res) = &stmt.val {
             self.visit_expr(&res);
         }
-        default()
+        todo!("visit")
     }
 
-    fn visit_break_stmt(&mut self, span: Span) -> Self::StmtResult {
-        default()
+    fn visit_break_stmt(&mut self, _span: Span) -> Self::StmtResult {
+        todo!("visit")
     }
 
-    fn visit_continue_stmt(&mut self, span: Span) -> Self::StmtResult {
-        default()
+    fn visit_continue_stmt(&mut self, _span: Span) -> Self::StmtResult {
+        todo!("visit")
     }
 
-    fn visit_empty_stmt(&mut self, span: Span) -> Self::StmtResult {
-        default()
+    fn visit_empty_stmt(&mut self, _span: Span) -> Self::StmtResult {
+        todo!("visit")
     }
 }
 

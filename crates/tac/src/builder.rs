@@ -29,6 +29,10 @@ impl FuncBuilder {
         }
     }
 
+    pub fn curr_bb(&self) -> usize {
+        self.current_bb
+    }
+
     pub fn new_bb(&mut self) -> usize {
         self.bb_count += 1;
         self.bb_count - 1

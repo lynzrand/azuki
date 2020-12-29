@@ -9,3 +9,4 @@ version = "0.1.0"
 [dependencies]
 azuki-syntax = {path = "../syntax"}
 azuki-tac = {path = "../tac"}
+bit-set = "0.5.2"

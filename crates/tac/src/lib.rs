@@ -10,7 +10,7 @@ use err::{Error, TacResult};
 use generational_arena::{Arena, Index};
 use smol_str::SmolStr;
 
-type OpRef = Index;
+pub type OpRef = Index;
 
 /// A function made of TAC instructions.
 ///
@@ -180,11 +180,23 @@ impl linkedlist::SinglyLinkedList for Tac {
     fn get_value_mut(ctx: &mut Self::Context, key: Self::Key) -> &mut Self {
         ctx.get_mut(key).unwrap()
     }
+
+    fn insert_value_after(ctx: &mut Self::Context, value: Self) -> Self::Key {
+        todo!()
+    }
+
+    fn set_next_value_key(&mut self) {
+        todo!()
+    }
 }
 
 impl linkedlist::DoublyLinkedList for Tac {
     fn prev_value_key(&self) -> Option<Self::Key> {
         self.prev
+    }
+
+    fn set_prev_value_key(&mut self) {
+        todo!()
     }
 }
 
@@ -220,8 +232,8 @@ pub enum InstKind {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct JumpTarget {
-    bb: usize,
-    params: Vec<Value>,
+    pub bb: usize,
+    pub params: Vec<Value>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
