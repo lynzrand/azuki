@@ -13,7 +13,7 @@ This is a *planned* structure of this project.
     crates/             libraries used in Azuki
         syntax/         lexing & parsing & AST
         tac/            three-address code (TAC) definition
-        codegen/        TAC code generation
+        tacgen/         TAC code generation
         opt/            optimization passes
         vm/             virtual machine
     src/                reference design source

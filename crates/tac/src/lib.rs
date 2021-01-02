@@ -227,7 +227,7 @@ pub enum InstKind {
     Param(usize),
     Return(Value),
     Jump(JumpTarget),
-    CondJump { cond: OpRef, target: JumpTarget },
+    CondJump { cond: Value, target: JumpTarget },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
