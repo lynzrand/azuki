@@ -1,8 +1,10 @@
-use std::ops::Deref;
+pub mod err;
 
 use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
 use bit_set::BitSet;
+use err::Error;
+use std::ops::Deref;
 
 use tac::{BasicBlock, BinaryInst, Inst, InstKind, OpRef, TacFunc, Ty, Value};
 
@@ -62,18 +64,18 @@ fn empty_jump_target(bb_id: usize) -> tac::JumpTarget {
 impl AstVisitor for FuncCompiler {
     type LExprResult = ();
 
-    type ExprResult = (Value, Ty);
+    type ExprResult = Result<(Value, Ty), Error>;
 
     type TyResult = ();
 
-    type StmtResult = ();
+    type StmtResult = Result<(), Error>;
 
     type ProgramResult = ();
 
     type FuncResult = ();
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt) -> Self::StmtResult {
-        let expr_val = self.visit_expr(&stmt.cond);
+        let expr_val = self.visit_expr(&stmt.cond)?;
         let last_bb = self.func_builder.curr_bb();
 
         // TODO: add conditional jump instruction
@@ -108,8 +110,8 @@ impl AstVisitor for FuncCompiler {
 
                 match other {
                     IfElseBlock::None => unreachable!(),
-                    IfElseBlock::If(i) => self.visit_if_stmt(&i),
-                    IfElseBlock::Block(b) => self.visit_block_stmt(&b),
+                    IfElseBlock::If(i) => self.visit_if_stmt(&i)?,
+                    IfElseBlock::Block(b) => self.visit_block_stmt(&b)?,
                 }
 
                 self.mark_current_bb_as_filled();
@@ -155,24 +157,27 @@ impl AstVisitor for FuncCompiler {
         }
 
         self.func_builder.set_current_bb(next_bb).unwrap();
+        Ok(())
     }
 
     fn visit_literal_expr(&mut self, _expr: &LiteralExpr) -> Self::ExprResult {
         match _expr.kind {
-            LiteralKind::Integer(val) => (Value::Imm(val as i64), Ty::Int),
+            LiteralKind::Integer(val) => Ok((Value::Imm(val as i64), Ty::Int)),
             LiteralKind::Float(_) => {
                 todo!("implement float (or not)")
             }
             LiteralKind::String(_) => {
                 todo!("Implement String")
             }
-            LiteralKind::Char(ch) => (Value::Imm(ch as i64), Ty::Int),
+            LiteralKind::Char(ch) => Ok((Value::Imm(ch as i64), Ty::Int)),
         }
     }
 
     fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> Self::ExprResult {
-        let (lhsv, lhst) = self.visit_expr(&expr.lhs);
-        let (rhsv, rhst) = self.visit_expr(&expr.rhs);
+        let (lhsv, lhst) = self.visit_expr(&expr.lhs)?;
+        let (rhsv, rhst) = self.visit_expr(&expr.rhs)?;
+
+        assert_type_eq(&lhst, &rhst)?;
 
         let v = self.func_builder.insert_after_current_place(Inst {
             kind: InstKind::Binary(BinaryInst {
@@ -194,11 +199,11 @@ impl AstVisitor for FuncCompiler {
             ty: lhst.clone(),
         });
 
-        (v.into(), lhst)
+        Ok((v.into(), lhst))
     }
 
     fn visit_unary_expr(&mut self, expr: &UnaryExpr) -> Self::ExprResult {
-        let (v, t) = self.visit_expr(&expr.expr);
+        let (v, t) = self.visit_expr(&expr.expr)?;
 
         match expr.op {
             UnaryOp::Neg => {
@@ -210,9 +215,9 @@ impl AstVisitor for FuncCompiler {
                     }),
                     ty: t.clone(),
                 });
-                (v.into(), t)
+                Ok((v.into(), t))
             }
-            UnaryOp::Pos => (v, t),
+            UnaryOp::Pos => Ok((v, t)),
         }
     }
 
@@ -223,4 +228,14 @@ impl AstVisitor for FuncCompiler {
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt) -> Self::StmtResult {
         todo!()
     }
+}
+
+fn assert_type_eq(lhs: &Ty, rhs: &Ty) -> Result<(), err::Error> {
+    if lhs != rhs {
+        return Err(Error::TypeMismatch {
+            expected: lhs.clone(),
+            found: rhs.clone(),
+        });
+    }
+    Ok(())
 }
