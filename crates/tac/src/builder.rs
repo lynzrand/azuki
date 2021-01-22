@@ -17,7 +17,7 @@ impl FuncBuilder {
                 op_start: None,
                 op_end: None,
                 params: None,
-                jumps: None,
+                jumps: Default::default(),
             },
         );
 
@@ -78,5 +78,18 @@ impl FuncBuilder {
         self.current_bb = curr_bb;
         self.current_idx = curr_idx;
         Ok(insert_pos)
+    }
+
+    pub fn set_jump_inst(&mut self, inst: JumpInst, bb_id: usize) -> TacResult<Option<JumpInst>> {
+        let bb = self
+            .func
+            .basic_blocks
+            .get_mut(&bb_id)
+            .ok_or(Error::NoSuchBB(bb_id))?;
+        let orig = std::mem::replace(&mut bb.jumps, inst);
+        Ok(match orig {
+            JumpInst::Unreachable => None,
+            a => Some(a),
+        })
     }
 }

@@ -138,7 +138,7 @@ impl TacFunc {
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub(crate) params: Option<OpRef>,
-    pub(crate) jumps: Option<OpRef>,
+    pub(crate) jumps: JumpInst,
     pub(crate) op_start: Option<OpRef>,
     pub(crate) op_end: Option<OpRef>,
 }
@@ -225,9 +225,28 @@ pub enum InstKind {
     FunctionCall(FunctionCall),
     Const(Immediate),
     Param(usize),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum JumpInst {
     Return(Value),
     Jump(JumpTarget),
-    CondJump { cond: Value, target: JumpTarget },
+    CondJump {
+        cond: Value,
+        target: JumpTarget,
+        target_if_false: JumpTarget,
+    },
+    TableJump {
+        cond: Value,
+        target: Vec<JumpTarget>,
+    },
+    Unreachable,
+}
+
+impl Default for JumpInst {
+    fn default() -> Self {
+        JumpInst::Unreachable
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

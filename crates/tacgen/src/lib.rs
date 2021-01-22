@@ -6,7 +6,7 @@ use bit_set::BitSet;
 use err::Error;
 use std::ops::Deref;
 
-use tac::{BasicBlock, BinaryInst, Inst, InstKind, OpRef, TacFunc, Ty, Value};
+use tac::{BasicBlock, BinaryInst, Inst, InstKind, JumpInst, OpRef, TacFunc, Ty, Value};
 
 fn compile(tac: &Program) {}
 
@@ -85,16 +85,9 @@ impl AstVisitor for FuncCompiler {
 
         // Create if block
         let if_bb = self.func_builder.new_bb();
-        self.func_builder.insert_after_current_place(Inst {
-            kind: InstKind::CondJump {
-                cond: expr_val.0,
-                target: empty_jump_target(if_bb),
-            },
-            ty: Ty::Unit,
-        });
 
         self.func_builder.set_current_bb(if_bb).unwrap();
-        self.visit_block_stmt(&stmt.if_block);
+        self.visit_block_stmt(&stmt.if_block)?;
 
         let if_end_bb = self.func_builder.curr_bb();
 
@@ -102,7 +95,7 @@ impl AstVisitor for FuncCompiler {
         self.mark_current_bb_as_sealed();
 
         // Deal with else block
-        let else_end_bb = match &stmt.else_block {
+        let else_bbs = match &stmt.else_block {
             azuki_syntax::ast::IfElseBlock::None => None,
             other => {
                 let else_bb = self.func_builder.new_bb();
@@ -117,42 +110,33 @@ impl AstVisitor for FuncCompiler {
                 self.mark_current_bb_as_filled();
                 self.mark_current_bb_as_sealed();
 
-                Some(self.func_builder.curr_bb())
+                Some((else_bb, self.func_builder.curr_bb()))
             }
         };
 
         // The basic block after the if statement
         let next_bb = self.func_builder.new_bb();
 
+        // if -> if_bb
+        //  \--> else_bb / next_bb
         self.func_builder
-            .insert_at_end_of(
-                Inst {
-                    kind: InstKind::Jump(empty_jump_target(else_end_bb.unwrap_or(next_bb))),
-                    ty: Ty::Unit,
+            .set_jump_inst(
+                JumpInst::CondJump {
+                    cond: expr_val.0,
+                    target: empty_jump_target(if_bb),
+                    target_if_false: empty_jump_target(else_bbs.map(|x| x.0).unwrap_or(next_bb)),
                 },
                 last_bb,
             )
             .unwrap();
 
         self.func_builder
-            .insert_at_end_of(
-                Inst {
-                    kind: InstKind::Jump(empty_jump_target(next_bb)),
-                    ty: tac::Ty::Unit,
-                },
-                if_end_bb,
-            )
+            .set_jump_inst(JumpInst::Jump(empty_jump_target(next_bb)), if_end_bb)
             .unwrap();
 
-        if let Some(bb) = else_end_bb {
+        if let Some((_, bb)) = else_bbs {
             self.func_builder
-                .insert_at_end_of(
-                    Inst {
-                        kind: InstKind::Jump(empty_jump_target(next_bb)),
-                        ty: tac::Ty::Unit,
-                    },
-                    bb,
-                )
+                .set_jump_inst(JumpInst::Jump(empty_jump_target(next_bb)), bb)
                 .unwrap();
         }
 
