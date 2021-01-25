@@ -42,11 +42,11 @@ impl FuncCompiler {
     }
 
     fn mark_current_bb_as_sealed(&mut self) {
-        self.mark_sealed(self.func_builder.curr_bb());
+        self.mark_sealed(self.func_builder.current_bb());
     }
 
     fn mark_current_bb_as_filled(&mut self) {
-        self.mark_filled(self.func_builder.curr_bb());
+        self.mark_filled(self.func_builder.current_bb());
     }
 }
 
@@ -76,7 +76,7 @@ impl AstVisitor for FuncCompiler {
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt) -> Self::StmtResult {
         let expr_val = self.visit_expr(&stmt.cond)?;
-        let last_bb = self.func_builder.curr_bb();
+        let last_bb = self.func_builder.current_bb();
 
         // TODO: add conditional jump instruction
 
@@ -89,7 +89,7 @@ impl AstVisitor for FuncCompiler {
         self.func_builder.set_current_bb(if_bb).unwrap();
         self.visit_block_stmt(&stmt.if_block)?;
 
-        let if_end_bb = self.func_builder.curr_bb();
+        let if_end_bb = self.func_builder.current_bb();
 
         self.mark_current_bb_as_filled();
         self.mark_current_bb_as_sealed();
@@ -110,7 +110,7 @@ impl AstVisitor for FuncCompiler {
                 self.mark_current_bb_as_filled();
                 self.mark_current_bb_as_sealed();
 
-                Some((else_bb, self.func_builder.curr_bb()))
+                Some((else_bb, self.func_builder.current_bb()))
             }
         };
 
@@ -130,10 +130,12 @@ impl AstVisitor for FuncCompiler {
             )
             .unwrap();
 
+        // if_end_bb -> next_bb
         self.func_builder
             .set_jump_inst(JumpInst::Jump(empty_jump_target(next_bb)), if_end_bb)
             .unwrap();
 
+        // else_end_bb -> next_bb
         if let Some((_, bb)) = else_bbs {
             self.func_builder
                 .set_jump_inst(JumpInst::Jump(empty_jump_target(next_bb)), bb)
@@ -141,6 +143,30 @@ impl AstVisitor for FuncCompiler {
         }
 
         self.func_builder.set_current_bb(next_bb).unwrap();
+        Ok(())
+    }
+
+    fn visit_while_stmt(&mut self, stmt: &WhileStmt) -> Self::StmtResult {
+        let cur_bb = self.func_builder.current_bb();
+        let cond_bb = self.func_builder.new_bb();
+        self.func_builder
+            .set_jump_inst(JumpInst::Jump(empty_jump_target(cond_bb)), cur_bb)
+            .unwrap();
+        self.mark_sealed(cur_bb);
+        self.mark_filled(cur_bb);
+
+        self.func_builder.set_current_bb(cond_bb).unwrap();
+        let (cond, cond_ty) = self.visit_expr(&stmt.cond)?;
+        let loop_bb = self.func_builder.new_bb();
+        self.func_builder.set_jump_inst(
+            JumpInst::CondJump {
+                cond,
+                target: empty_jump_target(loop_bb),
+                target_if_false: todo!(),
+            },
+            cond_bb,
+        );
+
         Ok(())
     }
 

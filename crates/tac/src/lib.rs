@@ -243,6 +243,22 @@ pub enum JumpInst {
     Unreachable,
 }
 
+impl JumpInst {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = usize> + 'a {
+        match self {
+            JumpInst::Return(_) => util::VarIter::None,
+            JumpInst::Jump(t) => util::VarIter::One(t.bb),
+            JumpInst::CondJump {
+                target,
+                target_if_false,
+                ..
+            } => util::VarIter::Two(target.bb, target_if_false.bb),
+            JumpInst::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
+            JumpInst::Unreachable => util::VarIter::None,
+        }
+    }
+}
+
 impl Default for JumpInst {
     fn default() -> Self {
         JumpInst::Unreachable
@@ -287,4 +303,38 @@ type Immediate = i64;
 pub enum Ty {
     Unit,
     Int,
+}
+
+mod util {
+    pub enum VarIter<T, I> {
+        None,
+        One(T),
+        Two(T, T),
+        Iter(I),
+    }
+
+    impl<T, I> Iterator for VarIter<T, I>
+    where
+        T: Clone,
+        I: Iterator<Item = T>,
+    {
+        type Item = T;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            let this = std::mem::replace(self, VarIter::None);
+            match this {
+                VarIter::None => None,
+                VarIter::One(i) => Some(i),
+                VarIter::Two(i, j) => {
+                    *self = VarIter::One(j);
+                    Some(i)
+                }
+                VarIter::Iter(mut t) => {
+                    let next = t.next();
+                    *self = VarIter::Iter(t);
+                    next
+                }
+            }
+        }
+    }
 }

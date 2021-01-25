@@ -9,5 +9,6 @@ version = "0.1.0"
 [dependencies]
 generational-arena = "0.2"
 indexmap = "1"
-lexpr = "0.2.5"
+lexpr = "0.2.6"
+petgraph = "0.5"
 smol_str = "0.1"

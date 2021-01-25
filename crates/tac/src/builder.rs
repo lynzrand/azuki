@@ -2,6 +2,7 @@ use crate::*;
 
 pub struct FuncBuilder {
     func: TacFunc,
+    cfg: petgraph::graphmap::DiGraphMap<usize, ()>,
     bb_count: usize,
     current_bb: usize,
     current_idx: Option<Index>,
@@ -23,19 +24,22 @@ impl FuncBuilder {
 
         FuncBuilder {
             func: f,
+            cfg: petgraph::graphmap::DiGraphMap::new(),
             current_bb: 0,
             current_idx: None,
             bb_count: 0,
         }
     }
 
-    pub fn curr_bb(&self) -> usize {
+    pub fn current_bb(&self) -> usize {
         self.current_bb
     }
 
     pub fn new_bb(&mut self) -> usize {
+        let bb_id = self.bb_count;
         self.bb_count += 1;
-        self.bb_count - 1
+        self.cfg.add_node(bb_id);
+        bb_id
     }
 
     pub fn set_current_bb(&mut self, bb_id: usize) -> TacResult<()> {
@@ -86,10 +90,25 @@ impl FuncBuilder {
             .basic_blocks
             .get_mut(&bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
+
+        for target in inst.iter() {
+            self.cfg.add_edge(bb_id, target, ());
+        }
+
         let orig = std::mem::replace(&mut bb.jumps, inst);
         Ok(match orig {
             JumpInst::Unreachable => None,
             a => Some(a),
         })
+    }
+
+    pub fn pred_of<'a>(&'a self, bb_id: usize) -> impl Iterator<Item = usize> + 'a {
+        self.cfg
+            .neighbors_directed(bb_id, petgraph::Direction::Incoming)
+    }
+
+    pub fn succ_of<'a>(&'a self, bb_id: usize) -> impl Iterator<Item = usize> + 'a {
+        self.cfg
+            .neighbors_directed(bb_id, petgraph::Direction::Outgoing)
     }
 }
