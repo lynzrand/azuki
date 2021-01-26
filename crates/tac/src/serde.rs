@@ -88,7 +88,7 @@ impl std::fmt::Display for TacFunc {
         };
         for (k, v) in &self.basic_blocks {
             writeln!(f, "bb {}:", k)?;
-            if let Some(x) = v.op_start {
+            if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {
                     let i = self.arena.get(cur_idx).unwrap();

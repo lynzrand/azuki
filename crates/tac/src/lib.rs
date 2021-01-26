@@ -12,16 +12,22 @@ use smol_str::SmolStr;
 
 pub type OpRef = Index;
 
+/// The index of a basic block.
+type BBId = usize;
+
 /// A function made of TAC instructions.
 ///
-/// The instructions are represented as a doubly linked list inside the
-/// `arena` using item indecies. Every basic block holds the start and end index
+/// The instructions are represented as an indirect doubly linked list inside the
+/// `arena` using item indices. Every basic block holds the start and end index
 /// of its instructions.
 #[derive(Debug, Clone)]
 pub struct TacFunc {
+    /// Function name
     name: SmolStr,
+    /// An arena to allocate instructions
     arena: Arena<Tac>,
-    pub basic_blocks: BTreeMap<usize, BasicBlock>,
+    /// Basic blocks inside this function
+    pub basic_blocks: BTreeMap<BBId, BasicBlock>,
 }
 
 impl TacFunc {
@@ -33,9 +39,11 @@ impl TacFunc {
         }
     }
 
-    /// Insert a new TAC into arena with no next instruction
-    pub fn tac_new(&mut self, inst: Inst) -> OpRef {
-        self.arena.insert(Tac::independent(inst))
+    /// Insert a new TAC into arena with no next instruction, and belongs to Basic Block `bb`.
+    ///
+    /// Note: The user **MUST** ensure the `bb` field to be correct.
+    pub fn tac_new(&mut self, inst: Inst, bb: BBId) -> OpRef {
+        self.arena.insert(Tac::independent(inst, bb))
     }
 
     #[inline]
@@ -135,29 +143,50 @@ impl TacFunc {
     }
 }
 
+/// A single basic block, represented as an indirect doubly linked list of instructions.
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
+    /// Basic block parameters
     pub(crate) params: Option<OpRef>,
+
+    /// Linked list head
+    pub(crate) head: Option<OpRef>,
+    /// Linked list tail
+    pub(crate) tail: Option<OpRef>,
+
+    /// The branch instruction at the end of this basic block
     pub(crate) jumps: Branch,
-    pub(crate) op_start: Option<OpRef>,
-    pub(crate) op_end: Option<OpRef>,
 }
 
+/// Represents a single TAC instruction inside an indirect doubly linked list of instructions.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Tac {
+    /// The actual instruction.
     pub inst: Inst,
+
+    /// The basic block this instruction is in.
+    pub bb: BBId,
+
+    /// The previous instruction in this list.
     pub prev: Option<OpRef>,
+    /// The next instruction in this list.
     pub next: Option<OpRef>,
 }
 
 impl Tac {
-    pub fn new(inst: Inst, prev: Option<OpRef>, next: Option<OpRef>) -> Self {
-        Self { inst, prev, next }
+    pub fn new(inst: Inst, prev: Option<OpRef>, next: Option<OpRef>, bb: BBId) -> Self {
+        Self {
+            inst,
+            prev,
+            next,
+            bb,
+        }
     }
 
-    pub fn independent(inst: Inst) -> Tac {
+    pub fn independent(inst: Inst, bb: BBId) -> Tac {
         Tac {
             inst,
+            bb,
             prev: None,
             next: None,
         }

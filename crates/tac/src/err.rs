@@ -4,6 +4,7 @@ use generational_arena::Index;
 pub enum Error {
     NoSuchTacIdx(Index),
     NoSuchBB(usize),
+    NoSuchVar(usize),
     NoCodeAfterInst(Index),
     AlreadyConnected,
     NotConnected,

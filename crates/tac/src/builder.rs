@@ -2,9 +2,6 @@ use bit_set::BitSet;
 
 use crate::*;
 
-/// The index of a basic block.
-type BBId = usize;
-
 /// The index of an external variable.
 type VarId = usize;
 
@@ -36,8 +33,8 @@ pub struct FuncBuilder {
 
     /// Control flow graph
     ///
-    /// This graph is in fact embedded inside `self.func`, but having an identical
-    /// version here with `petgraph` makes everything easier.
+    /// This graph is in fact calculable from `self.func`, but having an organized
+    /// version here with graph search support makes everything easier.
     cfg: petgraph::graphmap::DiGraphMap<usize, ()>,
 
     /// Sealed basic blocks.
@@ -49,6 +46,20 @@ pub struct FuncBuilder {
     ///
     /// Filled basic blocks have finished filling in calculation instructions.
     filled_bbs: BitSet,
+
+    /// A `Variable` - `Basic Block` - `SSA Value` map.
+    ///
+    /// This map is for global and local value numbering in the algorithm. Since
+    /// we expect variables and basic blocks to be small integer IDs, `BTreeMap` is
+    /// preferred here over `HashMap`.
+    ///
+    /// Well... You see, there's a [forest][] in cranelift, right?
+    ///
+    /// [forest]: https://github.com/bytecodealliance/wasmtime/tree/HEAD/cranelift/bforest
+    variable_map: BTreeMap<VarId, (Ty, BTreeMap<BBId, Index>)>,
+
+    /// Incomplete phi commands (params in our case).
+    incomplete_phi: BTreeMap<BBId, Vec<(VarId, Index)>>,
 }
 
 impl FuncBuilder {
@@ -59,8 +70,8 @@ impl FuncBuilder {
         f.basic_blocks.insert(
             0,
             BasicBlock {
-                op_start: None,
-                op_end: None,
+                head: None,
+                tail: None,
                 params: None,
                 jumps: Default::default(),
             },
@@ -74,6 +85,8 @@ impl FuncBuilder {
             bb_count: 0,
             sealed_bbs: BitSet::new(),
             filled_bbs: BitSet::new(),
+            variable_map: BTreeMap::new(),
+            incomplete_phi: BTreeMap::new(),
         }
     }
 
@@ -102,8 +115,8 @@ impl FuncBuilder {
             BasicBlock {
                 params: None,
                 jumps: Branch::Unreachable,
-                op_start: None,
-                op_end: None,
+                head: None,
+                tail: None,
             },
         );
         self.cfg.add_node(bb_id);
@@ -119,7 +132,29 @@ impl FuncBuilder {
             .get(&bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
         self.current_bb = bb_id;
-        self.current_idx = bb.op_end;
+        self.current_idx = bb.tail;
+        Ok(())
+    }
+
+    /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)
+    /// to the start of this basic block.
+    pub fn set_current_bb_start(&mut self, bb_id: BBId) -> TacResult<()> {
+        let bb = self
+            .func
+            .basic_blocks
+            .get(&bb_id)
+            .ok_or(Error::NoSuchBB(bb_id))?;
+        self.current_bb = bb_id;
+        self.current_idx = bb.head;
+        Ok(())
+    }
+
+    /// Sets current basic block and instruction position at the position of the given instruction.
+    pub fn set_position_at_instruction(&mut self, inst_idx: Index) -> TacResult<()> {
+        let inst = self.func.arena_get(inst_idx)?;
+        let bb = inst.bb;
+        self.current_bb = bb;
+        self.current_idx = Some(inst_idx);
         Ok(())
     }
 
@@ -147,15 +182,25 @@ impl FuncBuilder {
         self.filled_bbs.contains(bb_id)
     }
 
+    pub fn declare_var(&mut self, var: usize, ty: Ty) {
+        self.variable_map.insert(var, (ty, BTreeMap::new()));
+    }
+
     /// Indicate that variable `var` is written as the result of instruction `inst`.
-    pub fn write_variable_curr(&mut self, var: usize, inst: Index) {
+    pub fn write_variable_cur(&mut self, var: usize, inst: Index) -> TacResult<()> {
         self.write_variable(var, inst, self.current_bb())
     }
 
     /// Indicate that variable `var` is written as the result of instruction `inst`
     /// in basic block `bb_id`. If the variable does not exist, it will be created.
-    pub fn write_variable(&mut self, var: usize, inst: Index, bb_id: BBId) {
-        todo!("Write variable")
+    pub fn write_variable(&mut self, var: usize, inst: Index, bb_id: BBId) -> TacResult<()> {
+        let map = &mut self
+            .variable_map
+            .get_mut(&var)
+            .ok_or_else(|| Error::NoSuchVar(var))?
+            .1;
+        map.insert(bb_id, inst);
+        Ok(())
     }
 
     /// Indicate that variable `var` is read in basic block `bb`. Returns the index
@@ -166,12 +211,44 @@ impl FuncBuilder {
     /// According to the algorithm, this function may introduce parameters to
     /// `bb` and insert parameter passes to the block's predecessors.
     pub fn read_variable(&mut self, var: usize, bb_id: BBId) -> Option<Index> {
-        todo!("Read variable / do local numberings")
+        let subtree = &self.variable_map.get(&var)?.1;
+        if let Some(idx) = subtree.get(&bb_id) {
+            // local numbering works!
+            Some(*idx)
+        } else {
+            // search in predecessors, aka global numbering
+            self.read_variable_recursive(var, bb_id)
+        }
     }
 
     /// This function directly corresponds to `readVariableRecursive` in the algorithm.
     fn read_variable_recursive(&mut self, var: usize, bb_id: BBId) -> Option<Index> {
-        todo!("do global numberings")
+        let val = if !self.sealed_bbs.contains(bb_id) {
+            let var_ty = self.variable_map.get(&var)?.0.clone();
+
+            let param = self
+                .insert_at_start_of(
+                    Inst {
+                        kind: InstKind::Param(0),
+                        ty: var_ty,
+                    },
+                    bb_id,
+                )
+                .unwrap();
+
+            let block = self.incomplete_phi.entry(bb_id).or_insert_with(Vec::new);
+            block.push((var, param));
+
+            param
+        } else if self.pred_of_bb(bb_id).count() == 1 {
+            self.read_variable(var, bb_id)?
+        } else {
+            // TODO
+            todo!()
+        };
+
+        self.write_variable(var, val, bb_id).unwrap();
+        Some(val)
     }
 
     /// This function directly corresponds to `addPhiOperands` in the algorithm.
@@ -179,31 +256,71 @@ impl FuncBuilder {
         todo!()
     }
 
-    /// Insert the given instruction after the current place. Returns the index to
+    /// Insert the given instruction **after** the current place. Returns the index to
     /// the inserted instruction (and also the SSA value it's related to).
+    ///
+    /// If the current basic block is empty, the instruction is inserted as the
+    /// only instruction of the basic block.
     pub fn insert_after_current_place(&mut self, inst: Inst) -> Index {
-        let idx = self.func.tac_new(inst);
+        let idx = self.func.tac_new(inst, self.current_bb());
         if let Some(cur_idx) = self.current_idx {
             self.func.tac_set_after(cur_idx, idx).unwrap();
             let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
-            if bb.op_end == Some(cur_idx) {
-                bb.op_end = Some(idx);
+
+            // reset tail pointer, since insertion might be at the end
+            if bb.tail == Some(cur_idx) {
+                bb.tail = Some(idx);
             }
         } else {
             let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
-            bb.op_start = Some(idx);
-            bb.op_end = Some(idx);
+            bb.head = Some(idx);
+            bb.tail = Some(idx);
         }
         self.current_idx = Some(idx);
         idx
     }
 
-    /// Insert the given instruction at the end of the given basic block.
+    /// Insert the given instruction **before** the current place. Returns the index to
+    /// the inserted instruction (and also the SSA value it's related to).
+    ///
+    /// If the current basic block is empty, the instruction is inserted as the
+    /// only instruction of the basic block.
+    pub fn insert_before_current_place(&mut self, inst: Inst) -> Index {
+        let idx = self.func.tac_new(inst, self.current_bb());
+        if let Some(cur_idx) = self.current_idx {
+            self.func.tac_set_before(cur_idx, idx).unwrap();
+            let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
+
+            // reset head pointer, since insertion might be at the start
+            if bb.head == Some(cur_idx) {
+                bb.head = Some(idx);
+            }
+        } else {
+            let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
+            bb.head = Some(idx);
+            bb.tail = Some(idx);
+        }
+        self.current_idx = Some(idx);
+        idx
+    }
+
+    /// Insert the given instruction at the **end** of the given basic block.
     pub fn insert_at_end_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<Index> {
         let curr_bb = self.current_bb;
         let curr_idx = self.current_idx;
         self.set_current_bb(bb_id)?;
         let insert_pos = self.insert_after_current_place(inst);
+        self.current_bb = curr_bb;
+        self.current_idx = curr_idx;
+        Ok(insert_pos)
+    }
+
+    /// Insert the given instruction at the **start** of the given basic block.
+    pub fn insert_at_start_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<Index> {
+        let curr_bb = self.current_bb;
+        let curr_idx = self.current_idx;
+        self.set_current_bb_start(bb_id)?;
+        let insert_pos = self.insert_before_current_place(inst);
         self.current_bb = curr_bb;
         self.current_idx = curr_idx;
         Ok(insert_pos)
