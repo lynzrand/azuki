@@ -6,52 +6,16 @@ use bit_set::BitSet;
 use err::Error;
 use std::ops::Deref;
 
-use tac::{BasicBlock, BinaryInst, Inst, InstKind, JumpInst, OpRef, TacFunc, Ty, Value};
+use tac::{BasicBlock, BinaryInst, Branch, Inst, InstKind, OpRef, TacFunc, Ty, Value};
 
 fn compile(tac: &Program) {}
 
 struct FuncCompiler {
-    func_builder: tac::builder::FuncBuilder,
-
-    /// Sealed basic blocks.
-    ///
-    /// Sealed basic blocks have all their predecessors determined.
-    sealed_bbs: BitSet,
-
-    /// Filled basic blocks.
-    ///
-    /// Filled basic blocks have finished filling in calculation instructions.
-    filled_bbs: BitSet,
+    builder: tac::builder::FuncBuilder,
 }
 
-impl FuncCompiler {
-    pub fn mark_sealed(&mut self, bb_id: usize) {
-        self.sealed_bbs.insert(bb_id);
-    }
-
-    pub fn mark_filled(&mut self, bb_id: usize) {
-        self.filled_bbs.insert(bb_id);
-    }
-
-    pub fn is_sealed(&self, bb_id: usize) -> bool {
-        self.sealed_bbs.contains(bb_id)
-    }
-
-    pub fn is_filled(&self, bb_id: usize) -> bool {
-        self.filled_bbs.contains(bb_id)
-    }
-
-    fn mark_current_bb_as_sealed(&mut self) {
-        self.mark_sealed(self.func_builder.current_bb());
-    }
-
-    fn mark_current_bb_as_filled(&mut self) {
-        self.mark_filled(self.func_builder.current_bb());
-    }
-}
-
-fn empty_jump_target(bb_id: usize) -> tac::JumpTarget {
-    tac::JumpTarget {
+fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
+    tac::BranchTarget {
         bb: bb_id,
         params: vec![],
     }
@@ -76,30 +40,24 @@ impl AstVisitor for FuncCompiler {
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt) -> Self::StmtResult {
         let expr_val = self.visit_expr(&stmt.cond)?;
-        let last_bb = self.func_builder.current_bb();
+        let last_bb = self.builder.current_bb();
 
         // TODO: add conditional jump instruction
 
-        self.mark_current_bb_as_filled();
-        self.mark_current_bb_as_sealed();
-
         // Create if block
-        let if_bb = self.func_builder.new_bb();
+        let if_bb = self.builder.new_bb();
 
-        self.func_builder.set_current_bb(if_bb).unwrap();
+        self.builder.set_current_bb(if_bb).unwrap();
         self.visit_block_stmt(&stmt.if_block)?;
 
-        let if_end_bb = self.func_builder.current_bb();
-
-        self.mark_current_bb_as_filled();
-        self.mark_current_bb_as_sealed();
+        let if_end_bb = self.builder.current_bb();
 
         // Deal with else block
         let else_bbs = match &stmt.else_block {
             azuki_syntax::ast::IfElseBlock::None => None,
             other => {
-                let else_bb = self.func_builder.new_bb();
-                self.func_builder.set_current_bb(else_bb).unwrap();
+                let else_bb = self.builder.new_bb();
+                self.builder.set_current_bb(else_bb).unwrap();
 
                 match other {
                     IfElseBlock::None => unreachable!(),
@@ -107,21 +65,18 @@ impl AstVisitor for FuncCompiler {
                     IfElseBlock::Block(b) => self.visit_block_stmt(&b)?,
                 }
 
-                self.mark_current_bb_as_filled();
-                self.mark_current_bb_as_sealed();
-
-                Some((else_bb, self.func_builder.current_bb()))
+                Some((else_bb, self.builder.current_bb()))
             }
         };
 
         // The basic block after the if statement
-        let next_bb = self.func_builder.new_bb();
+        let next_bb = self.builder.new_bb();
 
         // if -> if_bb
         //  \--> else_bb / next_bb
-        self.func_builder
+        self.builder
             .set_jump_inst(
-                JumpInst::CondJump {
+                Branch::CondJump {
                     cond: expr_val.0,
                     target: empty_jump_target(if_bb),
                     target_if_false: empty_jump_target(else_bbs.map(|x| x.0).unwrap_or(next_bb)),
@@ -131,35 +86,36 @@ impl AstVisitor for FuncCompiler {
             .unwrap();
 
         // if_end_bb -> next_bb
-        self.func_builder
-            .set_jump_inst(JumpInst::Jump(empty_jump_target(next_bb)), if_end_bb)
+        self.builder
+            .set_jump_inst(Branch::Jump(empty_jump_target(next_bb)), if_end_bb)
             .unwrap();
 
         // else_end_bb -> next_bb
         if let Some((_, bb)) = else_bbs {
-            self.func_builder
-                .set_jump_inst(JumpInst::Jump(empty_jump_target(next_bb)), bb)
+            self.builder
+                .set_jump_inst(Branch::Jump(empty_jump_target(next_bb)), bb)
                 .unwrap();
         }
 
-        self.func_builder.set_current_bb(next_bb).unwrap();
+        self.builder.set_current_bb(next_bb).unwrap();
         Ok(())
     }
 
     fn visit_while_stmt(&mut self, stmt: &WhileStmt) -> Self::StmtResult {
-        let cur_bb = self.func_builder.current_bb();
-        let cond_bb = self.func_builder.new_bb();
-        self.func_builder
-            .set_jump_inst(JumpInst::Jump(empty_jump_target(cond_bb)), cur_bb)
+        let cur_bb = self.builder.current_bb();
+        let cond_bb = self.builder.new_bb();
+        self.builder
+            .set_jump_inst(Branch::Jump(empty_jump_target(cond_bb)), cur_bb)
             .unwrap();
-        self.mark_sealed(cur_bb);
-        self.mark_filled(cur_bb);
 
-        self.func_builder.set_current_bb(cond_bb).unwrap();
+        self.builder.mark_sealed(cur_bb);
+        self.builder.mark_filled(cur_bb);
+
+        self.builder.set_current_bb(cond_bb).unwrap();
         let (cond, cond_ty) = self.visit_expr(&stmt.cond)?;
-        let loop_bb = self.func_builder.new_bb();
-        self.func_builder.set_jump_inst(
-            JumpInst::CondJump {
+        let loop_bb = self.builder.new_bb();
+        self.builder.set_jump_inst(
+            Branch::CondJump {
                 cond,
                 target: empty_jump_target(loop_bb),
                 target_if_false: todo!(),
@@ -189,7 +145,7 @@ impl AstVisitor for FuncCompiler {
 
         assert_type_eq(&lhst, &rhst)?;
 
-        let v = self.func_builder.insert_after_current_place(Inst {
+        let v = self.builder.insert_after_current_place(Inst {
             kind: InstKind::Binary(BinaryInst {
                 op: match expr.op {
                     BinaryOp::Add => tac::BinaryOp::Add,
@@ -217,7 +173,7 @@ impl AstVisitor for FuncCompiler {
 
         match expr.op {
             UnaryOp::Neg => {
-                let v = self.func_builder.insert_after_current_place(Inst {
+                let v = self.builder.insert_after_current_place(Inst {
                     kind: InstKind::Binary(BinaryInst {
                         op: tac::BinaryOp::Sub,
                         lhs: Value::Imm(0),

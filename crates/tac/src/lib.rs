@@ -138,7 +138,7 @@ impl TacFunc {
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub(crate) params: Option<OpRef>,
-    pub(crate) jumps: JumpInst,
+    pub(crate) jumps: Branch,
     pub(crate) op_start: Option<OpRef>,
     pub(crate) op_end: Option<OpRef>,
 }
@@ -219,54 +219,71 @@ pub struct Inst {
     pub ty: Ty,
 }
 
+/// Kinds of an instruction
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum InstKind {
+    /// A binary operaton, e.g. plus, divide
     Binary(BinaryInst),
+    /// A call to another function.
     FunctionCall(FunctionCall),
+    /// A constant value.
     Const(Immediate),
+    /// A parameter with a specific index.
     Param(usize),
 }
 
+/// Represents a branch instruction.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum JumpInst {
+pub enum Branch {
+    /// Returns the given value.
     Return(Value),
-    Jump(JumpTarget),
+
+    /// Jumps to the given target with given parameters.
+    Jump(BranchTarget),
+
+    /// Conditional jump to the given targets.
+    ///
+    /// `cond` must be a boolean or integer.
     CondJump {
         cond: Value,
-        target: JumpTarget,
-        target_if_false: JumpTarget,
+        target: BranchTarget,
+        target_if_false: BranchTarget,
     },
+
+    /// Table jump.
     TableJump {
         cond: Value,
-        target: Vec<JumpTarget>,
+        target: Vec<BranchTarget>,
     },
+
+    /// Unreachable or undefined jump instruction
     Unreachable,
 }
 
-impl JumpInst {
+impl Default for Branch {
+    fn default() -> Self {
+        Self::Unreachable
+    }
+}
+
+impl Branch {
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = usize> + 'a {
         match self {
-            JumpInst::Return(_) => util::VarIter::None,
-            JumpInst::Jump(t) => util::VarIter::One(t.bb),
-            JumpInst::CondJump {
+            Branch::Return(_) => util::VarIter::None,
+            Branch::Jump(t) => util::VarIter::One(t.bb),
+            Branch::CondJump {
                 target,
                 target_if_false,
                 ..
             } => util::VarIter::Two(target.bb, target_if_false.bb),
-            JumpInst::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
-            JumpInst::Unreachable => util::VarIter::None,
+            Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
+            Branch::Unreachable => util::VarIter::None,
         }
     }
 }
 
-impl Default for JumpInst {
-    fn default() -> Self {
-        JumpInst::Unreachable
-    }
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct JumpTarget {
+pub struct BranchTarget {
     pub bb: usize,
     pub params: Vec<Value>,
 }
