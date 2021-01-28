@@ -5,14 +5,6 @@ use crate::*;
 /// The index of an external variable.
 type VarId = usize;
 
-/// An incomplete Phi
-struct IncompletePhi {
-    /// Position index in the parameter list. Since when noting incomplete phis
-    ///
-    pos: usize,
-    val: Index,
-}
-
 /// A function builder that loosely resembles building SSA functions using the
 /// algorithm described in
 /// [_Simple and Efficient Construction of Static Single Assignment Form_][ssa]
@@ -231,13 +223,12 @@ impl FuncBuilder {
 
     /// This function directly corresponds to `readVariableRecursive` in the algorithm.
     fn read_variable_recursive(&mut self, var: usize, bb_id: BBId) -> Option<Index> {
+        let var_ty = self.variable_map.get(&var)?.0.clone();
         let val = if !self.sealed_bbs.contains(bb_id) {
-            let var_ty = self.variable_map.get(&var)?.0.clone();
-
             let param = self
                 .insert_at_start_of(
                     Inst {
-                        kind: InstKind::Param(0),
+                        kind: InstKind::Param,
                         ty: var_ty,
                     },
                     bb_id,
@@ -248,11 +239,24 @@ impl FuncBuilder {
             block.push((var, param));
 
             param
-        } else if self.pred_of_bb(bb_id).count() == 1 {
-            self.read_variable(var, bb_id)?
         } else {
-            // TODO
-            todo!()
+            let preds = self.pred_of_bb(bb_id);
+            if preds.len() == 1 {
+                self.read_variable(var, bb_id)?
+            } else {
+                let inst = self
+                    .insert_at_start_of(
+                        Inst {
+                            kind: InstKind::Param,
+                            ty: var_ty,
+                        },
+                        bb_id,
+                    )
+                    .unwrap();
+                self.write_variable(var, inst, bb_id).unwrap();
+                self.add_phi_operands(var, inst, bb_id, &preds);
+                inst
+            }
         };
 
         self.write_variable(var, val, bb_id).unwrap();
@@ -260,8 +264,19 @@ impl FuncBuilder {
     }
 
     /// This function directly corresponds to `addPhiOperands` in the algorithm.
-    fn add_phi_operands(&mut self, var: usize) {
-        todo!()
+    fn add_phi_operands(
+        &mut self,
+        var: usize,
+        target_inst: Index,
+        current_bb: BBId,
+        preds: &[BBId],
+    ) {
+        for &pred in preds {
+            let source = self.read_variable(var, pred).unwrap();
+            let bb = self.func.basic_blocks.get_mut(&pred).unwrap();
+            bb.jumps.add_param(current_bb, target_inst, source);
+        }
+        // TODO: TryRemoveTrivialPhi()
     }
 
     /// Insert the given instruction **after** the current place. Returns the index to
@@ -355,14 +370,20 @@ impl FuncBuilder {
     }
 
     /// Returns an iterator of all predecessors of a basic block.
-    pub fn pred_of_bb<'a>(&'a self, bb_id: BBId) -> impl Iterator<Item = BBId> + 'a {
+    ///
+    /// The return type is to make the borrow checker happy.
+    pub fn pred_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
         self.cfg
             .neighbors_directed(bb_id, petgraph::Direction::Incoming)
+            .collect()
     }
 
     /// Returns an iterator of all successors of a basic block.
-    pub fn succ_of_bb<'a>(&'a self, bb_id: BBId) -> impl Iterator<Item = BBId> + 'a {
+    pub fn succ_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
         self.cfg
             .neighbors_directed(bb_id, petgraph::Direction::Outgoing)
+            .collect()
     }
 }
+
+type SmallBBIdVec = tinyvec::TinyVec<[BBId; 7]>;

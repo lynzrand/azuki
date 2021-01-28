@@ -257,8 +257,8 @@ pub enum InstKind {
     FunctionCall(FunctionCall),
     /// A constant value.
     Const(Immediate),
-    /// A parameter with a specific index.
-    Param(usize),
+    /// A parameter
+    Param,
 }
 
 /// Represents a branch instruction.
@@ -309,6 +309,29 @@ impl Branch {
             Branch::Unreachable => util::VarIter::None,
         }
     }
+
+    pub fn add_param(&mut self, bb_id: BBId, param: Index, source_var: Index) {
+        match self {
+            Branch::Return(_) => {}
+            Branch::Jump(target) => {
+                target.add_param_if_bb(bb_id, param, source_var);
+            }
+            Branch::CondJump {
+                cond,
+                target,
+                target_if_false,
+            } => {
+                target.add_param_if_bb(bb_id, param, source_var);
+                target_if_false.add_param_if_bb(bb_id, param, source_var);
+            }
+            Branch::TableJump { cond, target } => {
+                for branch_target in target {
+                    branch_target.add_param_if_bb(bb_id, param, source_var);
+                }
+            }
+            Branch::Unreachable => {}
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -316,6 +339,28 @@ pub struct BranchTarget {
     pub bb: usize,
     /// Basic block parameters, described as a Index-Index mapping (similar to phi)
     pub params: BTreeMap<Index, Index>,
+}
+
+impl BranchTarget {
+    pub fn add_param(&mut self, param: Index, source: Index) {
+        self.params.insert(param, source);
+    }
+
+    pub fn add_param_if_bb(&mut self, bb_id: BBId, param: Index, source: Index) {
+        if self.bb == bb_id {
+            self.add_param(param, source)
+        }
+    }
+
+    pub fn remove_param(&mut self, param: Index) {
+        self.params.remove(&param);
+    }
+
+    pub fn remove_param_if_bb(&mut self, bb_id: BBId, param: Index) {
+        if self.bb == bb_id {
+            self.remove_param(param)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

@@ -69,8 +69,8 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                 write!(f, "const {:?} {}", self.inst.ty, i)?;
             } // InstKind::Jump(_) => {}
             // InstKind::CondJump { cond, target } => {}
-            InstKind::Param(idx) => {
-                write!(f, "param {}", idx)?;
+            InstKind::Param => {
+                write!(f, "param")?;
             } // InstKind::Return(v) => {
               //     write!(f, "return ")?;
               //     v.fmt_ctx(f, ctx.1)?;
