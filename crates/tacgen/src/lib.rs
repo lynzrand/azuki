@@ -4,7 +4,7 @@ use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
 use bit_set::BitSet;
 use err::Error;
-use std::ops::Deref;
+use std::{collections::BTreeMap, ops::Deref};
 
 use tac::{BasicBlock, BinaryInst, Branch, Inst, InstKind, OpRef, TacFunc, Ty, Value};
 
@@ -17,7 +17,7 @@ struct FuncCompiler {
 fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
     tac::BranchTarget {
         bb: bb_id,
-        params: vec![],
+        params: BTreeMap::new(),
     }
 }
 

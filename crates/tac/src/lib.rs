@@ -314,7 +314,8 @@ impl Branch {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BranchTarget {
     pub bb: usize,
-    pub params: Vec<Value>,
+    /// Basic block parameters, described as a Index-Index mapping (similar to phi)
+    pub params: BTreeMap<Index, Index>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
