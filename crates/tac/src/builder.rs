@@ -5,6 +5,14 @@ use crate::*;
 /// The index of an external variable.
 type VarId = usize;
 
+/// An incomplete Phi
+struct IncompletePhi {
+    /// Position index in the parameter list. Since when noting incomplete phis
+    ///
+    pos: usize,
+    val: Index,
+}
+
 /// A function builder that loosely resembles building SSA functions using the
 /// algorithm described in
 /// [_Simple and Efficient Construction of Static Single Assignment Form_][ssa]
@@ -197,7 +205,7 @@ impl FuncBuilder {
         let map = &mut self
             .variable_map
             .get_mut(&var)
-            .ok_or_else(|| Error::NoSuchVar(var))?
+            .ok_or(Error::NoSuchVar(var))?
             .1;
         map.insert(bb_id, inst);
         Ok(())
