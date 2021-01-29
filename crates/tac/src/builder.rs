@@ -1,3 +1,5 @@
+//! A builder for constructing SSA functions from regular control flows.
+
 use bit_set::BitSet;
 
 use crate::*;
@@ -158,10 +160,18 @@ impl FuncBuilder {
         Ok(())
     }
 
-    /// Mark the given basic block as _sealed_.
+    /// Mark the given basic block as _sealed_. Also completes all incomplete Phi commands
+    /// inside this basic block.
     ///
     /// _Sealed_ blocks have all its predecessors determined.
     pub fn mark_sealed(&mut self, bb_id: BBId) {
+        if let Some(phis) = self.incomplete_phi.remove(&bb_id) {
+            let bb_preds = self.pred_of_bb(bb_id);
+            for (var, phi) in phis {
+                self.add_phi_operands(var, phi, bb_id, &bb_preds);
+            }
+        }
+
         self.sealed_bbs.insert(bb_id);
     }
 

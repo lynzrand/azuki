@@ -1,3 +1,5 @@
+//! Error and Result types.
+
 use generational_arena::Index;
 
 #[derive(Debug)]

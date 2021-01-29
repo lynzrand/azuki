@@ -1,3 +1,5 @@
+//! Serialization and de-serialization for TAC code.
+
 use indexmap::IndexSet;
 use std::{cell::Cell, fmt::Display};
 

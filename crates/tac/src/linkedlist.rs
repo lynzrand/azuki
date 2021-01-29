@@ -1,3 +1,5 @@
+//! Some random linked list traits, may or may not be used in actual program.
+
 pub trait SinglyLinkedList {
     type Key;
     type Context;

@@ -1,3 +1,15 @@
+//! TAC (Three-Address Code) is the intermediate representation for Azuki programs.
+//! This code type is similar to [Cranelift IR][cranelift] and [LLVM IR][llvm].
+//!
+//! This crate contains definition of Azuki TAC, code to serialize and deserialize
+//! them, and to construct them from regular control flows in a higher-level
+//! programming language.
+//!
+//! See the details in separate modules.
+//!
+//! [cranelift]: https://github.com/bytecodealliance/wasmtime
+//! [llvm]: https://llvm.org
+
 pub mod builder;
 pub mod err;
 mod linkedlist;
