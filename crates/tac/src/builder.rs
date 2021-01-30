@@ -368,11 +368,16 @@ impl FuncBuilder {
             .get_mut(&bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
 
-        for target in inst.iter() {
+        let orig = std::mem::replace(&mut bb.jumps, inst);
+
+        // TODO: Should we make jump instructions a list?
+
+        for target in orig.iter() {
+            self.cfg.remove_edge(bb_id, target);
+        }
+        for target in bb.jumps.iter() {
             self.cfg.add_edge(bb_id, target, ());
         }
-
-        let orig = std::mem::replace(&mut bb.jumps, inst);
         Ok(match orig {
             Branch::Unreachable => None,
             a => Some(a),

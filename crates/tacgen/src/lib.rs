@@ -25,6 +25,12 @@ fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
 //
 // I try to use the method in https://pp.ipd.kit.edu/uploads/publikationen/braun13cc.pdf
 // to directly generate SSA code from AST.
+//
+// Notes:
+//
+// - All basic blocks are marked as filled and sealed when its successor is created in another
+//   visitor method. Any basic block that needs special treatments (e.g. late sealing in control
+//   flows) should be managed within a single visitor method.
 impl AstVisitor for FuncCompiler {
     type LExprResult = ();
 
@@ -42,10 +48,13 @@ impl AstVisitor for FuncCompiler {
         let expr_val = self.visit_expr(&stmt.cond)?;
         let last_bb = self.builder.current_bb();
 
-        // TODO: add conditional jump instruction
+        self.builder.mark_sealed(last_bb);
+        self.builder.mark_sealed(last_bb);
 
         // Create if block
         let if_bb = self.builder.new_bb();
+
+        // todo: mark predecessor
 
         self.builder.set_current_bb(if_bb).unwrap();
         self.visit_block_stmt(&stmt.if_block)?;
@@ -112,16 +121,36 @@ impl AstVisitor for FuncCompiler {
         self.builder.mark_filled(cur_bb);
 
         self.builder.set_current_bb(cond_bb).unwrap();
-        let (cond, cond_ty) = self.visit_expr(&stmt.cond)?;
+        let (cond, _cond_ty) = self.visit_expr(&stmt.cond)?;
+
         let loop_bb = self.builder.new_bb();
-        self.builder.set_jump_inst(
-            Branch::CondJump {
-                cond,
-                target: empty_jump_target(loop_bb),
-                target_if_false: todo!(),
-            },
-            cond_bb,
-        );
+        let next_bb = self.builder.new_bb();
+
+        self.builder.mark_filled(cond_bb);
+        self.builder
+            .set_jump_inst(
+                Branch::CondJump {
+                    cond,
+                    target: empty_jump_target(loop_bb),
+                    target_if_false: empty_jump_target(next_bb),
+                },
+                cond_bb,
+            )
+            .unwrap();
+
+        self.builder.set_current_bb(loop_bb).unwrap();
+        self.visit_block_stmt(&stmt.body)?;
+        let loop_end_bb = self.builder.current_bb();
+
+        self.builder
+            .set_jump_inst(Branch::Jump(empty_jump_target(cond_bb)), loop_end_bb)
+            .unwrap();
+
+        self.builder.mark_sealed(loop_end_bb);
+        self.builder.mark_filled(loop_end_bb);
+        self.builder.mark_sealed(cond_bb);
+
+        self.builder.set_current_bb(next_bb).unwrap();
 
         Ok(())
     }
