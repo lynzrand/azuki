@@ -251,6 +251,85 @@ impl AstVisitor for FuncCompiler {
 
         Ok(())
     }
+
+    fn visit_program(&mut self, program: &Program) -> Self::ProgramResult {
+        for decl in &program.decls {
+            self.visit_decl_stmt(decl);
+        }
+        for func in &program.funcs {
+            self.visit_func(func);
+        }
+        todo!("Visit program")
+    }
+
+    fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
+        for param in &func.params {
+            self.visit_func_param(param);
+        }
+        self.visit_block_stmt(&func.body);
+        todo!("Visit function")
+    }
+
+    fn visit_func_param(&mut self, _param: &FuncParam) -> Self::StmtResult {
+        todo!("Visit function param")
+    }
+
+    fn visit_ty(&mut self, _ty: &TyDef) -> Self::TyResult {
+        todo!("Visit type")
+    }
+
+    fn visit_ident_expr(&mut self, _expr: &Ident) -> Self::ExprResult {
+        todo!("visit")
+    }
+
+    fn visit_assign_expr(&mut self, expr: &AssignExpr) -> Self::ExprResult {
+        self.visit_lexpr(&expr.lhs);
+        self.visit_expr(&expr.rhs);
+        todo!("visit")
+    }
+
+    fn visit_lexpr(&mut self, _expr: &Expr) -> Self::LExprResult {
+        todo!("visit")
+    }
+
+    fn visit_call_expr(&mut self, expr: &CallExpr) -> Self::ExprResult {
+        for subexpr in &expr.params {
+            self.visit_expr(&subexpr);
+        }
+        todo!("visit")
+    }
+
+    fn visit_block_stmt(&mut self, stmt: &BlockStmt) -> Self::StmtResult {
+        for substmt in &stmt.stmts {
+            self.visit_stmt(substmt);
+        }
+        todo!("visit")
+    }
+
+    fn visit_expr_stmt(&mut self, stmt: &Expr) -> Self::StmtResult {
+        self.visit_expr(stmt);
+        todo!("visit")
+    }
+
+    fn visit_decl_stmt(&mut self, stmt: &DeclStmt) -> Self::StmtResult {
+        self.visit_ty(&stmt.ty);
+        if let Some(expr) = &stmt.val {
+            self.visit_expr(expr);
+        }
+        todo!("visit")
+    }
+
+    fn visit_break_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
+        todo!("visit")
+    }
+
+    fn visit_continue_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
+        todo!("visit")
+    }
+
+    fn visit_empty_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
+        todo!("visit")
+    }
 }
 
 fn assert_type_eq(lhs: &Ty, rhs: &Ty) -> Result<(), err::Error> {
