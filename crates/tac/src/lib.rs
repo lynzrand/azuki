@@ -277,7 +277,7 @@ pub enum InstKind {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Branch {
     /// Returns the given value.
-    Return(Value),
+    Return(Option<Value>),
 
     /// Jumps to the given target with given parameters.
     Jump(BranchTarget),
