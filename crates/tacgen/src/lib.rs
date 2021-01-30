@@ -54,18 +54,36 @@ impl AstVisitor for FuncCompiler {
         // Create if block
         let if_bb = self.builder.new_bb();
 
-        // todo: mark predecessor
+        // if -> if_bb
+        self.builder
+            .add_branch(
+                Branch::CondJump {
+                    cond: expr_val.0,
+                    target: empty_jump_target(if_bb),
+                },
+                last_bb,
+            )
+            .unwrap();
 
         self.builder.set_current_bb(if_bb).unwrap();
         self.visit_block_stmt(&stmt.if_block)?;
 
         let if_end_bb = self.builder.current_bb();
 
+        // The basic block after the if statement
+        let next_bb = self.builder.new_bb();
+
         // Deal with else block
         let else_bbs = match &stmt.else_block {
-            azuki_syntax::ast::IfElseBlock::None => None,
-            other => {
+            other @ IfElseBlock::Block(..) | other @ IfElseBlock::If(..) => {
                 let else_bb = self.builder.new_bb();
+
+                // if
+                //  \--> else_bb
+                self.builder
+                    .add_branch(Branch::Jump(empty_jump_target(else_bb)), last_bb)
+                    .unwrap();
+
                 self.builder.set_current_bb(else_bb).unwrap();
 
                 match other {
@@ -76,33 +94,25 @@ impl AstVisitor for FuncCompiler {
 
                 Some((else_bb, self.builder.current_bb()))
             }
+            azuki_syntax::ast::IfElseBlock::None => {
+                // if
+                //  \--> next_bb
+                self.builder
+                    .add_branch(Branch::Jump(empty_jump_target(next_bb)), last_bb)
+                    .unwrap();
+                None
+            }
         };
-
-        // The basic block after the if statement
-        let next_bb = self.builder.new_bb();
-
-        // if -> if_bb
-        //  \--> else_bb / next_bb
-        self.builder
-            .set_jump_inst(
-                Branch::CondJump {
-                    cond: expr_val.0,
-                    target: empty_jump_target(if_bb),
-                    target_if_false: empty_jump_target(else_bbs.map(|x| x.0).unwrap_or(next_bb)),
-                },
-                last_bb,
-            )
-            .unwrap();
 
         // if_end_bb -> next_bb
         self.builder
-            .set_jump_inst(Branch::Jump(empty_jump_target(next_bb)), if_end_bb)
+            .add_branch(Branch::Jump(empty_jump_target(next_bb)), if_end_bb)
             .unwrap();
 
         // else_end_bb -> next_bb
         if let Some((_, bb)) = else_bbs {
             self.builder
-                .set_jump_inst(Branch::Jump(empty_jump_target(next_bb)), bb)
+                .add_branch(Branch::Jump(empty_jump_target(next_bb)), bb)
                 .unwrap();
         }
 
@@ -114,7 +124,7 @@ impl AstVisitor for FuncCompiler {
         let cur_bb = self.builder.current_bb();
         let cond_bb = self.builder.new_bb();
         self.builder
-            .set_jump_inst(Branch::Jump(empty_jump_target(cond_bb)), cur_bb)
+            .add_branch(Branch::Jump(empty_jump_target(cond_bb)), cur_bb)
             .unwrap();
 
         self.builder.mark_sealed(cur_bb);
@@ -127,15 +137,20 @@ impl AstVisitor for FuncCompiler {
         let next_bb = self.builder.new_bb();
 
         self.builder.mark_filled(cond_bb);
+
+        // cond_bb --> loop_bb
+        //   \---> next_bb
         self.builder
-            .set_jump_inst(
+            .add_branch(
                 Branch::CondJump {
                     cond,
                     target: empty_jump_target(loop_bb),
-                    target_if_false: empty_jump_target(next_bb),
                 },
                 cond_bb,
             )
+            .unwrap();
+        self.builder
+            .add_branch(Branch::Jump(empty_jump_target(next_bb)), cond_bb)
             .unwrap();
 
         self.builder.set_current_bb(loop_bb).unwrap();
@@ -143,7 +158,7 @@ impl AstVisitor for FuncCompiler {
         let loop_end_bb = self.builder.current_bb();
 
         self.builder
-            .set_jump_inst(Branch::Jump(empty_jump_target(cond_bb)), loop_end_bb)
+            .add_branch(Branch::Jump(empty_jump_target(cond_bb)), loop_end_bb)
             .unwrap();
 
         self.builder.mark_sealed(loop_end_bb);

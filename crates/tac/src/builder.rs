@@ -116,7 +116,7 @@ impl FuncBuilder {
             bb_id,
             BasicBlock {
                 params: None,
-                jumps: Branch::Unreachable,
+                jumps: vec![],
                 head: None,
                 tail: None,
             },
@@ -284,7 +284,9 @@ impl FuncBuilder {
         for &pred in preds {
             let source = self.read_variable(var, pred).unwrap();
             let bb = self.func.basic_blocks.get_mut(&pred).unwrap();
-            bb.jumps.add_param(current_bb, target_inst, source);
+            bb.jumps
+                .iter_mut()
+                .for_each(|x| x.add_param(current_bb, target_inst, source));
         }
         // TODO: TryRemoveTrivialPhi()
     }
@@ -359,29 +361,49 @@ impl FuncBuilder {
         Ok(insert_pos)
     }
 
-    /// Set the jump instruction of the given basic block. Returns the old jump instruction if it's
-    /// not [`Unreachable`](Branch::Unreachable).
-    pub fn set_jump_inst(&mut self, inst: Branch, bb_id: BBId) -> TacResult<Option<Branch>> {
+    /// Add a branching instruction to the given basic block's jump instruction list.
+    pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
         let bb = self
             .func
             .basic_blocks
             .get_mut(&bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
 
-        let orig = std::mem::replace(&mut bb.jumps, inst);
-
-        // TODO: Should we make jump instructions a list?
-
-        for target in orig.iter() {
-            self.cfg.remove_edge(bb_id, target);
-        }
-        for target in bb.jumps.iter() {
+        for target in inst.iter() {
             self.cfg.add_edge(bb_id, target, ());
         }
-        Ok(match orig {
-            Branch::Unreachable => None,
-            a => Some(a),
-        })
+
+        bb.jumps.push(inst);
+
+        Ok(())
+    }
+
+    /// Modifies the branching instructions of a basic block. Recalculates successors of this
+    /// basic block after the modification completes.
+    pub fn modify_branch<F: FnOnce(&mut Vec<Branch>)>(
+        &mut self,
+        bb_id: BBId,
+        f: F,
+    ) -> TacResult<()> {
+        for succ in self.succ_of_bb(bb_id) {
+            self.cfg.remove_edge(bb_id, succ);
+        }
+
+        let bb = self
+            .func
+            .basic_blocks
+            .get_mut(&bb_id)
+            .ok_or(Error::NoSuchBB(bb_id))?;
+
+        f(&mut bb.jumps);
+
+        for branch in &bb.jumps {
+            for target in branch.iter() {
+                self.cfg.add_edge(bb_id, target, ());
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns an iterator of all predecessors of a basic block.

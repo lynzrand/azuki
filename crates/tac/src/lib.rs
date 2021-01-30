@@ -167,7 +167,7 @@ pub struct BasicBlock {
     pub(crate) tail: Option<OpRef>,
 
     /// The branch instruction at the end of this basic block
-    pub(crate) jumps: Branch,
+    pub(crate) jumps: Vec<Branch>,
 }
 
 /// Represents a single TAC instruction inside an indirect doubly linked list of instructions.
@@ -285,40 +285,31 @@ pub enum Branch {
     /// Conditional jump to the given targets.
     ///
     /// `cond` must be a boolean or integer.
-    CondJump {
-        cond: Value,
-        target: BranchTarget,
-        target_if_false: BranchTarget,
-    },
+    CondJump { cond: Value, target: BranchTarget },
 
     /// Table jump.
     TableJump {
         cond: Value,
         target: Vec<BranchTarget>,
     },
-
-    /// Unreachable or undefined jump instruction
-    Unreachable,
+    // /// Unreachable or undefined jump instruction
+    // Unreachable,
 }
 
-impl Default for Branch {
-    fn default() -> Self {
-        Self::Unreachable
-    }
-}
+// impl Default for Branch {
+//     fn default() -> Self {
+//         Self::Unreachable
+//     }
+// }
 
 impl Branch {
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = usize> + 'a {
+    pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
         match self {
             Branch::Return(_) => util::VarIter::None,
             Branch::Jump(t) => util::VarIter::One(t.bb),
-            Branch::CondJump {
-                target,
-                target_if_false,
-                ..
-            } => util::VarIter::Two(target.bb, target_if_false.bb),
+            Branch::CondJump { target, .. } => util::VarIter::One(target.bb),
             Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
-            Branch::Unreachable => util::VarIter::None,
+            // Branch::Unreachable => util::VarIter::None,
         }
     }
 
@@ -328,20 +319,14 @@ impl Branch {
             Branch::Jump(target) => {
                 target.add_param_if_bb(bb_id, param, source_var);
             }
-            Branch::CondJump {
-                cond,
-                target,
-                target_if_false,
-            } => {
+            Branch::CondJump { target, .. } => {
                 target.add_param_if_bb(bb_id, param, source_var);
-                target_if_false.add_param_if_bb(bb_id, param, source_var);
             }
-            Branch::TableJump { cond, target } => {
+            Branch::TableJump { target, .. } => {
                 for branch_target in target {
                     branch_target.add_param_if_bb(bb_id, param, source_var);
                 }
-            }
-            Branch::Unreachable => {}
+            } // Branch::Unreachable => {}
         }
     }
 }
@@ -413,7 +398,7 @@ mod util {
     pub enum VarIter<T, I> {
         None,
         One(T),
-        Two(T, T),
+        // Two(T, T),
         Iter(I),
     }
 
@@ -429,10 +414,10 @@ mod util {
             match this {
                 VarIter::None => None,
                 VarIter::One(i) => Some(i),
-                VarIter::Two(i, j) => {
-                    *self = VarIter::One(j);
-                    Some(i)
-                }
+                // VarIter::Two(i, j) => {
+                //     *self = VarIter::One(j);
+                //     Some(i)
+                // }
                 VarIter::Iter(mut t) => {
                     let next = t.next();
                     *self = VarIter::Iter(t);
