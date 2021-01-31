@@ -25,7 +25,7 @@ use smol_str::SmolStr;
 pub type OpRef = Index;
 
 /// The index of a basic block.
-type BBId = usize;
+pub type BBId = usize;
 
 /// A function made of TAC instructions.
 ///

@@ -46,6 +46,7 @@ dependencies = [
  "azuki-syntax",
  "azuki-tac",
  "bit-set",
+ "smol_str",
 ]
 
 [[package]]

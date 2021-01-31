@@ -4,14 +4,29 @@ use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
 use bit_set::BitSet;
 use err::Error;
-use std::{borrow::Borrow, collections::BTreeMap, ops::Deref};
+use smol_str::SmolStr;
+use std::{
+    borrow::Borrow,
+    collections::{BTreeMap, HashMap},
+    ops::Deref,
+    todo,
+};
 
-use tac::{BasicBlock, BinaryInst, Branch, Inst, InstKind, OpRef, TacFunc, Ty, Value};
+use tac::{
+    BBId, BasicBlock, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, TacFunc, Ty, Value,
+};
 
 fn compile(tac: &Program) {}
 
 struct FuncCompiler {
     builder: tac::builder::FuncBuilder,
+    break_targets: Vec<BreakTarget>,
+    variables: HashMap<(SmolStr, usize), usize>,
+}
+
+struct BreakTarget {
+    pub break_out: BBId,
+    pub continue_in: BBId,
 }
 
 fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
@@ -28,9 +43,9 @@ fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
 //
 // Notes:
 //
-// - All basic blocks are marked as filled and sealed when its successor is created in another
-//   visitor method. Any basic block that needs special treatments (e.g. late sealing in control
-//   flows) should be managed within a single visitor method.
+// - All basic blocks that are passed from one statement visitor method into another should already
+//   have all their predecessors determined. Any statement visitor method could mark the input basic
+//   block as filled and sealed.
 impl AstVisitor for FuncCompiler {
     type LExprResult = ();
 
@@ -42,7 +57,23 @@ impl AstVisitor for FuncCompiler {
 
     type ProgramResult = ();
 
-    type FuncResult = ();
+    type FuncResult = Result<(), Error>;
+
+    fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
+        for param in &func.params {
+            self.visit_func_param(param)?;
+        }
+        self.visit_block_stmt(&func.body)?;
+        todo!("Visit function")
+    }
+
+    fn visit_func_param(&mut self, _param: &FuncParam) -> Self::StmtResult {
+        todo!("Visit function param")
+    }
+
+    fn visit_ty(&mut self, _ty: &TyDef) -> Self::TyResult {
+        todo!("Visit type")
+    }
 
     fn visit_literal_expr(&mut self, _expr: &LiteralExpr) -> Self::ExprResult {
         match _expr.kind {
@@ -55,6 +86,20 @@ impl AstVisitor for FuncCompiler {
             }
             LiteralKind::Char(ch) => Ok((Value::Imm(ch as i64), Ty::Int)),
         }
+    }
+
+    fn visit_ident_expr(&mut self, _expr: &Ident) -> Self::ExprResult {
+        todo!("visit")
+    }
+
+    fn visit_assign_expr(&mut self, expr: &AssignExpr) -> Self::ExprResult {
+        self.visit_lexpr(&expr.lhs);
+        self.visit_expr(&expr.rhs)?;
+        todo!("visit")
+    }
+
+    fn visit_lexpr(&mut self, _expr: &Expr) -> Self::LExprResult {
+        todo!("visit")
     }
 
     fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> Self::ExprResult {
@@ -105,8 +150,31 @@ impl AstVisitor for FuncCompiler {
         }
     }
 
+    fn visit_call_expr(&mut self, expr: &CallExpr) -> Self::ExprResult {
+        let mut params = vec![];
+        for subexpr in &expr.params {
+            params.push(self.visit_expr(&subexpr)?.0);
+        }
+        let val = self.builder.insert_after_current_place(Inst {
+            kind: InstKind::FunctionCall(FunctionCall {
+                name: todo!(),
+                params,
+            }),
+            ty: todo!(),
+        });
+        let ty = todo!();
+        Ok((val.into(), ty))
+    }
+
     fn visit_as_expr(&mut self, expr: &AsExpr) -> Self::ExprResult {
         self.visit_expr(&expr.val)
+    }
+
+    fn visit_block_stmt(&mut self, stmt: &BlockStmt) -> Self::StmtResult {
+        for substmt in &stmt.stmts {
+            self.visit_stmt(substmt)?;
+        }
+        Ok(())
     }
 
     fn visit_while_stmt(&mut self, stmt: &WhileStmt) -> Self::StmtResult {
@@ -124,6 +192,11 @@ impl AstVisitor for FuncCompiler {
 
         let loop_bb = self.builder.new_bb();
         let next_bb = self.builder.new_bb();
+
+        self.break_targets.push(BreakTarget {
+            break_out: next_bb,
+            continue_in: cond_bb,
+        });
 
         self.builder.mark_filled(cond_bb);
 
@@ -153,6 +226,8 @@ impl AstVisitor for FuncCompiler {
         self.builder.mark_sealed(loop_end_bb);
         self.builder.mark_filled(loop_end_bb);
         self.builder.mark_sealed(cond_bb);
+
+        self.break_targets.pop();
 
         self.builder.set_current_bb(next_bb).unwrap();
 
@@ -235,6 +310,19 @@ impl AstVisitor for FuncCompiler {
         Ok(())
     }
 
+    fn visit_expr_stmt(&mut self, stmt: &Expr) -> Self::StmtResult {
+        self.visit_expr(stmt)?;
+        Ok(())
+    }
+
+    fn visit_decl_stmt(&mut self, stmt: &DeclStmt) -> Self::StmtResult {
+        self.visit_ty(&stmt.ty);
+        if let Some(expr) = &stmt.val {
+            self.visit_expr(expr)?;
+        }
+        todo!("visit")
+    }
+
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt) -> Self::StmtResult {
         let val = if let Some(val) = &stmt.val {
             Some(self.visit_expr(&val)?)
@@ -252,83 +340,40 @@ impl AstVisitor for FuncCompiler {
         Ok(())
     }
 
-    fn visit_program(&mut self, program: &Program) -> Self::ProgramResult {
-        for decl in &program.decls {
-            self.visit_decl_stmt(decl);
-        }
-        for func in &program.funcs {
-            self.visit_func(func);
-        }
-        todo!("Visit program")
-    }
-
-    fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
-        for param in &func.params {
-            self.visit_func_param(param);
-        }
-        self.visit_block_stmt(&func.body);
-        todo!("Visit function")
-    }
-
-    fn visit_func_param(&mut self, _param: &FuncParam) -> Self::StmtResult {
-        todo!("Visit function param")
-    }
-
-    fn visit_ty(&mut self, _ty: &TyDef) -> Self::TyResult {
-        todo!("Visit type")
-    }
-
-    fn visit_ident_expr(&mut self, _expr: &Ident) -> Self::ExprResult {
-        todo!("visit")
-    }
-
-    fn visit_assign_expr(&mut self, expr: &AssignExpr) -> Self::ExprResult {
-        self.visit_lexpr(&expr.lhs);
-        self.visit_expr(&expr.rhs);
-        todo!("visit")
-    }
-
-    fn visit_lexpr(&mut self, _expr: &Expr) -> Self::LExprResult {
-        todo!("visit")
-    }
-
-    fn visit_call_expr(&mut self, expr: &CallExpr) -> Self::ExprResult {
-        for subexpr in &expr.params {
-            self.visit_expr(&subexpr);
-        }
-        todo!("visit")
-    }
-
-    fn visit_block_stmt(&mut self, stmt: &BlockStmt) -> Self::StmtResult {
-        for substmt in &stmt.stmts {
-            self.visit_stmt(substmt);
-        }
-        todo!("visit")
-    }
-
-    fn visit_expr_stmt(&mut self, stmt: &Expr) -> Self::StmtResult {
-        self.visit_expr(stmt);
-        todo!("visit")
-    }
-
-    fn visit_decl_stmt(&mut self, stmt: &DeclStmt) -> Self::StmtResult {
-        self.visit_ty(&stmt.ty);
-        if let Some(expr) = &stmt.val {
-            self.visit_expr(expr);
-        }
-        todo!("visit")
-    }
-
     fn visit_break_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
-        todo!("visit")
+        let continue_target = self.break_targets.last().unwrap().break_out;
+
+        let cur_bb = self.builder.current_bb();
+        self.builder
+            .add_branch(Branch::Jump(empty_jump_target(continue_target)), cur_bb)
+            .unwrap();
+        self.builder.mark_sealed(cur_bb);
+        self.builder.mark_filled(cur_bb);
+
+        let next_bb = self.builder.new_bb();
+        self.builder.set_current_bb(next_bb).unwrap();
+
+        Ok(())
     }
 
     fn visit_continue_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
-        todo!("visit")
+        let continue_target = self.break_targets.last().unwrap().continue_in;
+
+        let cur_bb = self.builder.current_bb();
+        self.builder
+            .add_branch(Branch::Jump(empty_jump_target(continue_target)), cur_bb)
+            .unwrap();
+        self.builder.mark_sealed(cur_bb);
+        self.builder.mark_filled(cur_bb);
+
+        let next_bb = self.builder.new_bb();
+        self.builder.set_current_bb(next_bb).unwrap();
+
+        Ok(())
     }
 
     fn visit_empty_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
-        todo!("visit")
+        Ok(())
     }
 }
 
