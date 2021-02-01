@@ -1,4 +1,5 @@
 pub mod err;
+pub mod symbol;
 
 use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
@@ -11,6 +12,7 @@ use std::{
     ops::Deref,
     todo,
 };
+use symbol::ScopeBuilder;
 
 use tac::{
     BBId, BasicBlock, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, TacFunc, Ty, Value,
@@ -18,10 +20,10 @@ use tac::{
 
 fn compile(tac: &Program) {}
 
-struct FuncCompiler {
+struct FuncCompiler<'a> {
     builder: tac::builder::FuncBuilder,
     break_targets: Vec<BreakTarget>,
-    variables: HashMap<(SmolStr, usize), usize>,
+    global_scope_builder: &'a mut ScopeBuilder<'a>,
 }
 
 struct BreakTarget {
@@ -46,7 +48,7 @@ fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
 // - All basic blocks that are passed from one statement visitor method into another should already
 //   have all their predecessors determined. Any statement visitor method could mark the input basic
 //   block as filled and sealed.
-impl AstVisitor for FuncCompiler {
+impl<'a> AstVisitor for FuncCompiler<'a> {
     type LExprResult = ();
 
     type ExprResult = Result<(Value, Ty), Error>;
