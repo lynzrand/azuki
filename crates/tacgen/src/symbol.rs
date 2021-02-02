@@ -7,6 +7,7 @@ use std::{
 
 use azuki_tac::Ty;
 use smol_str::SmolStr;
+use vec1::Vec1;
 
 /// A struct for storing strings and reducing space usage.
 pub struct StringInterner {
@@ -95,75 +96,95 @@ pub struct Variable {
     pub ty: Ty,
 }
 
-pub struct ScopeBuilder<'a> {
+pub struct ScopeBuilder {
     counter: Rc<NumberingCounter>,
     interner: Rc<RefCell<StringInterner>>,
-    scope: Scope<'a>,
+    scopes: Vec1<Scope>,
 }
 
-impl<'a> ScopeBuilder<'a> {
+impl ScopeBuilder {
     pub fn new(
-        parent: Option<&'a Scope>,
         counter: Rc<NumberingCounter>,
         interner: Rc<RefCell<StringInterner>>,
-    ) -> ScopeBuilder<'a> {
+    ) -> ScopeBuilder {
         ScopeBuilder {
             counter,
             interner,
-            scope: Scope::new(parent),
+            scopes: Vec1::new(Scope::new()),
         }
+    }
+
+    pub fn add_scope(&mut self) {
+        self.scopes.push(Scope::new())
+    }
+
+    pub fn is_top_scope_global(&self) -> bool {
+        self.scopes().len() == 1
     }
 
     /// Insert a variable with given name and type into this scope. Returns a reference to the
     /// inserted variable if succeeded, and `None` if failed.
     pub fn insert(&mut self, name: &SmolStr, ty: Ty) -> Option<&Variable> {
-        if self.scope.get_self(name).is_some() {
-            return None;
-        }
-
         let interned_name = self.interner.borrow_mut().intern(name);
         let var_id = self.counter.next();
         let variable = Variable {
-            is_global: self.scope.is_global(),
+            is_global: self.is_top_scope_global(),
             id: var_id,
             ty,
         };
 
-        let entry = self.scope.vars.entry(interned_name).or_insert(variable);
-
-        Some(entry)
+        let scope = self.top_scope_mut();
+        scope.insert(interned_name, variable)
     }
 
-    pub fn scope(&self) -> &Scope<'a> {
-        &self.scope
+    pub fn find(&self, name: &str) -> Option<&Variable> {
+        for scope in self.scopes().iter().rev() {
+            if let Some(var) = scope.find(name) {
+                return Some(var);
+            }
+        }
+        None
+    }
+
+    pub fn scopes(&self) -> &[Scope] {
+        &self.scopes
+    }
+
+    pub fn top_scope(&self) -> &Scope {
+        self.scopes.last()
+    }
+
+    pub fn top_scope_mut(&mut self) -> &mut Scope {
+        self.scopes.last_mut()
     }
 }
 
-pub struct Scope<'a> {
-    parent: Option<&'a Scope<'a>>,
+pub struct Scope {
     vars: HashMap<SmolStr, Variable>,
 }
 
-impl<'a> Scope<'a> {
-    pub fn new(parent: Option<&'a Scope>) -> Scope<'a> {
+impl Scope {
+    pub fn new() -> Scope {
         Scope {
-            parent,
             vars: HashMap::new(),
         }
     }
 
-    pub fn is_global(&self) -> bool {
-        self.parent.is_none()
-    }
-
-    pub fn get_self(&self, name: &str) -> Option<&Variable> {
+    pub fn find(&self, name: &str) -> Option<&Variable> {
         self.vars.get(name)
     }
 
-    pub fn get_recursive(&self, name: &str) -> Option<&Variable> {
-        match self.get_self(name) {
-            x @ Some(_) => x,
-            None => self.parent.and_then(|parent| parent.get_recursive(name)),
+    pub fn insert(&mut self, name: SmolStr, val: Variable) -> Option<&Variable> {
+        let entry = self.vars.entry(name);
+        match entry {
+            std::collections::hash_map::Entry::Occupied(_) => None,
+            std::collections::hash_map::Entry::Vacant(e) => Some(e.insert(val)),
         }
+    }
+}
+
+impl Default for Scope {
+    fn default() -> Self {
+        Self::new()
     }
 }

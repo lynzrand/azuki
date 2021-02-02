@@ -3,27 +3,19 @@ pub mod symbol;
 
 use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
-use bit_set::BitSet;
 use err::Error;
-use smol_str::SmolStr;
-use std::{
-    borrow::Borrow,
-    collections::{BTreeMap, HashMap},
-    ops::Deref,
-    todo,
-};
+use std::{cell::RefCell, collections::BTreeMap, rc::Rc, todo};
 use symbol::ScopeBuilder;
 
-use tac::{
-    BBId, BasicBlock, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, TacFunc, Ty, Value,
-};
+use tac::{BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, Ty, Value};
 
 fn compile(tac: &Program) {}
 
-struct FuncCompiler<'a> {
+struct FuncCompiler {
     builder: tac::builder::FuncBuilder,
     break_targets: Vec<BreakTarget>,
-    global_scope_builder: &'a mut ScopeBuilder<'a>,
+
+    scope_builder: Rc<RefCell<ScopeBuilder>>,
 }
 
 struct BreakTarget {
@@ -48,7 +40,7 @@ fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
 // - All basic blocks that are passed from one statement visitor method into another should already
 //   have all their predecessors determined. Any statement visitor method could mark the input basic
 //   block as filled and sealed.
-impl<'a> AstVisitor for FuncCompiler<'a> {
+impl AstVisitor for FuncCompiler {
     type LExprResult = ();
 
     type ExprResult = Result<(Value, Ty), Error>;
@@ -62,6 +54,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
     type FuncResult = Result<(), Error>;
 
     fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
+        // self.local_scope_builder = ScopeBuilder::new(, counter, interner)
         for param in &func.params {
             self.visit_func_param(param)?;
         }
