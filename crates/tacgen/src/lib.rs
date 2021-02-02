@@ -1,11 +1,11 @@
 pub mod err;
 pub mod symbol;
 
-use azuki_syntax::{ast::*, visitor::AstVisitor};
+use azuki_syntax::{ast::*, span::Span, visitor::AstVisitor};
 use azuki_tac as tac;
 use err::Error;
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc, todo};
-use symbol::ScopeBuilder;
+use symbol::{ScopeBuilder, StringInterner};
 
 use tac::{BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, Ty, Value};
 
@@ -14,6 +14,8 @@ fn compile(tac: &Program) {}
 struct FuncCompiler {
     builder: tac::builder::FuncBuilder,
     break_targets: Vec<BreakTarget>,
+
+    interner: Rc<RefCell<StringInterner>>,
 
     scope_builder: Rc<RefCell<ScopeBuilder>>,
 }
@@ -45,7 +47,7 @@ impl AstVisitor for FuncCompiler {
 
     type ExprResult = Result<(Value, Ty), Error>;
 
-    type TyResult = ();
+    type TyResult = Result<Ty, Error>;
 
     type StmtResult = Result<(), Error>;
 
@@ -54,20 +56,28 @@ impl AstVisitor for FuncCompiler {
     type FuncResult = Result<(), Error>;
 
     fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
-        // self.local_scope_builder = ScopeBuilder::new(, counter, interner)
         for param in &func.params {
             self.visit_func_param(param)?;
         }
         self.visit_block_stmt(&func.body)?;
-        todo!("Visit function")
+        Ok(())
     }
 
-    fn visit_func_param(&mut self, _param: &FuncParam) -> Self::StmtResult {
-        todo!("Visit function param")
+    fn visit_func_param(&mut self, param: &FuncParam) -> Self::StmtResult {
+        let ty = self.visit_ty(&param.ty)?;
+        self.scope_builder
+            .borrow_mut()
+            .insert(&param.name.name, ty)
+            .ok_or_else(|| Error::DuplicateVar(param.name.name.clone()))?;
+        Ok(())
     }
 
     fn visit_ty(&mut self, _ty: &TyDef) -> Self::TyResult {
-        todo!("Visit type")
+        match _ty.name.as_str() {
+            "void" => Ok(Ty::Unit),
+            "int" => Ok(Ty::Int),
+            _ => Err(Error::UnknownType(_ty.name.clone())),
+        }
     }
 
     fn visit_literal_expr(&mut self, _expr: &LiteralExpr) -> Self::ExprResult {
@@ -146,19 +156,32 @@ impl AstVisitor for FuncCompiler {
     }
 
     fn visit_call_expr(&mut self, expr: &CallExpr) -> Self::ExprResult {
+        let func = self
+            .scope_builder
+            .borrow()
+            .find(&expr.func.name)
+            .ok_or_else(|| Error::UnknownVar(expr.func.name.clone()))?;
+
         let mut params = vec![];
+        let mut types = vec![];
         for subexpr in &expr.params {
-            params.push(self.visit_expr(&subexpr)?.0);
+            let (val, ty) = self.visit_expr(&subexpr)?;
+            params.push(val);
+            types.push(ty);
         }
+
+        // TODO: Check types
+        let return_ty: Ty = todo!();
+
         let val = self.builder.insert_after_current_place(Inst {
             kind: InstKind::FunctionCall(FunctionCall {
-                name: todo!(),
+                name: self.interner.borrow_mut().intern(&expr.func.name),
                 params,
             }),
-            ty: todo!(),
+            ty: return_ty,
         });
-        let ty = todo!();
-        Ok((val.into(), ty))
+
+        Ok((val.into(), return_ty))
     }
 
     fn visit_as_expr(&mut self, expr: &AsExpr) -> Self::ExprResult {
@@ -311,11 +334,25 @@ impl AstVisitor for FuncCompiler {
     }
 
     fn visit_decl_stmt(&mut self, stmt: &DeclStmt) -> Self::StmtResult {
-        self.visit_ty(&stmt.ty);
+        let ty = self.visit_ty(&stmt.ty)?;
+        self.scope_builder
+            .borrow_mut()
+            .insert(&stmt.name.name, ty)
+            .ok_or_else(|| Error::DuplicateVar(stmt.name.name.clone()))?;
+
         if let Some(expr) = &stmt.val {
-            self.visit_expr(expr)?;
+            self.visit_assign_expr(&AssignExpr {
+                span: stmt.span,
+                allow_assign_const: stmt.is_const,
+                lhs: Rc::new(Expr::Ident(Ident {
+                    span: stmt.span,
+                    name: stmt.name.name.clone(),
+                })),
+                rhs: expr.clone(),
+            })?;
         }
-        todo!("visit")
+
+        Ok(())
     }
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt) -> Self::StmtResult {
