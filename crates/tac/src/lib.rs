@@ -22,6 +22,8 @@ use err::{Error, TacResult};
 use generational_arena::{Arena, Index};
 use smol_str::SmolStr;
 
+pub use ty::{NumericTy, Ty, TyKind};
+
 pub type OpRef = Index;
 
 /// The index of a basic block.
@@ -387,12 +389,6 @@ impl From<OpRef> for Value {
 }
 
 type Immediate = i64;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Ty {
-    Unit,
-    Int,
-}
 
 mod util {
     pub enum VarIter<T, I> {

@@ -75,21 +75,21 @@ impl AstVisitor for FuncCompiler {
     fn visit_ty(&mut self, _ty: &TyDef) -> Self::TyResult {
         match _ty.name.as_str() {
             "void" => Ok(Ty::Unit),
-            "int" => Ok(Ty::Int),
+            "int" => Ok(Ty::int()),
             _ => Err(Error::UnknownType(_ty.name.clone())),
         }
     }
 
     fn visit_literal_expr(&mut self, _expr: &LiteralExpr) -> Self::ExprResult {
         match _expr.kind {
-            LiteralKind::Integer(val) => Ok((Value::Imm(val as i64), Ty::Int)),
+            LiteralKind::Integer(val) => Ok((Value::Imm(val as i64), Ty::int())),
             LiteralKind::Float(_) => {
                 todo!("implement float (or not)")
             }
             LiteralKind::String(_) => {
                 todo!("Implement String")
             }
-            LiteralKind::Char(ch) => Ok((Value::Imm(ch as i64), Ty::Int)),
+            LiteralKind::Char(ch) => Ok((Value::Imm(ch as i64), Ty::int())),
         }
     }
 
