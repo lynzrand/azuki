@@ -18,11 +18,13 @@ use crate::{
 fn test_basic_func_generation() {
     let program = r"
     fn fib(n: int) -> int {
+        let r: int;
         if n <= 1 {
-            return 1;
+            r = 1;
         } else {
-            return fib(n - 1) + fib(n - 2);
+            r = fib(n - 1) + fib(n - 2);
         }
+        return r;
     }
     ";
     let mut parser = parser::Parser::new(spanned_lexer(program));
@@ -32,12 +34,8 @@ fn test_basic_func_generation() {
     let interner = Rc::new(RefCell::new(StringInterner::new()));
     let counter = Rc::new(NumberingCounter::new(0));
 
-    let mut compiler = FuncCompiler {
-        builder: FuncBuilder::new("test".into()),
-        break_targets: vec![],
-        interner: interner.clone(),
-        scope_builder: Rc::new(RefCell::new(ScopeBuilder::new(counter, interner))),
-    };
+    let scope_builder = Rc::new(RefCell::new(ScopeBuilder::new(counter, interner.clone())));
+    let mut compiler = FuncCompiler::new("fib".into(), interner, scope_builder);
 
     compiler.visit_func(&func).unwrap();
 

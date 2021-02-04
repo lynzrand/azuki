@@ -13,7 +13,7 @@ use tac::{
     builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, Ty, Value,
 };
 
-fn compile(tac: &Program) {
+pub fn compile(tac: &Program) {
     let interner = Rc::new(RefCell::new(StringInterner::new()));
     let counter = Rc::new(NumberingCounter::new(0));
     let global_scope_builder = Rc::new(RefCell::new(ScopeBuilder::new(counter, interner.clone())));
@@ -28,9 +28,23 @@ fn compile(tac: &Program) {
     }
 }
 
+struct BreakTarget {
+    pub break_out: BBId,
+    pub continue_in: BBId,
+}
+
+fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
+    tac::BranchTarget {
+        bb: bb_id,
+        params: BTreeMap::new(),
+    }
+}
+
 pub struct FuncCompiler {
     builder: tac::builder::FuncBuilder,
     break_targets: Vec<BreakTarget>,
+
+    return_ty: Ty,
 
     interner: Rc<RefCell<StringInterner>>,
 
@@ -46,21 +60,27 @@ impl FuncCompiler {
         FuncCompiler {
             builder: FuncBuilder::new(name),
             break_targets: vec![],
+            return_ty: Ty::unit(),
             interner,
             scope_builder,
         }
     }
-}
 
-struct BreakTarget {
-    pub break_out: BBId,
-    pub continue_in: BBId,
-}
+    fn visit_func_param_real(&mut self, param: &FuncParam) -> Result<Ty, Error> {
+        let ty = self.visit_ty(&param.ty)?;
+        let mut scope = self.scope_builder.borrow_mut();
+        let var = scope
+            .insert(&param.name.name, ty.clone())
+            .ok_or_else(|| Error::DuplicateVar(param.name.name.clone()))?;
 
-fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
-    tac::BranchTarget {
-        bb: bb_id,
-        params: BTreeMap::new(),
+        let val = self.builder.insert_after_current_place(Inst {
+            kind: InstKind::Param,
+            ty: ty.clone(),
+        });
+
+        self.builder.declare_var(var.id, ty.clone());
+        self.builder.write_variable_cur(var.id, val).unwrap();
+        Ok(ty)
     }
 }
 
@@ -89,26 +109,23 @@ impl AstVisitor for FuncCompiler {
 
     fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
         self.scope_builder.borrow_mut().add_scope();
+
+        let return_ty = self.visit_ty(&func.ret_ty)?;
+        let mut params_ty = vec![];
         for param in &func.params {
-            self.visit_func_param(param)?;
+            let param_ty = self.visit_func_param_real(param)?;
+            params_ty.push(param_ty);
         }
+        let func_ty = Ty::func_of(return_ty, params_ty);
+        self.builder.set_type(func_ty.clone());
+
+        let func_name = &func.name.name;
+        self.scope_builder
+            .borrow_mut()
+            .insert_global(func_name, func_ty);
+
         self.visit_block_stmt(&func.body)?;
         self.scope_builder.borrow_mut().pop_scope().unwrap();
-        Ok(())
-    }
-
-    fn visit_func_param(&mut self, param: &FuncParam) -> Self::StmtResult {
-        let ty = self.visit_ty(&param.ty)?;
-        let mut scope = self.scope_builder.borrow_mut();
-        let var = scope
-            .insert(&param.name.name, ty.clone())
-            .ok_or_else(|| Error::DuplicateVar(param.name.name.clone()))?;
-        let val = self.builder.insert_after_current_place(Inst {
-            kind: InstKind::Param,
-            ty: ty.clone(),
-        });
-        self.builder.declare_var(var.id, ty);
-        self.builder.write_variable_cur(var.id, val).unwrap();
         Ok(())
     }
 
@@ -342,7 +359,7 @@ impl AstVisitor for FuncCompiler {
         let expr_val = self.visit_expr(&stmt.cond)?;
         let last_bb = self.builder.current_bb();
 
-        self.builder.mark_sealed(last_bb);
+        self.builder.mark_filled(last_bb);
         self.builder.mark_sealed(last_bb);
 
         // Create if block
@@ -364,11 +381,9 @@ impl AstVisitor for FuncCompiler {
 
         let if_end_bb = self.builder.current_bb();
 
-        // The basic block after the if statement
-        let next_bb = self.builder.new_bb();
-
+        // next_bb: The basic block after the if statement
         // Deal with else block
-        let else_bbs = match &stmt.else_block {
+        let next_bb = match &stmt.else_block {
             other @ IfElseBlock::Block(..) | other @ IfElseBlock::If(..) => {
                 let else_bb = self.builder.new_bb();
 
@@ -385,16 +400,26 @@ impl AstVisitor for FuncCompiler {
                     IfElseBlock::If(i) => self.visit_if_stmt(&i)?,
                     IfElseBlock::Block(b) => self.visit_block_stmt(&b)?,
                 }
+                let else_end_bb = self.builder.current_bb();
 
-                Some((else_bb, self.builder.current_bb()))
+                let next_bb = self.builder.new_bb();
+
+                self.builder
+                    .add_branch(Branch::Jump(empty_jump_target(next_bb)), else_end_bb)
+                    .unwrap();
+
+                self.builder.mark_filled(else_end_bb);
+                self.builder.mark_sealed(else_end_bb);
+                next_bb
             }
             azuki_syntax::ast::IfElseBlock::None => {
+                let next_bb = self.builder.new_bb();
                 // if
                 //  \--> next_bb
                 self.builder
                     .add_branch(Branch::Jump(empty_jump_target(next_bb)), last_bb)
                     .unwrap();
-                None
+                next_bb
             }
         };
 
@@ -403,12 +428,8 @@ impl AstVisitor for FuncCompiler {
             .add_branch(Branch::Jump(empty_jump_target(next_bb)), if_end_bb)
             .unwrap();
 
-        // else_end_bb -> next_bb
-        if let Some((_, bb)) = else_bbs {
-            self.builder
-                .add_branch(Branch::Jump(empty_jump_target(next_bb)), bb)
-                .unwrap();
-        }
+        self.builder.mark_filled(if_end_bb);
+        self.builder.mark_sealed(if_end_bb);
 
         self.builder.set_current_bb(next_bb).unwrap();
         Ok(())

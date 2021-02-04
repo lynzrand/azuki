@@ -65,9 +65,15 @@ pub struct FuncBuilder {
 }
 
 impl FuncBuilder {
-    /// Create a function builder for a function with the given `name`.
+    /// Create a function builder for a function with the given `name` and type
+    /// undefined for now.
     pub fn new(name: SmolStr) -> FuncBuilder {
-        let mut f = TacFunc::new(name);
+        Self::new_typed(name, Ty::unit())
+    }
+
+    /// Create a function builder for a function with the given `name` and given type `ty`.
+    pub fn new_typed(name: SmolStr, ty: Ty) -> FuncBuilder {
+        let mut f = TacFunc::new(name, ty);
 
         f.basic_blocks.insert(
             0,
@@ -92,6 +98,10 @@ impl FuncBuilder {
         }
     }
 
+    pub fn set_type(&mut self, ty: Ty) {
+        self.func.ty = ty;
+    }
+
     /// Build this function.
     pub fn build(self) -> TacFunc {
         self.func
@@ -110,8 +120,8 @@ impl FuncBuilder {
 
     /// Add an free-standing empty basic block into the function.
     pub fn new_bb(&mut self) -> BBId {
-        let bb_id = self.bb_count;
         self.bb_count += 1;
+        let bb_id = self.bb_count;
         self.func.basic_blocks.insert(
             bb_id,
             BasicBlock {

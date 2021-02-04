@@ -141,6 +141,19 @@ impl ScopeBuilder {
         scope.insert(interned_name, variable)
     }
 
+    pub fn insert_global(&mut self, name: &SmolStr, ty: Ty) -> Option<&Variable> {
+        let interned_name = self.interner.borrow_mut().intern(name);
+        let var_id = self.counter.next();
+        let variable = Variable {
+            is_global: true,
+            id: var_id,
+            ty,
+        };
+
+        let scope = self.global_scope_mut();
+        scope.insert(interned_name, variable)
+    }
+
     pub fn find(&self, name: &str) -> Option<&Variable> {
         for scope in self.scopes().iter().rev() {
             if let Some(var) = scope.find(name) {
@@ -160,6 +173,14 @@ impl ScopeBuilder {
 
     pub fn top_scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut()
+    }
+
+    pub fn global_scope(&self) -> &Scope {
+        self.scopes.first()
+    }
+
+    pub fn global_scope_mut(&mut self) -> &mut Scope {
+        self.scopes.first_mut()
     }
 }
 

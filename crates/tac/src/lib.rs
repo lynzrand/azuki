@@ -39,6 +39,8 @@ pub type BBId = usize;
 pub struct TacFunc {
     /// Function name
     name: SmolStr,
+    /// Function type
+    ty: Ty,
     /// An arena to allocate instructions
     arena: Arena<Tac>,
     /// Basic blocks inside this function
@@ -46,9 +48,19 @@ pub struct TacFunc {
 }
 
 impl TacFunc {
-    pub fn new(name: SmolStr) -> TacFunc {
+    pub fn new(name: SmolStr, ty: Ty) -> TacFunc {
         TacFunc {
             name,
+            ty,
+            arena: Arena::new(),
+            basic_blocks: BTreeMap::new(),
+        }
+    }
+
+    pub fn new_undefined_type(name: SmolStr) -> TacFunc {
+        TacFunc {
+            name,
+            ty: Ty::unit(),
             arena: Arena::new(),
             basic_blocks: BTreeMap::new(),
         }
