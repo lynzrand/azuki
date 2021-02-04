@@ -43,7 +43,7 @@ fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
 //   have all their predecessors determined. Any statement visitor method could mark the input basic
 //   block as filled and sealed.
 impl AstVisitor for FuncCompiler {
-    type LExprResult = ();
+    type LExprResult = Result<(usize, Ty), Error>;
 
     type ExprResult = Result<(Value, Ty), Error>;
 
@@ -93,18 +93,51 @@ impl AstVisitor for FuncCompiler {
         }
     }
 
-    fn visit_ident_expr(&mut self, _expr: &Ident) -> Self::ExprResult {
-        todo!("visit")
+    fn visit_ident_expr(&mut self, expr: &Ident) -> Self::ExprResult {
+        let scope = self.scope_builder.borrow();
+        let var = scope
+            .find(&expr.name)
+            .ok_or_else(|| Error::UnknownVar(expr.name.clone()))?;
+        let val = self
+            .builder
+            .read_variable(var.id, self.builder.current_bb())
+            .unwrap();
+        Ok((val.into(), var.ty.clone()))
     }
 
     fn visit_assign_expr(&mut self, expr: &AssignExpr) -> Self::ExprResult {
-        self.visit_lexpr(&expr.lhs);
-        self.visit_expr(&expr.rhs)?;
-        todo!("visit")
+        let (var_id, var_ty) = self.visit_lexpr(&expr.lhs)?;
+        let (val, val_ty) = self.visit_expr(&expr.rhs)?;
+
+        assert_type_eq(&var_ty, &val_ty)?;
+
+        let result_idx = match val {
+            Value::Dest(i) => {
+                self.builder.write_variable_cur(var_id, i).unwrap();
+                i
+            }
+            Value::Imm(i) => {
+                let target = self.builder.insert_after_current_place(Inst {
+                    kind: InstKind::Const(i),
+                    ty: val_ty,
+                });
+                self.builder.write_variable_cur(var_id, target).unwrap();
+                target
+            }
+        };
+        Ok((result_idx.into(), Ty::unit()))
     }
 
-    fn visit_lexpr(&mut self, _expr: &Expr) -> Self::LExprResult {
-        todo!("visit")
+    fn visit_lexpr(&mut self, expr: &Expr) -> Self::LExprResult {
+        let expr = match expr {
+            Expr::Ident(i) => i,
+            _ => return Err(Error::InvalidLExpr(format!("{:?}", &expr))),
+        };
+        let scope = self.scope_builder.borrow();
+        let var = scope
+            .find(&expr.name)
+            .ok_or_else(|| Error::UnknownVar(expr.name.clone()))?;
+        Ok((var.id, var.ty.clone()))
     }
 
     fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> Self::ExprResult {
@@ -156,11 +189,15 @@ impl AstVisitor for FuncCompiler {
     }
 
     fn visit_call_expr(&mut self, expr: &CallExpr) -> Self::ExprResult {
-        let func = self
+        let func_ty = self
             .scope_builder
             .borrow()
             .find(&expr.func.name)
-            .ok_or_else(|| Error::UnknownVar(expr.func.name.clone()))?;
+            .ok_or_else(|| Error::UnknownVar(expr.func.name.clone()))?
+            .ty
+            .clone();
+
+        let func_ty = func_ty.as_func().unwrap();
 
         let mut params = vec![];
         let mut types = vec![];
@@ -170,18 +207,25 @@ impl AstVisitor for FuncCompiler {
             types.push(ty);
         }
 
-        // TODO: Check types
-        let return_ty: Ty = todo!();
+        if types.len() != func_ty.params.len() {
+            return Err(Error::WrongParamLength {
+                expected: func_ty.params.len(),
+                found: types.len(),
+            });
+        }
+        for (ty, expected) in types.iter().zip(func_ty.params.iter()) {
+            assert_type_eq(ty, expected)?;
+        }
 
         let val = self.builder.insert_after_current_place(Inst {
             kind: InstKind::FunctionCall(FunctionCall {
                 name: self.interner.borrow_mut().intern(&expr.func.name),
                 params,
             }),
-            ty: return_ty,
+            ty: func_ty.return_type.clone(),
         });
 
-        Ok((val.into(), return_ty))
+        Ok((val.into(), func_ty.return_type.clone()))
     }
 
     fn visit_as_expr(&mut self, expr: &AsExpr) -> Self::ExprResult {

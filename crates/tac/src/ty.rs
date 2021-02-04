@@ -99,6 +99,6 @@ pub enum TyKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FuncTy {
-    return_type: Ty,
-    params: Vec<Ty>,
+    pub return_type: Ty,
+    pub params: Vec<Ty>,
 }
