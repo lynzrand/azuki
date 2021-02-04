@@ -7,7 +7,7 @@ use std::{
 
 use azuki_tac::Ty;
 use smol_str::SmolStr;
-use vec1::Vec1;
+use vec1::{Size0Error, Vec1};
 
 /// A struct for storing strings and reducing space usage.
 pub struct StringInterner {
@@ -116,6 +116,10 @@ impl ScopeBuilder {
 
     pub fn add_scope(&mut self) {
         self.scopes.push(Scope::new())
+    }
+
+    pub fn pop_scope(&mut self) -> Result<Scope, Size0Error> {
+        self.scopes.try_pop()
     }
 
     pub fn is_top_scope_global(&self) -> bool {

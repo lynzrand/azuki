@@ -1,23 +1,55 @@
 pub mod err;
 pub mod symbol;
+mod test;
 
-use azuki_syntax::{ast::*, span::Span, visitor::AstVisitor};
+use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
 use err::Error;
+use smol_str::SmolStr;
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc, todo};
-use symbol::{ScopeBuilder, StringInterner};
+use symbol::{NumberingCounter, ScopeBuilder, StringInterner};
 
-use tac::{BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, Ty, Value};
+use tac::{
+    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, Ty, Value,
+};
 
-fn compile(tac: &Program) {}
+fn compile(tac: &Program) {
+    let interner = Rc::new(RefCell::new(StringInterner::new()));
+    let counter = Rc::new(NumberingCounter::new(0));
+    let global_scope_builder = Rc::new(RefCell::new(ScopeBuilder::new(counter, interner.clone())));
 
-struct FuncCompiler {
+    for func in &tac.funcs {
+        let mut compiler = FuncCompiler::new(
+            func.name.name.clone(),
+            interner.clone(),
+            global_scope_builder.clone(),
+        );
+        compiler.visit_func(func).unwrap();
+    }
+}
+
+pub struct FuncCompiler {
     builder: tac::builder::FuncBuilder,
     break_targets: Vec<BreakTarget>,
 
     interner: Rc<RefCell<StringInterner>>,
 
     scope_builder: Rc<RefCell<ScopeBuilder>>,
+}
+
+impl FuncCompiler {
+    pub fn new(
+        name: SmolStr,
+        interner: Rc<RefCell<StringInterner>>,
+        scope_builder: Rc<RefCell<ScopeBuilder>>,
+    ) -> FuncCompiler {
+        FuncCompiler {
+            builder: FuncBuilder::new(name),
+            break_targets: vec![],
+            interner,
+            scope_builder,
+        }
+    }
 }
 
 struct BreakTarget {
@@ -56,19 +88,27 @@ impl AstVisitor for FuncCompiler {
     type FuncResult = Result<(), Error>;
 
     fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
+        self.scope_builder.borrow_mut().add_scope();
         for param in &func.params {
             self.visit_func_param(param)?;
         }
         self.visit_block_stmt(&func.body)?;
+        self.scope_builder.borrow_mut().pop_scope().unwrap();
         Ok(())
     }
 
     fn visit_func_param(&mut self, param: &FuncParam) -> Self::StmtResult {
         let ty = self.visit_ty(&param.ty)?;
-        self.scope_builder
-            .borrow_mut()
-            .insert(&param.name.name, ty)
+        let mut scope = self.scope_builder.borrow_mut();
+        let var = scope
+            .insert(&param.name.name, ty.clone())
             .ok_or_else(|| Error::DuplicateVar(param.name.name.clone()))?;
+        let val = self.builder.insert_after_current_place(Inst {
+            kind: InstKind::Param,
+            ty: ty.clone(),
+        });
+        self.builder.declare_var(var.id, ty);
+        self.builder.write_variable_cur(var.id, val).unwrap();
         Ok(())
     }
 
@@ -233,9 +273,11 @@ impl AstVisitor for FuncCompiler {
     }
 
     fn visit_block_stmt(&mut self, stmt: &BlockStmt) -> Self::StmtResult {
+        self.scope_builder.borrow_mut().add_scope();
         for substmt in &stmt.stmts {
             self.visit_stmt(substmt)?;
         }
+        self.scope_builder.borrow_mut().pop_scope().unwrap();
         Ok(())
     }
 
@@ -379,13 +421,16 @@ impl AstVisitor for FuncCompiler {
 
     fn visit_decl_stmt(&mut self, stmt: &DeclStmt) -> Self::StmtResult {
         let ty = self.visit_ty(&stmt.ty)?;
-        self.scope_builder
+        let var_id = self
+            .scope_builder
             .borrow_mut()
-            .insert(&stmt.name.name, ty)
-            .ok_or_else(|| Error::DuplicateVar(stmt.name.name.clone()))?;
+            .insert(&stmt.name.name, ty.clone())
+            .ok_or_else(|| Error::DuplicateVar(stmt.name.name.clone()))?
+            .id;
+        self.builder.declare_var(var_id, ty);
 
         if let Some(expr) = &stmt.val {
-            self.visit_assign_expr(&AssignExpr {
+            let (inst, _) = self.visit_assign_expr(&AssignExpr {
                 span: stmt.span,
                 allow_assign_const: stmt.is_const,
                 lhs: Rc::new(Expr::Ident(Ident {
@@ -394,6 +439,9 @@ impl AstVisitor for FuncCompiler {
                 })),
                 rhs: expr.clone(),
             })?;
+            self.builder
+                .write_variable_cur(var_id, inst.get_inst().unwrap())
+                .unwrap();
         }
 
         Ok(())

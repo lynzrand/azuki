@@ -20,6 +20,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use err::{Error, TacResult};
 use generational_arena::{Arena, Index};
+use lexpr::value;
 use smol_str::SmolStr;
 
 pub use ty::{NumericTy, Ty, TyKind};
@@ -380,6 +381,22 @@ pub enum BinaryOp {
 pub enum Value {
     Dest(OpRef),
     Imm(Immediate),
+}
+
+impl Value {
+    pub fn get_imm(&self) -> Option<Immediate> {
+        match self {
+            Value::Dest(_) => None,
+            Value::Imm(i) => Some(*i),
+        }
+    }
+
+    pub fn get_inst(&self) -> Option<OpRef> {
+        match self {
+            Value::Dest(o) => Some(*o),
+            _ => None,
+        }
+    }
 }
 
 impl From<OpRef> for Value {
