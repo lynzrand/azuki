@@ -1,6 +1,6 @@
 //! Error and Result types.
 
-use generational_arena::Index;
+use thunderdome::Index;
 
 #[derive(Debug)]
 pub enum Error {

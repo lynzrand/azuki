@@ -26,7 +26,7 @@ struct TacFormatCtx {
 impl TacFormatCtx {
     pub fn var_id(&mut self, var: Index) -> VarId {
         // VarId(self.i_set.insert_full(var).0)
-        VarId(var.into_raw_parts().0)
+        VarId(var.slot())
     }
 }
 
@@ -72,10 +72,10 @@ impl Display for NumericTy {
     }
 }
 
-struct VarId(usize);
+struct VarId(u32);
 impl Display for VarId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.0 != usize::max_value() {
+        if self.0 != u32::max_value() {
             write!(f, "%{}", self.0)
         } else {
             write!(f, "_")

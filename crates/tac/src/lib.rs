@@ -16,12 +16,11 @@ mod linkedlist;
 pub mod serde;
 pub mod ty;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use err::{Error, TacResult};
-use generational_arena::{Arena, Index};
-use lexpr::value;
 use smol_str::SmolStr;
+use thunderdome::{Arena, Index};
 
 pub use ty::{NumericTy, Ty, TyKind};
 
@@ -145,10 +144,34 @@ impl TacFunc {
     ///
     /// Errors if `tail` does not exist or `tail.next` is not `None`. _This function
     /// does not check for availability of `head`._
+    ///
+    /// # Panics
+    ///
+    /// This function requires `head` and `tail` to be different. Panics if
+    /// `head == tail`.
+    ///
+    /// # Safety
+    ///
+    /// Since `thunderdome` lacks a `get2_mut` method like `generational-arena`,
+    /// we need to use unsafe functions to bypass borrow checker in order to
+    /// operate two indices at once. This operation is safe since `tail != head`
+    /// is always true.
     pub fn tac_connect(&mut self, tail: OpRef, head: OpRef) -> TacResult<()> {
-        let (tail_tac, head_tac) = self.arena.get2_mut(tail, head);
-        let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
-        let head_tac = head_tac.ok_or(Error::NoSuchTacIdx(head))?;
+        assert_ne!(tail, head, "Can't connect one same instruction!");
+
+        // * Unsafe operation to get mutable references to multiple references at once
+        // * This operation is safe since `tail != head` is always true.
+        let (tail_tac, head_tac) = unsafe {
+            let tail_tac = self.arena.get_mut(tail);
+            let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
+            let tail_tac_bypass = tail_tac as *mut Tac;
+
+            let head_tac = self.arena.get_mut(head);
+            let head_tac = head_tac.ok_or(Error::NoSuchTacIdx(head))?;
+            let tail_tac = tail_tac_bypass.as_mut().unwrap();
+            (tail_tac, head_tac)
+        };
+
         if tail_tac.next.is_some() || head_tac.prev.is_some() {
             return Err(Error::AlreadyConnected);
         }

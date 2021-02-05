@@ -8,9 +8,9 @@ version = "0.1.0"
 
 [dependencies]
 bit-set = "0.5.2"
-generational-arena = "0.2"
 indexmap = "1"
 lexpr = "0.2.6"
 petgraph = "0.5"
 smol_str = "0.1"
+thunderdome = "0.4"
 tinyvec = {version = "1", features = ["alloc"]}
