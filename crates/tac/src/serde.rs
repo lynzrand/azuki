@@ -25,7 +25,8 @@ struct TacFormatCtx {
 
 impl TacFormatCtx {
     pub fn var_id(&mut self, var: Index) -> VarId {
-        VarId(self.i_set.insert_full(var).0)
+        // VarId(self.i_set.insert_full(var).0)
+        VarId(var.into_raw_parts().0)
     }
 }
 
