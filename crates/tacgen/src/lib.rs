@@ -125,6 +125,10 @@ impl AstVisitor for FuncCompiler {
             .insert_global(func_name, func_ty);
 
         self.visit_block_stmt(&func.body)?;
+
+        self.builder.mark_sealed(self.builder.current_bb());
+        self.builder.mark_filled(self.builder.current_bb());
+
         self.scope_builder.borrow_mut().pop_scope().unwrap();
         Ok(())
     }
@@ -155,10 +159,7 @@ impl AstVisitor for FuncCompiler {
         let var = scope
             .find(&expr.name)
             .ok_or_else(|| Error::UnknownVar(expr.name.clone()))?;
-        let val = self
-            .builder
-            .read_variable(var.id, self.builder.current_bb())
-            .unwrap();
+        let val = self.builder.read_variable_cur(var.id).unwrap();
         Ok((val.into(), var.ty.clone()))
     }
 
@@ -478,6 +479,9 @@ impl AstVisitor for FuncCompiler {
         self.builder
             .add_branch(Branch::Return(val.map(|x| x.0)), self.builder.current_bb())
             .unwrap();
+
+        self.builder.mark_filled(self.builder.current_bb());
+        self.builder.mark_sealed(self.builder.current_bb());
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb).unwrap();

@@ -103,7 +103,32 @@ impl FuncBuilder {
     }
 
     /// Build this function.
+    ///
+    /// ## Panics
+    ///
+    /// This function panics when there is any basic block not _filled_,
+    /// not _sealed_, or there is any incomplete phis lying around.
     pub fn build(self) -> TacFunc {
+        for &bb in self.func.basic_blocks.keys() {
+            assert!(
+                self.filled_bbs.contains(bb),
+                "bb{} is not yet filled!\nfunc:\n{}",
+                bb,
+                self.func
+            );
+            assert!(
+                self.sealed_bbs.contains(bb),
+                "bb{} is not yet sealed!\nfunc:\n{}",
+                bb,
+                self.func
+            );
+        }
+        assert!(
+            self.incomplete_phi.is_empty(),
+            "there is still incomplete phis: {:?}\nfunc:\n{}",
+            self.incomplete_phi,
+            self.func
+        );
         self.func
     }
 
@@ -137,37 +162,47 @@ impl FuncBuilder {
 
     /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)
     /// to the end of this basic block.
-    pub fn set_current_bb(&mut self, bb_id: BBId) -> TacResult<()> {
+    ///
+    /// Returns whether the position was **unchanged**.
+    pub fn set_current_bb(&mut self, bb_id: BBId) -> TacResult<bool> {
         let bb = self
             .func
             .basic_blocks
             .get(&bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
+        let same_pos = bb_id == self.current_bb && bb.tail == self.current_idx;
         self.current_bb = bb_id;
         self.current_idx = bb.tail;
-        Ok(())
+        Ok(same_pos)
     }
 
     /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)
     /// to the start of this basic block.
-    pub fn set_current_bb_start(&mut self, bb_id: BBId) -> TacResult<()> {
+    ///
+    /// Returns whether the position was **unchanged**.
+    pub fn set_current_bb_start(&mut self, bb_id: BBId) -> TacResult<bool> {
         let bb = self
             .func
             .basic_blocks
             .get(&bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
+        let same_pos = bb_id == self.current_bb && bb.head == self.current_idx;
         self.current_bb = bb_id;
         self.current_idx = bb.head;
-        Ok(())
+        Ok(same_pos)
     }
 
-    /// Sets current basic block and instruction position at the position of the given instruction.
-    pub fn set_position_at_instruction(&mut self, inst_idx: Index) -> TacResult<()> {
+    /// Sets current basic block and instruction position at the position of the
+    /// given instruction.
+    ///
+    /// Returns whether the position was **unchanged**.
+    pub fn set_position_at_instruction(&mut self, inst_idx: Index) -> TacResult<bool> {
         let inst = self.func.arena_get(inst_idx)?;
         let bb = inst.bb;
+        let same_pos = bb == self.current_bb && Some(inst_idx) == self.current_idx;
         self.current_bb = bb;
         self.current_idx = Some(inst_idx);
-        Ok(())
+        Ok(same_pos)
     }
 
     /// Mark the given basic block as _sealed_. Also completes all incomplete Phi commands
@@ -223,6 +258,17 @@ impl FuncBuilder {
         Ok(())
     }
 
+    /// Indicate that variable `var` is read in the current basic block. Returns the index
+    /// to the latest definition of this variable, or `None` if it does not exist.
+    ///
+    /// ## Side effects
+    ///
+    /// According to the algorithm, this function may introduce parameters to
+    /// `bb` and insert parameter passes to the block's predecessors.
+    pub fn read_variable_cur(&mut self, var: usize) -> Option<Index> {
+        self.read_variable(var, self.current_bb())
+    }
+
     /// Indicate that variable `var` is read in basic block `bb`. Returns the index
     /// to the latest definition of this variable, or `None` if it does not exist.
     ///
@@ -245,15 +291,7 @@ impl FuncBuilder {
     fn read_variable_recursive(&mut self, var: usize, bb_id: BBId) -> Option<Index> {
         let var_ty = self.variable_map.get(&var)?.0.clone();
         let val = if !self.sealed_bbs.contains(bb_id) {
-            let param = self
-                .insert_at_start_of(
-                    Inst {
-                        kind: InstKind::Param,
-                        ty: var_ty,
-                    },
-                    bb_id,
-                )
-                .unwrap();
+            let param = self.insert_param(bb_id, var_ty).unwrap();
 
             let block = self.incomplete_phi.entry(bb_id).or_insert_with(Vec::new);
             block.push((var, param));
@@ -262,17 +300,9 @@ impl FuncBuilder {
         } else {
             let preds = self.pred_of_bb(bb_id);
             if preds.len() == 1 {
-                self.read_variable(var, bb_id)?
+                self.read_variable(var, preds[0])?
             } else {
-                let inst = self
-                    .insert_at_start_of(
-                        Inst {
-                            kind: InstKind::Param,
-                            ty: var_ty,
-                        },
-                        bb_id,
-                    )
-                    .unwrap();
+                let inst = self.insert_param(bb_id, var_ty).unwrap();
                 self.write_variable(var, inst, bb_id).unwrap();
                 self.add_phi_operands(var, inst, bb_id, &preds);
                 inst
@@ -299,6 +329,16 @@ impl FuncBuilder {
                 .for_each(|x| x.add_param(current_bb, target_inst, source));
         }
         // TODO: TryRemoveTrivialPhi()
+    }
+
+    pub fn insert_param(&mut self, bb_id: BBId, ty: Ty) -> Result<Index, Error> {
+        self.insert_at_start_of(
+            Inst {
+                kind: InstKind::Param,
+                ty,
+            },
+            bb_id,
+        )
     }
 
     /// Insert the given instruction **after** the current place. Returns the index to
@@ -337,7 +377,7 @@ impl FuncBuilder {
             let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
 
             // reset head pointer, since insertion might be at the start
-            if bb.head == Some(cur_idx) {
+            if bb.head == self.current_idx {
                 bb.head = Some(idx);
             }
         } else {
@@ -353,10 +393,12 @@ impl FuncBuilder {
     pub fn insert_at_end_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<Index> {
         let curr_bb = self.current_bb;
         let curr_idx = self.current_idx;
-        self.set_current_bb(bb_id)?;
+        let same_pos = self.set_current_bb(bb_id)?;
         let insert_pos = self.insert_after_current_place(inst);
-        self.current_bb = curr_bb;
-        self.current_idx = curr_idx;
+        if !same_pos {
+            self.current_bb = curr_bb;
+            self.current_idx = curr_idx;
+        }
         Ok(insert_pos)
     }
 
@@ -364,10 +406,12 @@ impl FuncBuilder {
     pub fn insert_at_start_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<Index> {
         let curr_bb = self.current_bb;
         let curr_idx = self.current_idx;
-        self.set_current_bb_start(bb_id)?;
+        let same_pos = self.set_current_bb_start(bb_id)?;
         let insert_pos = self.insert_before_current_place(inst);
-        self.current_bb = curr_bb;
-        self.current_idx = curr_idx;
+        if !same_pos {
+            self.current_bb = curr_bb;
+            self.current_idx = curr_idx;
+        }
         Ok(insert_pos)
     }
 
