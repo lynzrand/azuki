@@ -149,34 +149,26 @@ impl TacFunc {
     ///
     /// This function requires `head` and `tail` to be different. Panics if
     /// `head == tail`.
-    ///
-    /// # Safety
-    ///
-    /// Since `thunderdome` lacks a `get2_mut` method like `generational-arena`,
-    /// we need to use unsafe functions to bypass borrow checker in order to
-    /// operate two indices at once. This operation is safe since `tail != head`
-    /// is always true.
     pub fn tac_connect(&mut self, tail: OpRef, head: OpRef) -> TacResult<()> {
         assert_ne!(tail, head, "Can't connect one same instruction!");
 
-        // * Unsafe operation to get mutable references to multiple references at once
-        // * This operation is safe since `tail != head` is always true.
-        let (tail_tac, head_tac) = unsafe {
-            let tail_tac = self.arena.get_mut(tail);
-            let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
-            let tail_tac_bypass = tail_tac as *mut Tac;
-
-            let head_tac = self.arena.get_mut(head);
-            let head_tac = head_tac.ok_or(Error::NoSuchTacIdx(head))?;
-            let tail_tac = tail_tac_bypass.as_mut().unwrap();
-            (tail_tac, head_tac)
-        };
-
-        if tail_tac.next.is_some() || head_tac.prev.is_some() {
+        let tail_tac = self.arena.get_mut(tail);
+        let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
+        if tail_tac.next.is_some() {
             return Err(Error::AlreadyConnected);
         }
         tail_tac.next = Some(head);
+
+        let head_tac = self.arena.get_mut(head);
+        let head_tac = head_tac.ok_or(Error::NoSuchTacIdx(head))?;
+        if head_tac.prev.is_some() {
+            let tail_tac = self.arena.get_mut(tail);
+            let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
+            tail_tac.next = None;
+            return Err(Error::AlreadyConnected);
+        }
         head_tac.prev = Some(tail);
+
         Ok(())
     }
 
@@ -260,7 +252,7 @@ impl linkedlist::SinglyLinkedList for Tac {
         ctx.get_mut(key).unwrap()
     }
 
-    fn insert_value_after(ctx: &mut Self::Context, value: Self) -> Self::Key {
+    fn insert_value_after(_ctx: &mut Self::Context, _value: Self) -> Self::Key {
         todo!()
     }
 
