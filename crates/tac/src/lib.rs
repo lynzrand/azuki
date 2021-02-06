@@ -189,9 +189,6 @@ impl TacFunc {
 /// A single basic block, represented as an indirect doubly linked list of instructions.
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
-    /// Basic block parameters
-    pub(crate) params: Option<OpRef>,
-
     /// Linked list head
     pub(crate) head: Option<OpRef>,
     /// Linked list tail
@@ -318,14 +315,6 @@ pub enum Branch {
     ///
     /// `cond` must be a boolean or integer.
     CondJump { cond: Value, target: BranchTarget },
-
-    /// Table jump.
-    TableJump {
-        cond: Value,
-        target: Vec<BranchTarget>,
-    },
-    // /// Unreachable or undefined jump instruction
-    // Unreachable,
 }
 
 // impl Default for Branch {
@@ -337,10 +326,10 @@ pub enum Branch {
 impl Branch {
     pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
         match self {
-            Branch::Return(_) => util::VarIter::None,
+            Branch::Return(_) => util::VarIter::<usize, std::iter::Empty<_>>::None,
             Branch::Jump(t) => util::VarIter::One(t.bb),
             Branch::CondJump { target, .. } => util::VarIter::One(target.bb),
-            Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
+            // Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
             // Branch::Unreachable => util::VarIter::None,
         }
     }
@@ -353,12 +342,11 @@ impl Branch {
             }
             Branch::CondJump { target, .. } => {
                 target.add_param_if_bb(bb_id, param, source_var);
-            }
-            Branch::TableJump { target, .. } => {
-                for branch_target in target {
-                    branch_target.add_param_if_bb(bb_id, param, source_var);
-                }
-            } // Branch::Unreachable => {}
+            } // Branch::TableJump { target, .. } => {
+              //     for branch_target in target {
+              //         branch_target.add_param_if_bb(bb_id, param, source_var);
+              //     }
+              // } // Branch::Unreachable => {}
         }
     }
 }

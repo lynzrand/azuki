@@ -153,10 +153,9 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
                 cond.fmt_ctx(f, ctx)?;
                 write!(f, " ")?;
                 target.fmt_ctx(f, ctx)?;
-            }
-            Branch::TableJump { .. } => {
-                todo!("No table jump for now");
-            }
+            } // Branch::TableJump { .. } => {
+              //     todo!("No table jump for now");
+              // }
         }
         Ok(())
     }
