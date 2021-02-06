@@ -12,6 +12,7 @@
 
 pub mod builder;
 pub mod err;
+// pub mod ffi;
 mod linkedlist;
 pub mod serde;
 pub mod ty;
@@ -305,6 +306,7 @@ pub enum InstKind {
 
 /// Represents a branch instruction.
 #[derive(Debug, Clone, Eq, PartialEq)]
+
 pub enum Branch {
     /// Returns the given value.
     Return(Option<Value>),
@@ -391,6 +393,7 @@ impl BranchTarget {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[repr(u32)]
 pub enum BinaryOp {
     Add,
     Sub,

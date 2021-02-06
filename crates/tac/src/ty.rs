@@ -9,7 +9,7 @@ pub const PTR_SIZE: usize = 8;
 ///
 /// > I know this is worse than using an external type repository, but hey you
 /// > can directly compare these!
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Ty {
     Unit,
     Func(Arc<FuncTy>),
@@ -65,7 +65,7 @@ impl Ty {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NumericTy {
     pub kind: TyKind,
     pub size: u8,
@@ -91,13 +91,13 @@ impl NumericTy {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TyKind {
     Bool,
     Int,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FuncTy {
     pub return_type: Ty,
     pub params: Vec<Ty>,
