@@ -80,7 +80,6 @@ impl FuncBuilder {
             BasicBlock {
                 head: None,
                 tail: None,
-                params: None,
                 jumps: Default::default(),
             },
         );
@@ -150,7 +149,6 @@ impl FuncBuilder {
         self.func.basic_blocks.insert(
             bb_id,
             BasicBlock {
-                params: None,
                 jumps: vec![],
                 head: None,
                 tail: None,
