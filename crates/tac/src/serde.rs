@@ -1,7 +1,7 @@
 //! Serialization and de-serialization for TAC code.
 
 use indexmap::IndexSet;
-use std::{cell::Cell, fmt::Display};
+use std::{cell::Cell, fmt::Display, writeln};
 use ty::FuncTy;
 
 use crate::*;
@@ -185,6 +185,10 @@ impl std::fmt::Display for TacFunc {
         let mut ctx = TacFormatCtx {
             i_set: IndexSet::new(),
         };
+        writeln!(f, "params:")?;
+        for (&param_idx, &inst) in &self.param_map {
+            writeln!(f, "\t{} <- #{}", ctx.var_id(inst), param_idx)?;
+        }
         for (k, v) in &self.basic_blocks {
             writeln!(f, "bb {}:", k)?;
             if let Some(x) = v.head {

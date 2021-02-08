@@ -18,7 +18,7 @@ use crate::*;
 /// inside [`BTreeMap`s](BTreeMap)
 pub struct FuncBuilder<TVar> {
     /// The function we're building.
-    func: TacFunc,
+    pub func: TacFunc,
 
     /// Total count of basic blocks. Basic blocks (BBs) are sequentially numbered
     /// from 0. A function always starts from BB0.
@@ -256,7 +256,7 @@ where
         let map = &mut self
             .variable_map
             .get_mut(&var)
-            .ok_or(Error::NoSuchVar(format!("{:?}", var)))?
+            .ok_or_else(|| Error::NoSuchVar(format!("{:?}", var)))?
             .1;
         map.insert(bb_id, inst);
         Ok(())

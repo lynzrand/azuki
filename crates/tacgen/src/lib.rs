@@ -10,7 +10,7 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc, todo};
 use symbol::{NumberingCounter, ScopeBuilder, StringInterner};
 
 use tac::{
-    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, Ty, Value,
+    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, Ty, Value,
 };
 
 pub fn compile(tac: &Program) {
@@ -66,7 +66,7 @@ impl FuncCompiler {
         }
     }
 
-    fn visit_func_param_real(&mut self, param: &FuncParam) -> Result<Ty, Error> {
+    fn visit_func_param_real(&mut self, param: &FuncParam) -> Result<(OpRef, Ty), Error> {
         let ty = self.visit_ty(&param.ty)?;
         let mut scope = self.scope_builder.borrow_mut();
         let var = scope
@@ -80,7 +80,8 @@ impl FuncCompiler {
 
         self.builder.declare_var(var.id, ty.clone());
         self.builder.write_variable_cur(var.id, val).unwrap();
-        Ok(ty)
+
+        Ok((val, ty))
     }
 }
 
@@ -113,7 +114,11 @@ impl AstVisitor for FuncCompiler {
         let return_ty = self.visit_ty(&func.ret_ty)?;
         let mut params_ty = vec![];
         for param in &func.params {
-            let param_ty = self.visit_func_param_real(param)?;
+            let (param_op, param_ty) = self.visit_func_param_real(param)?;
+            self.builder
+                .func
+                .param_map_mut()
+                .insert(params_ty.len(), param_op);
             params_ty.push(param_ty);
         }
         let func_ty = Ty::func_of(return_ty, params_ty);

@@ -19,6 +19,9 @@ fn test_basic_func_generation() {
     let program = r"
     fn fib(n: int) -> int {
         let r: int;
+        while 0 != 1 {
+            r = r;
+        }
         if n <= 1 {
             r = 1;
         } else {
