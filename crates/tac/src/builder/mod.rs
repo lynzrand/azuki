@@ -318,21 +318,66 @@ where
     }
 
     /// This function directly corresponds to `addPhiOperands` in the algorithm.
-    fn add_phi_operands(
-        &mut self,
-        var: TVar,
-        target_inst: Index,
-        current_bb: BBId,
-        preds: &[BBId],
-    ) {
+    fn add_phi_operands(&mut self, var: TVar, phi: Index, current_bb: BBId, preds: &[BBId]) {
         for &pred in preds {
             let source = self.read_variable(var.clone(), pred).unwrap();
             let bb = self.func.basic_blocks.get_mut(&pred).unwrap();
             bb.jumps
                 .iter_mut()
-                .for_each(|x| x.add_param(current_bb, target_inst, source));
+                .for_each(|x| x.add_param(current_bb, phi, source));
         }
-        // TODO: TryRemoveTrivialPhi()
+        self.try_remove_trivial_phi(phi);
+    }
+
+    fn try_remove_trivial_phi(&mut self, phi_op: Index) {
+        let mut same = None;
+        let phi = self.func.arena_get(phi_op).unwrap();
+        let phi_bb = phi.bb;
+        let preds = self.pred_of_bb(phi_bb);
+
+        // for op in phi.operands:
+        'bb: for &bb in &preds {
+            let bb = self.func.basic_blocks.get(&bb).unwrap();
+            for branch in bb
+                .jumps
+                .iter()
+                .filter_map(|b| b.target())
+                .filter(|t| t.bb == phi_bb)
+            {
+                let operand = *branch
+                    .params
+                    .get(&phi_op)
+                    .expect("Phi operation should reside in bb's direct predecessor");
+                // if op == same || op == phi
+                if operand == phi_op || same.map_or(false, |x| x == operand) {
+                    continue 'bb;
+                }
+                if same.is_some() {
+                    // not trivial
+                    return;
+                }
+                same = Some(operand);
+            }
+        }
+        let replace_value = match same {
+            None => InstKind::Dead,
+            Some(same) => InstKind::Assign(same),
+        };
+        // remove traces of this phi
+        for &bb in &preds {
+            let bb = self.func.basic_blocks.get_mut(&bb).unwrap();
+            for branch in bb
+                .jumps
+                .iter_mut()
+                .filter_map(|b| b.target_mut())
+                .filter(|t| t.bb == phi_bb)
+            {
+                branch.params.remove(&phi_op);
+            }
+        }
+        // FIXME: workaround for not being able to track a phi's users
+        // replace usage of this phi
+        self.func.arena_get_mut(phi_op).unwrap().inst.kind = replace_value;
     }
 
     pub fn insert_param(&mut self, bb_id: BBId, ty: Ty) -> Result<Index, Error> {

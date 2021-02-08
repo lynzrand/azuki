@@ -123,14 +123,16 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
             }
             InstKind::Const(i) => {
                 write!(f, "const {}", i)?;
-            } // InstKind::Jump(_) => {}
-            // InstKind::CondJump { cond, target } => {}
+            }
+            InstKind::Assign(i) => {
+                write!(f, "{}", ctx.1.var_id(*i))?;
+            }
             InstKind::Param => {
                 write!(f, "param")?;
-            } // InstKind::Return(v) => {
-              //     write!(f, "return ")?;
-              //     v.fmt_ctx(f, ctx.1)?;
-              // }
+            }
+            InstKind::Dead => {
+                write!(f, "dead_value")?;
+            }
         }
         Ok(())
     }

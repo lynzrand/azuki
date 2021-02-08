@@ -296,8 +296,12 @@ pub enum InstKind {
     FunctionCall(FunctionCall),
     /// A constant value.
     Const(Immediate),
+    /// An assignment from another value
+    Assign(Index),
     /// A parameter
     Param,
+    /// An unreachable value
+    Dead,
 }
 
 /// Represents a branch instruction.
@@ -329,6 +333,22 @@ impl Branch {
             Branch::CondJump { target, .. } => util::VarIter::One(target.bb),
             // Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
             // Branch::Unreachable => util::VarIter::None,
+        }
+    }
+
+    pub fn target(&self) -> Option<&BranchTarget> {
+        match self {
+            Branch::Return(_) => None,
+            Branch::Jump(j) => Some(j),
+            Branch::CondJump { target, .. } => Some(target),
+        }
+    }
+
+    pub fn target_mut(&mut self) -> Option<&mut BranchTarget> {
+        match self {
+            Branch::Return(_) => None,
+            Branch::Jump(j) => Some(j),
+            Branch::CondJump { target, .. } => Some(target),
         }
     }
 
