@@ -56,7 +56,7 @@ impl TacFunc {
         }
     }
 
-    pub fn new_undefined_type(name: SmolStr) -> TacFunc {
+    pub fn new_untyped(name: SmolStr) -> TacFunc {
         TacFunc {
             name,
             ty: Ty::unit(),
