@@ -12,7 +12,7 @@
 
 pub mod builder;
 pub mod err;
-// pub mod ffi;
+pub mod ffi;
 mod linkedlist;
 pub mod serde;
 pub mod ty;
@@ -57,7 +57,7 @@ impl TacFunc {
         }
     }
 
-    pub fn new_undefined_type(name: SmolStr) -> TacFunc {
+    pub fn new_untyped(name: SmolStr) -> TacFunc {
         TacFunc {
             name,
             ty: Ty::unit(),
