@@ -6,7 +6,7 @@ use thunderdome::Index;
 pub enum Error {
     NoSuchTacIdx(Index),
     NoSuchBB(usize),
-    NoSuchVar(usize),
+    NoSuchVar(String),
     NoCodeAfterInst(Index),
     AlreadyConnected,
     NotConnected,

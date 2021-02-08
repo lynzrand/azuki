@@ -41,7 +41,7 @@ fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
 }
 
 pub struct FuncCompiler {
-    builder: tac::builder::FuncBuilder,
+    builder: tac::builder::FuncBuilder<u32>,
     break_targets: Vec<BreakTarget>,
 
     return_ty: Ty,
@@ -95,7 +95,7 @@ impl FuncCompiler {
 //   have all their predecessors determined. Any statement visitor method could mark the input basic
 //   block as filled and sealed.
 impl AstVisitor for FuncCompiler {
-    type LExprResult = Result<(usize, Ty), Error>;
+    type LExprResult = Result<(u32, Ty), Error>;
 
     type ExprResult = Result<(Value, Ty), Error>;
 

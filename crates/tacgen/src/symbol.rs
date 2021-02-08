@@ -2,7 +2,10 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     rc::Rc,
-    sync::{atomic::AtomicUsize, Arc},
+    sync::{
+        atomic::{AtomicU32, AtomicUsize},
+        Arc,
+    },
 };
 
 use azuki_tac::Ty;
@@ -74,14 +77,14 @@ impl Default for StringInterner {
     }
 }
 
-pub struct NumberingCounter(AtomicUsize);
+pub struct NumberingCounter(AtomicU32);
 
 impl NumberingCounter {
-    pub fn new(start: usize) -> Self {
+    pub fn new(start: u32) -> Self {
         NumberingCounter(start.into())
     }
 
-    pub fn next(&self) -> usize {
+    pub fn next(&self) -> u32 {
         self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
     }
 }
@@ -91,7 +94,7 @@ pub struct Variable {
     /// Whether if this variable is a global variable
     pub is_global: bool,
     /// The unique global ID of this variable
-    pub id: usize,
+    pub id: u32,
     /// The type of this variable
     pub ty: Ty,
 }

@@ -4,16 +4,19 @@ use bit_set::BitSet;
 
 use crate::*;
 
-/// The index of an external variable.
-type VarId = usize;
-
 /// A function builder that loosely resembles building SSA functions using the
 /// algorithm described in
 /// [_Simple and Efficient Construction of Static Single Assignment Form_][ssa]
 /// by Matthias Braun _et al._
 ///
 /// [ssa]: https://pp.ipd.kit.edu/uploads/publikationen/braun13cc.pdf
-pub struct FuncBuilder {
+///
+/// This type is parameterized by one type, `TVar`, which is the representation
+/// of variable in your original language. It is expected to be a small,
+/// [`Clone`](std::mem::Clone)
+/// [`Ord`](std::cmp::Ord) and [`Debug`](std::Debug) type for usage
+/// inside [`BTreeMap`s](BTreeMap)
+pub struct FuncBuilder<TVar> {
     /// The function we're building.
     func: TacFunc,
 
@@ -58,21 +61,24 @@ pub struct FuncBuilder {
     /// Well... You see, there's a [forest][] in cranelift, right?
     ///
     /// [forest]: https://github.com/bytecodealliance/wasmtime/tree/HEAD/cranelift/bforest
-    variable_map: BTreeMap<VarId, (Ty, BTreeMap<BBId, Index>)>,
+    variable_map: BTreeMap<TVar, (Ty, BTreeMap<BBId, Index>)>,
 
     /// Incomplete phi commands (params in our case).
-    incomplete_phi: BTreeMap<BBId, Vec<(VarId, Index)>>,
+    incomplete_phi: BTreeMap<BBId, Vec<(TVar, Index)>>,
 }
 
-impl FuncBuilder {
+impl<TVar> FuncBuilder<TVar>
+where
+    TVar: Ord + std::fmt::Debug + Clone,
+{
     /// Create a function builder for a function with the given `name` and type
     /// undefined for now.
-    pub fn new(name: SmolStr) -> FuncBuilder {
+    pub fn new(name: SmolStr) -> FuncBuilder<TVar> {
         Self::new_typed(name, Ty::unit())
     }
 
     /// Create a function builder for a function with the given `name` and given type `ty`.
-    pub fn new_typed(name: SmolStr, ty: Ty) -> FuncBuilder {
+    pub fn new_typed(name: SmolStr, ty: Ty) -> FuncBuilder<TVar> {
         let mut f = TacFunc::new(name, ty);
 
         f.basic_blocks.insert(
@@ -235,22 +241,22 @@ impl FuncBuilder {
         self.filled_bbs.contains(bb_id)
     }
 
-    pub fn declare_var(&mut self, var: usize, ty: Ty) {
+    pub fn declare_var(&mut self, var: TVar, ty: Ty) {
         self.variable_map.insert(var, (ty, BTreeMap::new()));
     }
 
     /// Indicate that variable `var` is written as the result of instruction `inst`.
-    pub fn write_variable_cur(&mut self, var: usize, inst: Index) -> TacResult<()> {
+    pub fn write_variable_cur(&mut self, var: TVar, inst: Index) -> TacResult<()> {
         self.write_variable(var, inst, self.current_bb())
     }
 
     /// Indicate that variable `var` is written as the result of instruction `inst`
     /// in basic block `bb_id`. If the variable does not exist, it will be created.
-    pub fn write_variable(&mut self, var: usize, inst: Index, bb_id: BBId) -> TacResult<()> {
+    pub fn write_variable(&mut self, var: TVar, inst: Index, bb_id: BBId) -> TacResult<()> {
         let map = &mut self
             .variable_map
             .get_mut(&var)
-            .ok_or(Error::NoSuchVar(var))?
+            .ok_or(Error::NoSuchVar(format!("{:?}", var)))?
             .1;
         map.insert(bb_id, inst);
         Ok(())
@@ -263,7 +269,7 @@ impl FuncBuilder {
     ///
     /// According to the algorithm, this function may introduce parameters to
     /// `bb` and insert parameter passes to the block's predecessors.
-    pub fn read_variable_cur(&mut self, var: usize) -> Option<Index> {
+    pub fn read_variable_cur(&mut self, var: TVar) -> Option<Index> {
         self.read_variable(var, self.current_bb())
     }
 
@@ -274,7 +280,7 @@ impl FuncBuilder {
     ///
     /// According to the algorithm, this function may introduce parameters to
     /// `bb` and insert parameter passes to the block's predecessors.
-    pub fn read_variable(&mut self, var: usize, bb_id: BBId) -> Option<Index> {
+    pub fn read_variable(&mut self, var: TVar, bb_id: BBId) -> Option<Index> {
         let subtree = &self.variable_map.get(&var)?.1;
         if let Some(idx) = subtree.get(&bb_id) {
             // local numbering works!
@@ -286,23 +292,23 @@ impl FuncBuilder {
     }
 
     /// This function directly corresponds to `readVariableRecursive` in the algorithm.
-    fn read_variable_recursive(&mut self, var: usize, bb_id: BBId) -> Option<Index> {
+    fn read_variable_recursive(&mut self, var: TVar, bb_id: BBId) -> Option<Index> {
         let var_ty = self.variable_map.get(&var)?.0.clone();
         let val = if !self.sealed_bbs.contains(bb_id) {
             let param = self.insert_param(bb_id, var_ty).unwrap();
 
             let block = self.incomplete_phi.entry(bb_id).or_insert_with(Vec::new);
-            block.push((var, param));
+            block.push((var.clone(), param));
 
             param
         } else {
             let preds = self.pred_of_bb(bb_id);
             if preds.len() == 1 {
-                self.read_variable(var, preds[0])?
+                self.read_variable(var.clone(), preds[0])?
             } else {
                 let inst = self.insert_param(bb_id, var_ty).unwrap();
-                self.write_variable(var, inst, bb_id).unwrap();
-                self.add_phi_operands(var, inst, bb_id, &preds);
+                self.write_variable(var.clone(), inst, bb_id).unwrap();
+                self.add_phi_operands(var.clone(), inst, bb_id, &preds);
                 inst
             }
         };
@@ -314,13 +320,13 @@ impl FuncBuilder {
     /// This function directly corresponds to `addPhiOperands` in the algorithm.
     fn add_phi_operands(
         &mut self,
-        var: usize,
+        var: TVar,
         target_inst: Index,
         current_bb: BBId,
         preds: &[BBId],
     ) {
         for &pred in preds {
-            let source = self.read_variable(var, pred).unwrap();
+            let source = self.read_variable(var.clone(), pred).unwrap();
             let bb = self.func.basic_blocks.get_mut(&pred).unwrap();
             bb.jumps
                 .iter_mut()

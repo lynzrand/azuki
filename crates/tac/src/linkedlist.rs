@@ -17,4 +17,6 @@ pub trait DoublyLinkedList: SinglyLinkedList {
     fn set_prev_value_key(&mut self);
 }
 
-pub struct Cursor {}
+pub struct Cursor<'a, Ctx> {
+    ctx: &'a mut Ctx,
+}
