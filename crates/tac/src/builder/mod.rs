@@ -1,11 +1,7 @@
 //! A builder for constructing SSA functions from regular control flows.
 
 use bit_set::BitSet;
-use petgraph::{
-    data::Build,
-    graph::EdgeIndex,
-    visit::{EdgeRef, IntoNeighborsDirected},
-};
+use petgraph::{graph::EdgeIndex, visit::EdgeRef};
 use tinyvec::TinyVec;
 
 use crate::*;
@@ -468,7 +464,7 @@ where
 
     /// Add a branching instruction to the given basic block's jump instruction list.
     pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
-        if !self.func.basic_blocks.node_weight(bb_id).is_some() {
+        if self.func.basic_blocks.node_weight(bb_id).is_none() {
             return Err(Error::NoSuchBB(bb_id));
         }
 

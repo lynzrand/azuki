@@ -1,13 +1,7 @@
 #![cfg(test)]
 use std::{cell::RefCell, rc::Rc};
 
-use azuki_syntax::{
-    ast::{BlockStmt, FuncStmt, Ident, TyDef},
-    lexer::spanned_lexer,
-    parser,
-    visitor::AstVisitor,
-};
-use azuki_tac::builder::FuncBuilder;
+use azuki_syntax::{lexer::spanned_lexer, parser, visitor::AstVisitor};
 
 use crate::{
     symbol::{NumberingCounter, ScopeBuilder, StringInterner},

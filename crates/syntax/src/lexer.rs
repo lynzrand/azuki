@@ -8,7 +8,7 @@ pub fn lexer(s: &str) -> Lexer {
     Token::lexer(s)
 }
 
-pub fn spanned_lexer<'s>(s: &'s str) -> impl Iterator<Item = (Token, Span)> + 's {
+pub fn spanned_lexer(s: &str) -> impl Iterator<Item = (Token, Span)> + '_ {
     Token::lexer(s)
         .spanned()
         .map(|(t, s)| (t, crate::prelude::Span::new_idx(s.start, s.end)))

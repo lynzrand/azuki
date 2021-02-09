@@ -47,7 +47,8 @@ pub struct TacFunc {
     arena: Arena<Tac>,
     /// Basic blocks inside this function
     pub basic_blocks: DiGraph<BasicBlock, ()>,
-    pub starting_block: NodeIndex,
+    /// The initial basic block to start with, usually the smallest index in graph
+    pub starting_block: BBId,
 }
 
 impl TacFunc {
@@ -344,7 +345,7 @@ pub enum Branch {
 impl Branch {
     pub fn iter(&self) -> impl Iterator<Item = BBId> + '_ {
         match self {
-            Branch::Return(_) => util::VarIter::<BBId, std::iter::Empty<_>>::None,
+            Branch::Return(_) => util::VarIter::<BBId>::None,
             Branch::Jump(t) => util::VarIter::One(t.bb),
             Branch::CondJump { target, .. } => util::VarIter::One(target.bb),
             // Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
@@ -459,17 +460,16 @@ impl From<OpRef> for Value {
 type Immediate = i64;
 
 mod util {
-    pub enum VarIter<T, I> {
+    pub enum VarIter<T> {
         None,
         One(T),
         // Two(T, T),
-        Iter(I),
+        // Iter(I),
     }
 
-    impl<T, I> Iterator for VarIter<T, I>
+    impl<T> Iterator for VarIter<T>
     where
         T: Clone,
-        I: Iterator<Item = T>,
     {
         type Item = T;
 
@@ -478,15 +478,6 @@ mod util {
             match this {
                 VarIter::None => None,
                 VarIter::One(i) => Some(i),
-                // VarIter::Two(i, j) => {
-                //     *self = VarIter::One(j);
-                //     Some(i)
-                // }
-                VarIter::Iter(mut t) => {
-                    let next = t.next();
-                    *self = VarIter::Iter(t);
-                    next
-                }
             }
         }
     }

@@ -338,9 +338,6 @@ impl AstVisitor for FuncCompiler {
                 cond_bb,
             )
             .unwrap();
-        self.builder
-            .add_branch(Branch::Jump(empty_jump_target(next_bb)), cond_bb)
-            .unwrap();
 
         self.builder.set_current_bb(loop_bb).unwrap();
         self.visit_block_stmt(&stmt.body)?;
@@ -355,6 +352,10 @@ impl AstVisitor for FuncCompiler {
         self.builder.mark_sealed(cond_bb);
 
         self.break_targets.pop();
+
+        self.builder
+            .add_branch(Branch::Jump(empty_jump_target(next_bb)), cond_bb)
+            .unwrap();
 
         self.builder.set_current_bb(next_bb).unwrap();
 
