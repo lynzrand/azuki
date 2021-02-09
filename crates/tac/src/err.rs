@@ -2,10 +2,12 @@
 
 use thunderdome::Index;
 
+use crate::BBId;
+
 #[derive(Debug)]
 pub enum Error {
     NoSuchTacIdx(Index),
-    NoSuchBB(usize),
+    NoSuchBB(BBId),
     NoSuchVar(String),
     NoCodeAfterInst(Index),
     AlreadyConnected,

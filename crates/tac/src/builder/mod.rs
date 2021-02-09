@@ -1,6 +1,12 @@
 //! A builder for constructing SSA functions from regular control flows.
 
 use bit_set::BitSet;
+use petgraph::{
+    data::Build,
+    graph::EdgeIndex,
+    visit::{EdgeRef, IntoNeighborsDirected},
+};
+use tinyvec::TinyVec;
 
 use crate::*;
 
@@ -20,10 +26,6 @@ pub struct FuncBuilder<TVar> {
     /// The function we're building.
     pub func: TacFunc,
 
-    /// Total count of basic blocks. Basic blocks (BBs) are sequentially numbered
-    /// from 0. A function always starts from BB0.
-    bb_count: BBId,
-
     /// The basic block we're currently working on. Must be a valid basic block
     /// inside this function.
     current_bb: BBId,
@@ -35,12 +37,6 @@ pub struct FuncBuilder<TVar> {
     /// **This value MUST refer to an instruction inside [`current_bb`](Self::current_bb).**
     /// **If this value is [`None`](Option::None), `current_bb` MUST be empty.**
     current_idx: Option<Index>,
-
-    /// Control flow graph
-    ///
-    /// This graph is in fact calculable from `self.func`, but having an organized
-    /// version here with graph search support makes everything easier.
-    cfg: petgraph::graphmap::DiGraphMap<usize, ()>,
 
     /// Sealed basic blocks.
     ///
@@ -81,21 +77,17 @@ where
     pub fn new_typed(name: SmolStr, ty: Ty) -> FuncBuilder<TVar> {
         let mut f = TacFunc::new(name, ty);
 
-        f.basic_blocks.insert(
-            0,
-            BasicBlock {
-                head: None,
-                tail: None,
-                jumps: Default::default(),
-            },
-        );
+        let starting_block = f.basic_blocks.add_node(BasicBlock {
+            head: None,
+            tail: None,
+            jumps: Default::default(),
+        });
+        f.starting_block = starting_block;
 
         FuncBuilder {
             func: f,
-            cfg: petgraph::graphmap::DiGraphMap::new(),
-            current_bb: 0,
+            current_bb: starting_block,
             current_idx: None,
-            bb_count: 0,
             sealed_bbs: BitSet::new(),
             filled_bbs: BitSet::new(),
             variable_map: BTreeMap::new(),
@@ -114,7 +106,8 @@ where
     /// This function panics when there is any basic block not _filled_,
     /// not _sealed_, or there is any incomplete phis lying around.
     pub fn build(self) -> TacFunc {
-        for &bb in self.func.basic_blocks.keys() {
+        for bb in self.func.basic_blocks.node_indices() {
+            let bb = bb.index();
             assert!(
                 self.filled_bbs.contains(bb),
                 "bb{} is not yet filled!\nfunc:\n{}",
@@ -150,18 +143,11 @@ where
 
     /// Add an free-standing empty basic block into the function.
     pub fn new_bb(&mut self) -> BBId {
-        self.bb_count += 1;
-        let bb_id = self.bb_count;
-        self.func.basic_blocks.insert(
-            bb_id,
-            BasicBlock {
-                jumps: vec![],
-                head: None,
-                tail: None,
-            },
-        );
-        self.cfg.add_node(bb_id);
-        bb_id
+        self.func.basic_blocks.add_node(BasicBlock {
+            jumps: vec![],
+            head: None,
+            tail: None,
+        })
     }
 
     /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)
@@ -172,7 +158,7 @@ where
         let bb = self
             .func
             .basic_blocks
-            .get(&bb_id)
+            .node_weight(bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
         let same_pos = bb_id == self.current_bb && bb.tail == self.current_idx;
         self.current_bb = bb_id;
@@ -188,7 +174,7 @@ where
         let bb = self
             .func
             .basic_blocks
-            .get(&bb_id)
+            .node_weight(bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
         let same_pos = bb_id == self.current_bb && bb.head == self.current_idx;
         self.current_bb = bb_id;
@@ -221,24 +207,24 @@ where
             }
         }
 
-        self.sealed_bbs.insert(bb_id);
+        self.sealed_bbs.insert(bb_id.index());
     }
 
     /// Mark the given basic block as _filled_.
     ///
     /// _Filled_ blocks have all its instructions inserted.
     pub fn mark_filled(&mut self, bb_id: BBId) {
-        self.filled_bbs.insert(bb_id);
+        self.filled_bbs.insert(bb_id.index());
     }
 
     /// Check if the given basic block is sealed.
     pub fn is_sealed(&self, bb_id: BBId) -> bool {
-        self.sealed_bbs.contains(bb_id)
+        self.sealed_bbs.contains(bb_id.index())
     }
 
     /// Check if the given basic block is filled.
     pub fn is_filled(&self, bb_id: BBId) -> bool {
-        self.filled_bbs.contains(bb_id)
+        self.filled_bbs.contains(bb_id.index())
     }
 
     pub fn declare_var(&mut self, var: TVar, ty: Ty) {
@@ -294,7 +280,7 @@ where
     /// This function directly corresponds to `readVariableRecursive` in the algorithm.
     fn read_variable_recursive(&mut self, var: TVar, bb_id: BBId) -> Option<Index> {
         let var_ty = self.variable_map.get(&var)?.0.clone();
-        let val = if !self.sealed_bbs.contains(bb_id) {
+        let val = if !self.sealed_bbs.contains(bb_id.index()) {
             let param = self.insert_param(bb_id, var_ty).unwrap();
 
             let block = self.incomplete_phi.entry(bb_id).or_insert_with(Vec::new);
@@ -321,7 +307,7 @@ where
     fn add_phi_operands(&mut self, var: TVar, phi: Index, current_bb: BBId, preds: &[BBId]) {
         for &pred in preds {
             let source = self.read_variable(var.clone(), pred).unwrap();
-            let bb = self.func.basic_blocks.get_mut(&pred).unwrap();
+            let bb = self.func.basic_blocks.node_weight_mut(pred).unwrap();
             bb.jumps
                 .iter_mut()
                 .for_each(|x| x.add_param(current_bb, phi, source));
@@ -337,7 +323,7 @@ where
 
         // for op in phi.operands:
         'bb: for &bb in &preds {
-            let bb = self.func.basic_blocks.get(&bb).unwrap();
+            let bb = self.func.basic_blocks.node_weight(bb).unwrap();
             for branch in bb
                 .jumps
                 .iter()
@@ -365,7 +351,7 @@ where
         };
         // remove traces of this phi
         for &bb in &preds {
-            let bb = self.func.basic_blocks.get_mut(&bb).unwrap();
+            let bb = self.func.basic_blocks.node_weight_mut(bb).unwrap();
             for branch in bb
                 .jumps
                 .iter_mut()
@@ -399,14 +385,22 @@ where
         let idx = self.func.tac_new(inst, self.current_bb());
         if let Some(cur_idx) = self.current_idx {
             self.func.tac_set_after(cur_idx, idx).unwrap();
-            let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb)
+                .unwrap();
 
             // reset tail pointer, since insertion might be at the end
             if bb.tail == Some(cur_idx) {
                 bb.tail = Some(idx);
             }
         } else {
-            let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb)
+                .unwrap();
             bb.head = Some(idx);
             bb.tail = Some(idx);
         }
@@ -423,14 +417,22 @@ where
         let idx = self.func.tac_new(inst, self.current_bb());
         if let Some(cur_idx) = self.current_idx {
             self.func.tac_set_before(cur_idx, idx).unwrap();
-            let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb)
+                .unwrap();
 
             // reset head pointer, since insertion might be at the start
             if bb.head == self.current_idx {
                 bb.head = Some(idx);
             }
         } else {
-            let bb = self.func.basic_blocks.get_mut(&self.current_bb).unwrap();
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb)
+                .unwrap();
             bb.head = Some(idx);
             bb.tail = Some(idx);
         }
@@ -466,15 +468,15 @@ where
 
     /// Add a branching instruction to the given basic block's jump instruction list.
     pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
-        let bb = self
-            .func
-            .basic_blocks
-            .get_mut(&bb_id)
-            .ok_or(Error::NoSuchBB(bb_id))?;
+        if !self.func.basic_blocks.node_weight(bb_id).is_some() {
+            return Err(Error::NoSuchBB(bb_id));
+        }
 
         for target in inst.iter() {
-            self.cfg.add_edge(bb_id, target, ());
+            self.func.basic_blocks.update_edge(bb_id, target, ());
         }
+
+        let bb = self.func.basic_blocks.node_weight_mut(bb_id).unwrap();
 
         bb.jumps.push(inst);
 
@@ -488,22 +490,25 @@ where
         bb_id: BBId,
         f: F,
     ) -> TacResult<()> {
-        for succ in self.succ_of_bb(bb_id) {
-            self.cfg.remove_edge(bb_id, succ);
+        for edge in self.succ_edge_of_bb(bb_id) {
+            self.func.basic_blocks.remove_edge(edge);
         }
 
         let bb = self
             .func
             .basic_blocks
-            .get_mut(&bb_id)
+            .node_weight_mut(bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
 
         f(&mut bb.jumps);
 
-        for branch in &bb.jumps {
-            for target in branch.iter() {
-                self.cfg.add_edge(bb_id, target, ());
-            }
+        for target in bb
+            .jumps
+            .iter()
+            .flat_map(|x| x.iter())
+            .collect::<TinyVec<[_; 16]>>()
+        {
+            self.func.basic_blocks.add_edge(bb_id, target, ());
         }
 
         Ok(())
@@ -513,17 +518,40 @@ where
     ///
     /// The return type is to make the borrow checker happy.
     pub fn pred_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
-        self.cfg
+        self.func
+            .basic_blocks
             .neighbors_directed(bb_id, petgraph::Direction::Incoming)
             .collect()
     }
 
     /// Returns an iterator of all successors of a basic block.
     pub fn succ_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
-        self.cfg
+        self.func
+            .basic_blocks
             .neighbors_directed(bb_id, petgraph::Direction::Outgoing)
+            .collect()
+    }
+
+    /// Returns an iterator of all predecessors of a basic block.
+    ///
+    /// The return type is to make the borrow checker happy.
+    pub fn pred_edge_of_bb(&self, bb_id: BBId) -> SmallEdgeVec {
+        self.func
+            .basic_blocks
+            .edges_directed(bb_id, petgraph::Direction::Incoming)
+            .map(|e| e.id())
+            .collect()
+    }
+
+    /// Returns an iterator of all successors of a basic block.
+    pub fn succ_edge_of_bb(&self, bb_id: BBId) -> SmallEdgeVec {
+        self.func
+            .basic_blocks
+            .edges_directed(bb_id, petgraph::Direction::Outgoing)
+            .map(|e| e.id())
             .collect()
     }
 }
 
 type SmallBBIdVec = tinyvec::TinyVec<[BBId; 7]>;
+type SmallEdgeVec = tinyvec::TinyVec<[EdgeIndex; 7]>;

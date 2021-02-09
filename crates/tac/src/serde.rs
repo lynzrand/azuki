@@ -1,6 +1,7 @@
 //! Serialization and de-serialization for TAC code.
 
 use indexmap::IndexSet;
+use petgraph::visit::IntoNodeReferences;
 use std::{cell::Cell, fmt::Display, writeln};
 use ty::FuncTy;
 
@@ -165,7 +166,7 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
 
 impl FormatContext<&mut TacFormatCtx> for BranchTarget {
     fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut TacFormatCtx) -> std::fmt::Result {
-        write!(f, "jump {} (", self.bb)?;
+        write!(f, "jump {} (", self.bb.index())?;
         for (idx, (target_idx, source_idx)) in self.params.iter().enumerate() {
             if idx != 0 {
                 write!(f, ", ")?;
@@ -189,8 +190,9 @@ impl std::fmt::Display for TacFunc {
         for (&param_idx, &inst) in &self.param_map {
             writeln!(f, "\t{} <- #{}", ctx.var_id(inst), param_idx)?;
         }
-        for (k, v) in &self.basic_blocks {
-            writeln!(f, "bb {}:", k)?;
+        for k in self.basic_blocks.node_indices() {
+            let v = self.basic_blocks.node_weight(k).unwrap();
+            writeln!(f, "bb {}:", k.index())?;
             if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {

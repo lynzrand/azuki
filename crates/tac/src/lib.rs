@@ -19,6 +19,7 @@ pub mod ty;
 use std::collections::BTreeMap;
 
 use err::{Error, TacResult};
+use petgraph::{graph::DiGraph, graph::NodeIndex};
 use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 
@@ -27,7 +28,7 @@ pub use ty::{NumericTy, Ty, TyKind};
 pub type OpRef = Index;
 
 /// The index of a basic block.
-pub type BBId = usize;
+pub type BBId = NodeIndex;
 
 /// A function made of TAC instructions.
 ///
@@ -37,15 +38,16 @@ pub type BBId = usize;
 #[derive(Debug, Clone)]
 pub struct TacFunc {
     /// Function name
-    name: SmolStr,
+    pub name: SmolStr,
     /// Function type
-    ty: Ty,
+    pub ty: Ty,
     /// Mapping between function parameters and instructions
-    param_map: BTreeMap<usize, OpRef>,
+    pub param_map: BTreeMap<usize, OpRef>,
     /// An arena to allocate instructions
     arena: Arena<Tac>,
     /// Basic blocks inside this function
-    pub basic_blocks: BTreeMap<BBId, BasicBlock>,
+    pub basic_blocks: DiGraph<BasicBlock, ()>,
+    pub starting_block: NodeIndex,
 }
 
 impl TacFunc {
@@ -55,7 +57,8 @@ impl TacFunc {
             ty,
             param_map: BTreeMap::new(),
             arena: Arena::new(),
-            basic_blocks: BTreeMap::new(),
+            basic_blocks: DiGraph::new(),
+            starting_block: NodeIndex::end(),
         }
     }
 
@@ -65,7 +68,8 @@ impl TacFunc {
             ty: Ty::unit(),
             param_map: BTreeMap::new(),
             arena: Arena::new(),
-            basic_blocks: BTreeMap::new(),
+            basic_blocks: DiGraph::new(),
+            starting_block: NodeIndex::end(),
         }
     }
 
@@ -338,9 +342,9 @@ pub enum Branch {
 // }
 
 impl Branch {
-    pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = BBId> + '_ {
         match self {
-            Branch::Return(_) => util::VarIter::<usize, std::iter::Empty<_>>::None,
+            Branch::Return(_) => util::VarIter::<BBId, std::iter::Empty<_>>::None,
             Branch::Jump(t) => util::VarIter::One(t.bb),
             Branch::CondJump { target, .. } => util::VarIter::One(target.bb),
             // Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
@@ -383,7 +387,7 @@ impl Branch {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BranchTarget {
-    pub bb: usize,
+    pub bb: BBId,
     /// Basic block parameters, described as a Index-Index mapping (similar to phi)
     pub params: BTreeMap<Index, Index>,
 }

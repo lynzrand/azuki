@@ -33,7 +33,7 @@ struct BreakTarget {
     pub continue_in: BBId,
 }
 
-fn empty_jump_target(bb_id: usize) -> tac::BranchTarget {
+fn empty_jump_target(bb_id: BBId) -> tac::BranchTarget {
     tac::BranchTarget {
         bb: bb_id,
         params: BTreeMap::new(),
