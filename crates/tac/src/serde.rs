@@ -4,6 +4,7 @@ use indexmap::IndexSet;
 use petgraph::visit;
 use std::{fmt::Display, writeln};
 use ty::FuncTy;
+use util::BiasedRevPostOrderDfs;
 use visit::Walker;
 
 use crate::*;
@@ -192,11 +193,9 @@ impl std::fmt::Display for TacFunc {
             writeln!(f, "\t{} <- #{}", ctx.var_id(inst), param_idx)?;
         }
 
-        let reverse_dfs_path =
-            petgraph::visit::DfsPostOrder::new(&self.basic_blocks, self.starting_block)
-                .iter(&self.basic_blocks)
-                .collect::<Vec<_>>();
-        for k in reverse_dfs_path.iter().cloned().rev() {
+        let mut reverse_dfs_path =
+            BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
+        while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
             let v = self.basic_blocks.node_weight(k).unwrap();
             writeln!(f, "bb {}:", k.index())?;
             if let Some(x) = v.head {

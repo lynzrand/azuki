@@ -10,7 +10,8 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc, todo};
 use symbol::{NumberingCounter, ScopeBuilder, StringInterner};
 
 use tac::{
-    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, Ty, Value,
+    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, TacFunc,
+    Ty, Value,
 };
 
 pub fn compile(tac: &Program) {
@@ -19,11 +20,9 @@ pub fn compile(tac: &Program) {
     let global_scope_builder = Rc::new(RefCell::new(ScopeBuilder::new(counter, interner.clone())));
 
     for func in &tac.funcs {
-        let mut compiler = FuncCompiler::new(
-            func.name.name.clone(),
-            interner.clone(),
-            global_scope_builder.clone(),
-        );
+        let mut result = TacFunc::new_untyped(func.name.name.clone());
+        let mut compiler =
+            FuncCompiler::new(&mut result, interner.clone(), global_scope_builder.clone());
         compiler.visit_func(func).unwrap();
     }
 }
@@ -40,8 +39,8 @@ fn empty_jump_target(bb_id: BBId) -> tac::BranchTarget {
     }
 }
 
-pub struct FuncCompiler {
-    builder: tac::builder::FuncBuilder<u32>,
+pub struct FuncCompiler<'a> {
+    builder: tac::builder::FuncBuilder<'a, u32>,
     break_targets: Vec<BreakTarget>,
 
     return_ty: Ty,
@@ -51,14 +50,14 @@ pub struct FuncCompiler {
     scope_builder: Rc<RefCell<ScopeBuilder>>,
 }
 
-impl FuncCompiler {
+impl<'a> FuncCompiler<'a> {
     pub fn new(
-        name: SmolStr,
+        func: &'a mut TacFunc,
         interner: Rc<RefCell<StringInterner>>,
         scope_builder: Rc<RefCell<ScopeBuilder>>,
-    ) -> FuncCompiler {
+    ) -> FuncCompiler<'a> {
         FuncCompiler {
-            builder: FuncBuilder::new(name),
+            builder: FuncBuilder::new_func(func),
             break_targets: vec![],
             return_ty: Ty::unit(),
             interner,
@@ -95,7 +94,7 @@ impl FuncCompiler {
 // - All basic blocks that are passed from one statement visitor method into another should already
 //   have all their predecessors determined. Any statement visitor method could mark the input basic
 //   block as filled and sealed.
-impl AstVisitor for FuncCompiler {
+impl<'a> AstVisitor for FuncCompiler<'a> {
     type LExprResult = Result<(u32, Ty), Error>;
 
     type ExprResult = Result<(Value, Ty), Error>;
@@ -116,6 +115,7 @@ impl AstVisitor for FuncCompiler {
         for param in &func.params {
             let (param_op, param_ty) = self.visit_func_param_real(param)?;
             self.builder
+                .editor
                 .func
                 .param_map_mut()
                 .insert(params_ty.len(), param_op);
@@ -482,8 +482,9 @@ impl AstVisitor for FuncCompiler {
             None
         };
 
+        let curr_bb = self.builder.current_bb();
         self.builder
-            .add_branch(Branch::Return(val.map(|x| x.0)), self.builder.current_bb())
+            .add_branch(Branch::Return(val.map(|x| x.0)), curr_bb)
             .unwrap();
 
         self.builder.mark_filled(self.builder.current_bb());

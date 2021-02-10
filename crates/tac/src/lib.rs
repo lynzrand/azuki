@@ -15,11 +15,15 @@ pub mod err;
 mod linkedlist;
 pub mod serde;
 pub mod ty;
+pub mod util;
 
 use std::collections::BTreeMap;
 
 use err::{Error, TacResult};
-use petgraph::{graph::DiGraph, graph::NodeIndex};
+use petgraph::{
+    graph::DiGraph,
+    graph::{self, NodeIndex},
+};
 use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 
@@ -53,25 +57,25 @@ pub struct TacFunc {
 
 impl TacFunc {
     pub fn new(name: SmolStr, ty: Ty) -> TacFunc {
+        let mut basic_blocks = DiGraph::new();
+        let starting_block = basic_blocks.add_node(BasicBlock {
+            head: None,
+            tail: None,
+            jumps: Default::default(),
+        });
+
         TacFunc {
             name,
             ty,
             param_map: BTreeMap::new(),
             arena: Arena::new(),
-            basic_blocks: DiGraph::new(),
-            starting_block: NodeIndex::end(),
+            basic_blocks,
+            starting_block,
         }
     }
 
     pub fn new_untyped(name: SmolStr) -> TacFunc {
-        TacFunc {
-            name,
-            ty: Ty::unit(),
-            param_map: BTreeMap::new(),
-            arena: Arena::new(),
-            basic_blocks: DiGraph::new(),
-            starting_block: NodeIndex::end(),
-        }
+        Self::new(name, Ty::unit())
     }
 
     pub fn param_map(&self) -> &BTreeMap<usize, OpRef> {
@@ -458,27 +462,3 @@ impl From<OpRef> for Value {
 }
 
 type Immediate = i64;
-
-mod util {
-    pub enum VarIter<T> {
-        None,
-        One(T),
-        // Two(T, T),
-        // Iter(I),
-    }
-
-    impl<T> Iterator for VarIter<T>
-    where
-        T: Clone,
-    {
-        type Item = T;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            let this = std::mem::replace(self, VarIter::None);
-            match this {
-                VarIter::None => None,
-                VarIter::One(i) => Some(i),
-            }
-        }
-    }
-}

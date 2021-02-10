@@ -2,6 +2,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use azuki_syntax::{lexer::spanned_lexer, parser, visitor::AstVisitor};
+use azuki_tac::TacFunc;
 
 use crate::{
     symbol::{NumberingCounter, ScopeBuilder, StringInterner},
@@ -32,10 +33,11 @@ fn test_basic_func_generation() {
     let counter = Rc::new(NumberingCounter::new(0));
 
     let scope_builder = Rc::new(RefCell::new(ScopeBuilder::new(counter, interner.clone())));
-    let mut compiler = FuncCompiler::new("fib".into(), interner, scope_builder);
+    let mut result = TacFunc::new_untyped("fib".into());
+    let mut compiler = FuncCompiler::new(&mut result, interner, scope_builder);
 
     compiler.visit_func(&func).unwrap();
+    compiler.builder.sanity_check();
 
-    let func = compiler.builder.build();
-    eprintln!("{}", func);
+    eprintln!("{}", result);
 }
