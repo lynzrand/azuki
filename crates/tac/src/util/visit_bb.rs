@@ -2,8 +2,11 @@ use std::hash::Hash;
 use std::{collections::HashMap, fmt::Debug};
 
 use petgraph::{
-    visit::{GraphRef, IntoNeighborsDirected, VisitMap, Visitable, Walker},
-    EdgeDirection::Outgoing,
+    visit::{
+        depth_first_search, GraphRef, IntoNeighbors, IntoNeighborsDirected, IntoNodeIdentifiers,
+        VisitMap, Visitable, Walker,
+    },
+    EdgeDirection::{Incoming, Outgoing},
 };
 
 pub struct BiasedRevPostOrderDfs<TNode, TVisit> {
@@ -21,10 +24,11 @@ where
     where
         TGraph: GraphRef
             + Visitable<NodeId = TNode, Map = TVisit>
+            + IntoNodeIdentifiers
             + IntoNeighborsDirected<NodeId = TNode>,
     {
         let mut map = Self::empty(graph);
-        map.move_to(start);
+        map.move_to(start, graph);
         map
     }
 
@@ -39,11 +43,34 @@ where
         }
     }
 
-    pub fn move_to(&mut self, node: TNode) {
+    pub fn move_to<TGraph>(&mut self, node: TNode, graph: TGraph)
+    where
+        TGraph: GraphRef
+            + Visitable<NodeId = TNode, Map = TVisit>
+            + IntoNodeIdentifiers
+            + IntoNeighborsDirected<NodeId = TNode>,
+    {
         self.stack.clear();
-        // TODO: Calculate cycles
+        self.count_cycles(node.clone(), graph);
         self.stack.push(node.clone());
         self.counter.insert(node, 1);
+    }
+
+    fn count_cycles<TGraph>(&mut self, starting_node: TNode, graph: TGraph)
+    where
+        TGraph: GraphRef
+            + Visitable<NodeId = TNode, Map = TVisit>
+            + IntoNodeIdentifiers
+            + IntoNeighborsDirected<NodeId = TNode>,
+    {
+        depth_first_search(graph, std::iter::once(starting_node), |ev| {
+            if let petgraph::visit::DfsEvent::TreeEdge(_, target) = ev {
+                self.counter
+                    .entry(target)
+                    .and_modify(|x| *x += 1)
+                    .or_insert(1);
+            }
+        });
     }
 
     pub fn next<TGraph>(&mut self, graph: TGraph) -> Option<TNode>
@@ -56,24 +83,14 @@ where
         // count == Some && visited == true  ==>> Revisiting
         // count == None && visited == true  ==>> Visited
         while let Some(node) = self.stack.pop() {
-            let visited = !self.visited.visit(node.clone());
-            let count = if !visited {
-                self.counter.entry(node.clone()).or_insert_with(|| {
-                    graph
-                        .neighbors_directed(node.clone(), petgraph::EdgeDirection::Incoming)
-                        .count()
-                })
-            } else {
-                match self.counter.get_mut(&node) {
-                    Some(x) => x,
-                    // This node is already fully visited. Might be a loop to
-                    // start node, anyway we'll ignore it.
-                    _ => continue,
-                }
+            let count = match self.counter.get_mut(&node) {
+                Some(x) => x,
+                // This node is already fully visited. Might be a loop to
+                // start node, anyway we'll ignore it.
+                _ => continue,
             };
 
             *count -= 1;
-            eprintln!("{:?} {}", &node, *count);
 
             if *count == 0 {
                 // this node is completely visited
@@ -81,7 +98,6 @@ where
 
                 // add its proceeding nodes
                 for proceeding in graph.neighbors_directed(node.clone(), Outgoing) {
-                    eprintln!("> {:?} ", &proceeding);
                     self.stack.push(proceeding);
                 }
 
