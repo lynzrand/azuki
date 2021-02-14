@@ -9,3 +9,4 @@ version = "0.1.0"
 [dependencies]
 anymap = "0.12"
 azuki-tac = {path = "../tac"}
+petgraph = "0.5"

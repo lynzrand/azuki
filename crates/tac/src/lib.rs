@@ -21,6 +21,7 @@ pub mod util;
 use std::collections::{BTreeMap, HashMap};
 
 use err::{Error, TacResult};
+use indexmap::map::Values;
 use petgraph::{
     graph::DiGraph,
     graph::{self, NodeIndex},
@@ -29,6 +30,7 @@ use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 
 pub use ty::{NumericTy, Ty, TyKind};
+use util::VarIter;
 
 #[derive(Debug, Clone)]
 pub struct Program {
@@ -100,7 +102,7 @@ impl TacFunc {
     }
 
     #[inline]
-    pub fn arena_get(&mut self, idx: OpRef) -> TacResult<&Tac> {
+    pub fn arena_get(&self, idx: OpRef) -> TacResult<&Tac> {
         self.arena.get(idx).ok_or(Error::NoSuchTacIdx(idx))
     }
 
@@ -156,6 +158,15 @@ impl TacFunc {
         let next_idx = target.next;
         let prev_idx = target.prev;
 
+        let bb = target.bb;
+        let bb = self.basic_blocks.node_weight_mut(bb).unwrap();
+        if bb.head == Some(idx) {
+            bb.head = next_idx;
+        }
+        if bb.tail == Some(idx) {
+            bb.tail = prev_idx;
+        }
+
         if let Some(prev_idx) = prev_idx {
             let prev = self.arena_get_mut(prev_idx)?;
             prev.next = next_idx;
@@ -210,6 +221,12 @@ impl TacFunc {
         }
         Ok(tail.next.take().unwrap())
     }
+
+    pub fn all_inst_unordered(&self) -> impl Iterator<Item = (OpRef, BBId, &Inst)> {
+        self.arena
+            .iter()
+            .map(|(idx, inst)| (idx, inst.bb, &inst.inst))
+    }
 }
 
 /// A single basic block, represented as an indirect doubly linked list of instructions.
@@ -221,7 +238,7 @@ pub struct BasicBlock {
     pub(crate) tail: Option<OpRef>,
 
     /// The branch instruction at the end of this basic block
-    pub(crate) jumps: Vec<Branch>,
+    pub jumps: Vec<Branch>,
 }
 
 /// Represents a single TAC instruction inside an indirect doubly linked list of instructions.
@@ -331,6 +348,23 @@ pub enum InstKind {
     Dead,
 }
 
+impl InstKind {
+    pub fn params_iter(&self) -> impl Iterator<Item = Value> + '_ {
+        match self {
+            InstKind::Binary(b) => VarIter::Two(b.lhs.clone(), b.rhs.clone()),
+            InstKind::FunctionCall(f) => VarIter::Iter(f.params.iter().cloned()),
+            InstKind::Const(v) => VarIter::One(Value::Imm(*v)),
+            InstKind::Assign(v) => VarIter::One((*v).into()),
+            InstKind::Param => VarIter::None,
+            InstKind::Dead => VarIter::None,
+        }
+    }
+
+    pub fn param_op_iter(&self) -> impl Iterator<Item = OpRef> + '_ {
+        self.params_iter().filter_map(|x| x.get_inst())
+    }
+}
+
 /// Represents a branch instruction.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Branch {
@@ -353,11 +387,11 @@ pub enum Branch {
 // }
 
 impl Branch {
-    pub fn iter(&self) -> impl Iterator<Item = BBId> + '_ {
+    pub fn target_iter(&self) -> impl Iterator<Item = BBId> + '_ {
         match self {
-            Branch::Return(_) => util::VarIter::<BBId>::None,
-            Branch::Jump(t) => util::VarIter::One(t.bb),
-            Branch::CondJump { target, .. } => util::VarIter::One(target.bb),
+            Branch::Return(_) => util::OptionIter::<BBId>::None,
+            Branch::Jump(t) => util::OptionIter::One(t.bb),
+            Branch::CondJump { target, .. } => util::OptionIter::One(target.bb),
             // Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
             // Branch::Unreachable => util::VarIter::None,
         }

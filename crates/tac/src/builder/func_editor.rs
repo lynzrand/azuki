@@ -3,7 +3,7 @@ use tinyvec::TinyVec;
 
 use crate::{
     err::{Error, TacResult},
-    BBId, BasicBlock, Branch, Inst, InstKind, OpRef, TacFunc, Ty,
+    BBId, BasicBlock, Branch, Inst, InstKind, OpRef, Tac, TacFunc, Ty,
 };
 
 use super::{SmallBBIdVec, SmallEdgeVec};
@@ -13,7 +13,7 @@ pub struct FuncEditor<'a> {
 
     /// The basic block we're currently working on. Must be a valid basic block
     /// inside this function.
-    current_bb: BBId,
+    current_bb_id: BBId,
 
     /// The instruction index we're currently working on. New instructions will
     /// be inserted before or after this instruction, depending on the function
@@ -35,7 +35,7 @@ impl<'a> FuncEditor<'a> {
 
         FuncEditor {
             func,
-            current_bb,
+            current_bb_id: current_bb,
             current_idx: starting_idx,
         }
     }
@@ -45,14 +45,44 @@ impl<'a> FuncEditor<'a> {
     }
 
     /// Returns the current basic block this builder is working on.
-    pub fn current_bb(&self) -> BBId {
-        self.current_bb
+    pub fn current_bb_id(&self) -> BBId {
+        self.current_bb_id
+    }
+
+    pub fn current_bb(&self) -> &BasicBlock {
+        self.func
+            .basic_blocks
+            .node_weight(self.current_bb_id)
+            .unwrap()
+    }
+
+    pub fn current_bb_mut(&mut self) -> &mut BasicBlock {
+        self.func
+            .basic_blocks
+            .node_weight_mut(self.current_bb_id)
+            .unwrap()
     }
 
     /// Returns the current instruction this builder is working on. If
     /// [`current_bb`](Self::current_bb) is empty, returns [`None`](Option::None).
     pub fn current_idx(&self) -> Option<OpRef> {
         self.current_idx
+    }
+
+    pub fn current_inst(&self) -> Option<&Inst> {
+        self.current_tac().map(|x| &x.inst)
+    }
+
+    pub fn current_tac(&self) -> Option<&Tac> {
+        self.func.arena_get(self.current_idx?).ok()
+    }
+
+    pub fn current_inst_mut(&mut self) -> Option<&mut Inst> {
+        self.current_tac_mut().map(|x| &mut x.inst)
+    }
+
+    pub fn current_tac_mut(&mut self) -> Option<&mut Tac> {
+        self.func.arena_get_mut(self.current_idx?).ok()
     }
 
     /// Add an free-standing empty basic block into the function.
@@ -74,8 +104,8 @@ impl<'a> FuncEditor<'a> {
             .basic_blocks
             .node_weight(bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
-        let same_pos = bb_id == self.current_bb && bb.tail == self.current_idx;
-        self.current_bb = bb_id;
+        let same_pos = bb_id == self.current_bb_id && bb.tail == self.current_idx;
+        self.current_bb_id = bb_id;
         self.current_idx = bb.tail;
         Ok(same_pos)
     }
@@ -90,8 +120,8 @@ impl<'a> FuncEditor<'a> {
             .basic_blocks
             .node_weight(bb_id)
             .ok_or(Error::NoSuchBB(bb_id))?;
-        let same_pos = bb_id == self.current_bb && bb.head == self.current_idx;
-        self.current_bb = bb_id;
+        let same_pos = bb_id == self.current_bb_id && bb.head == self.current_idx;
+        self.current_bb_id = bb_id;
         self.current_idx = bb.head;
         Ok(same_pos)
     }
@@ -103,8 +133,8 @@ impl<'a> FuncEditor<'a> {
     pub fn set_position_at_instruction(&mut self, inst_idx: OpRef) -> TacResult<bool> {
         let inst = self.func.arena_get(inst_idx)?;
         let bb = inst.bb;
-        let same_pos = bb == self.current_bb && Some(inst_idx) == self.current_idx;
-        self.current_bb = bb;
+        let same_pos = bb == self.current_bb_id && Some(inst_idx) == self.current_idx;
+        self.current_bb_id = bb;
         self.current_idx = Some(inst_idx);
         Ok(same_pos)
     }
@@ -115,13 +145,13 @@ impl<'a> FuncEditor<'a> {
     /// If the current basic block is empty, the instruction is inserted as the
     /// only instruction of the basic block.
     pub fn insert_after_current_place(&mut self, inst: Inst) -> OpRef {
-        let idx = self.func.tac_new(inst, self.current_bb());
+        let idx = self.func.tac_new(inst, self.current_bb_id());
         if let Some(cur_idx) = self.current_idx {
             self.func.tac_set_after(cur_idx, idx).unwrap();
             let bb = self
                 .func
                 .basic_blocks
-                .node_weight_mut(self.current_bb)
+                .node_weight_mut(self.current_bb_id)
                 .unwrap();
 
             // reset tail pointer, since insertion might be at the end
@@ -132,7 +162,7 @@ impl<'a> FuncEditor<'a> {
             let bb = self
                 .func
                 .basic_blocks
-                .node_weight_mut(self.current_bb)
+                .node_weight_mut(self.current_bb_id)
                 .unwrap();
             bb.head = Some(idx);
             bb.tail = Some(idx);
@@ -147,13 +177,13 @@ impl<'a> FuncEditor<'a> {
     /// If the current basic block is empty, the instruction is inserted as the
     /// only instruction of the basic block.
     pub fn insert_before_current_place(&mut self, inst: Inst) -> OpRef {
-        let idx = self.func.tac_new(inst, self.current_bb());
+        let idx = self.func.tac_new(inst, self.current_bb_id());
         if let Some(cur_idx) = self.current_idx {
             self.func.tac_set_before(cur_idx, idx).unwrap();
             let bb = self
                 .func
                 .basic_blocks
-                .node_weight_mut(self.current_bb)
+                .node_weight_mut(self.current_bb_id)
                 .unwrap();
 
             // reset head pointer, since insertion might be at the start
@@ -164,7 +194,7 @@ impl<'a> FuncEditor<'a> {
             let bb = self
                 .func
                 .basic_blocks
-                .node_weight_mut(self.current_bb)
+                .node_weight_mut(self.current_bb_id)
                 .unwrap();
             bb.head = Some(idx);
             bb.tail = Some(idx);
@@ -175,12 +205,12 @@ impl<'a> FuncEditor<'a> {
 
     /// Insert the given instruction at the **end** of the given basic block.
     pub fn insert_at_end_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<OpRef> {
-        let curr_bb = self.current_bb;
+        let curr_bb = self.current_bb_id;
         let curr_idx = self.current_idx;
         let same_pos = self.set_current_bb(bb_id)?;
         let insert_pos = self.insert_after_current_place(inst);
         if !same_pos {
-            self.current_bb = curr_bb;
+            self.current_bb_id = curr_bb;
             self.current_idx = curr_idx;
         }
         Ok(insert_pos)
@@ -188,12 +218,12 @@ impl<'a> FuncEditor<'a> {
 
     /// Insert the given instruction at the **start** of the given basic block.
     pub fn insert_at_start_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<OpRef> {
-        let curr_bb = self.current_bb;
+        let curr_bb = self.current_bb_id;
         let curr_idx = self.current_idx;
         let same_pos = self.set_current_bb_start(bb_id)?;
         let insert_pos = self.insert_before_current_place(inst);
         if !same_pos {
-            self.current_bb = curr_bb;
+            self.current_bb_id = curr_bb;
             self.current_idx = curr_idx;
         }
         Ok(insert_pos)
@@ -205,7 +235,7 @@ impl<'a> FuncEditor<'a> {
             return Err(Error::NoSuchBB(bb_id));
         }
 
-        for target in inst.iter() {
+        for target in inst.target_iter() {
             self.func.basic_blocks.add_edge(bb_id, target, ());
         }
 
@@ -238,7 +268,7 @@ impl<'a> FuncEditor<'a> {
         for target in bb
             .jumps
             .iter()
-            .flat_map(|x| x.iter())
+            .flat_map(|x| x.target_iter())
             .collect::<TinyVec<[_; 16]>>()
         {
             self.func.basic_blocks.add_edge(bb_id, target, ());
@@ -293,5 +323,45 @@ impl<'a> FuncEditor<'a> {
             },
             bb_id,
         )
+    }
+
+    /// Move one instruction forward. Returns whether the move was successful.
+    /// If this function returns `true`, [`current_idx`] and functions related
+    /// to it are guaranteed to return `Some` as long as .
+    pub fn move_forward(&mut self) -> bool {
+        if let Some(inst) = self.current_tac() {
+            if inst.next.is_some() {
+                self.current_idx = inst.next;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Move one instruction backward. Returns whether the move was successful.
+    /// If this function returns `true`, [`current_idx`] and functions related
+    /// to it are guaranteed to return `Some`.
+    pub fn move_backward(&mut self) -> bool {
+        if let Some(inst) = self.current_tac() {
+            if inst.prev.is_some() {
+                self.current_idx = inst.prev;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn remove_current(&mut self) -> Option<Inst> {
+        if let Some(idx) = self.current_idx {
+            self.func.tac_remove_at(idx).ok()
+        } else {
+            None
+        }
     }
 }

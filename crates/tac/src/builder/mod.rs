@@ -139,7 +139,7 @@ where
 
     /// Indicate that variable `var` is written as the result of instruction `inst`.
     pub fn write_variable_cur(&mut self, var: TVar, inst: Index) -> TacResult<()> {
-        self.write_variable(var, inst, self.current_bb())
+        self.write_variable(var, inst, self.current_bb_id())
     }
 
     /// Indicate that variable `var` is written as the result of instruction `inst`
@@ -162,7 +162,7 @@ where
     /// According to the algorithm, this function may introduce parameters to
     /// `bb` and insert parameter passes to the block's predecessors.
     pub fn read_variable_cur(&mut self, var: TVar) -> Option<Index> {
-        self.read_variable(var, self.current_bb())
+        self.read_variable(var, self.current_bb_id())
     }
 
     /// Indicate that variable `var` is read in basic block `bb`. Returns the index

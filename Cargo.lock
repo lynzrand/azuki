@@ -27,6 +27,7 @@ version = "0.1.0"
 dependencies = [
  "anymap",
  "azuki-tac",
+ "petgraph",
 ]
 
 [[package]]

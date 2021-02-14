@@ -131,8 +131,8 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         self.visit_block_stmt(&func.body)?;
 
-        self.builder.mark_sealed(self.builder.current_bb());
-        self.builder.mark_filled(self.builder.current_bb());
+        self.builder.mark_sealed(self.builder.current_bb_id());
+        self.builder.mark_filled(self.builder.current_bb_id());
 
         self.scope_builder.borrow_mut().pop_scope().unwrap();
         Ok(())
@@ -305,7 +305,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
     }
 
     fn visit_while_stmt(&mut self, stmt: &WhileStmt) -> Self::StmtResult {
-        let cur_bb = self.builder.current_bb();
+        let cur_bb = self.builder.current_bb_id();
         let cond_bb = self.builder.new_bb();
         self.builder
             .add_branch(Branch::Jump(empty_jump_target(cond_bb)), cur_bb)
@@ -341,7 +341,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         self.builder.set_current_bb(loop_bb).unwrap();
         self.visit_block_stmt(&stmt.body)?;
-        let loop_end_bb = self.builder.current_bb();
+        let loop_end_bb = self.builder.current_bb_id();
 
         self.builder
             .add_branch(Branch::Jump(empty_jump_target(cond_bb)), loop_end_bb)
@@ -364,7 +364,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt) -> Self::StmtResult {
         let expr_val = self.visit_expr(&stmt.cond)?;
-        let last_bb = self.builder.current_bb();
+        let last_bb = self.builder.current_bb_id();
 
         self.builder.mark_filled(last_bb);
         self.builder.mark_sealed(last_bb);
@@ -386,7 +386,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.set_current_bb(if_bb).unwrap();
         self.visit_block_stmt(&stmt.if_block)?;
 
-        let if_end_bb = self.builder.current_bb();
+        let if_end_bb = self.builder.current_bb_id();
 
         // next_bb: The basic block after the if statement
         // Deal with else block
@@ -407,7 +407,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
                     IfElseBlock::If(i) => self.visit_if_stmt(&i)?,
                     IfElseBlock::Block(b) => self.visit_block_stmt(&b)?,
                 }
-                let else_end_bb = self.builder.current_bb();
+                let else_end_bb = self.builder.current_bb_id();
 
                 let next_bb = self.builder.new_bb();
 
@@ -482,13 +482,13 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
             None
         };
 
-        let curr_bb = self.builder.current_bb();
+        let curr_bb = self.builder.current_bb_id();
         self.builder
             .add_branch(Branch::Return(val.map(|x| x.0)), curr_bb)
             .unwrap();
 
-        self.builder.mark_filled(self.builder.current_bb());
-        self.builder.mark_sealed(self.builder.current_bb());
+        self.builder.mark_filled(self.builder.current_bb_id());
+        self.builder.mark_sealed(self.builder.current_bb_id());
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb).unwrap();
@@ -499,7 +499,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
     fn visit_break_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
         let continue_target = self.break_targets.last().unwrap().break_out;
 
-        let cur_bb = self.builder.current_bb();
+        let cur_bb = self.builder.current_bb_id();
         self.builder
             .add_branch(Branch::Jump(empty_jump_target(continue_target)), cur_bb)
             .unwrap();
@@ -515,7 +515,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
     fn visit_continue_stmt(&mut self, _span: azuki_syntax::span::Span) -> Self::StmtResult {
         let continue_target = self.break_targets.last().unwrap().continue_in;
 
-        let cur_bb = self.builder.current_bb();
+        let cur_bb = self.builder.current_bb_id();
         self.builder
             .add_branch(Branch::Jump(empty_jump_target(continue_target)), cur_bb)
             .unwrap();

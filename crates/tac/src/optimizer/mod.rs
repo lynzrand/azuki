@@ -20,6 +20,9 @@ pub trait FunctionOptimizer {
     /// Returns the name of this pass.
     fn name(&self) -> Cow<str>;
 
+    /// Reset this instance for optimizing another function.
+    fn reset(&mut self);
+
     /// Optimize a single function.
     fn optimize_func(&mut self, env: &mut OptimizeEnvironment, func: &mut TacFunc);
 }
@@ -35,6 +38,7 @@ where
 
     fn optimize_program(&mut self, env: &mut OptimizeEnvironment, program: &mut Program) {
         for func in program.functions.values_mut() {
+            self.0.reset();
             self.0.optimize_func(env, func);
         }
     }
