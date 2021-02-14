@@ -17,7 +17,7 @@ pub mod serde;
 pub mod ty;
 pub mod util;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use err::{Error, TacResult};
 use petgraph::{
@@ -28,6 +28,11 @@ use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 
 pub use ty::{NumericTy, Ty, TyKind};
+
+#[derive(Debug, Clone)]
+pub struct Program {
+    pub functions: HashMap<SmolStr, TacFunc>,
+}
 
 pub type OpRef = Index;
 
