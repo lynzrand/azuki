@@ -7,6 +7,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anymap = "0.12"
 bit-set = "0.5.2"
 indexmap = "1"
 lexpr = "0.2.6"

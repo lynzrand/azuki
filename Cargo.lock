@@ -44,6 +44,7 @@ dependencies = [
 name = "azuki-tac"
 version = "0.1.0"
 dependencies = [
+ "anymap",
  "bit-set",
  "indexmap",
  "lexpr",

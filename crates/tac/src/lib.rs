@@ -13,6 +13,7 @@
 pub mod builder;
 pub mod err;
 mod linkedlist;
+pub mod optimizer;
 pub mod serde;
 pub mod ty;
 pub mod util;
