@@ -8,3 +8,5 @@ version = "0.1.0"
 
 [dependencies]
 azuki-tac = {path = "../tac"}
+petgraph = "0.5"
+smol_str = "0.1"

@@ -47,6 +47,7 @@ version = "0.1.0"
 dependencies = [
  "anymap",
  "bit-set",
+ "combine",
  "indexmap",
  "lexpr",
  "petgraph",
@@ -71,6 +72,8 @@ name = "azuki-tacvm"
 version = "0.1.0"
 dependencies = [
  "azuki-tac",
+ "petgraph",
+ "smol_str",
 ]
 
 [[package]]
@@ -93,6 +96,22 @@ name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
+
+[[package]]
+name = "bytes"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
+
+[[package]]
+name = "combine"
+version = "4.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc4369b5e4c0cddf64ad8981c0111e7df4f7078f4d6ba98fb31f2e17c4c57b7e"
+dependencies = [
+ "bytes",
+ "memchr",
+]
 
 [[package]]
 name = "fixedbitset"
@@ -174,6 +193,12 @@ dependencies = [
  "syn",
  "utf8-ranges",
 ]
+
+[[package]]
+name = "memchr"
+version = "2.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ee1c47aaa256ecabcaea351eae4a9b01ef39ed810004e298d2511ed284b1525"
 
 [[package]]
 name = "petgraph"
