@@ -1,13 +1,14 @@
 use combine::{
     choice, easy,
-    error::{Format, Info, UnexpectedParse},
+    error::{Format, Info, StreamError, UnexpectedParse},
     many1, optional,
     parser::char::{alpha_num, char, digit, spaces, string},
-    ParseError, Parser, Stream,
+    stream::StreamErrorFor,
+    ParseError, Parser, Stream, StreamOnce,
 };
 use std::{str::FromStr, todo};
 
-use crate::{BinaryInst, BinaryOp, InstKind, OpRef, Value};
+use crate::{err::Error, BinaryInst, BinaryOp, InstKind, OpRef, Value};
 
 struct VariableNamingCtx {
     // local_vars:
@@ -40,18 +41,21 @@ where
 fn variable<Input>() -> impl Parser<Input, Output = usize>
 where
     Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (char('%'), many1(digit()))
         .skip(spaces())
         .and_then(|(_, digits): (_, String)| {
-            digits.parse::<usize>().unwrap()
-            // .map_err(|e| UnexpectedParse::Unexpected.add_expected("unsigned integer"))
+            digits
+                .parse::<usize>()
+                .map_err(StreamErrorFor::<Input>::message_format)
         })
 }
 
 fn value<Input>() -> impl Parser<Input, Output = Value>
 where
     Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     choice((
         num().map(Value::Imm),
