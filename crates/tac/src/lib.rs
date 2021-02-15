@@ -12,9 +12,10 @@
 
 pub mod builder;
 pub mod err;
+pub mod formatter;
 mod linkedlist;
 pub mod optimizer;
-pub mod serde;
+pub mod parser;
 pub mod ty;
 pub mod util;
 
