@@ -1,0 +1,6 @@
+[book]
+authors = ["Rynco Maekawa"]
+language = "zh_cn"
+multilingual = true
+src = "src"
+title = "Compilers Experiment"
