@@ -124,14 +124,12 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                 }
                 write!(f, ")")?;
             }
-            InstKind::Const(i) => {
-                write!(f, "const {}", i)?;
-            }
+
             InstKind::Assign(i) => {
-                write!(f, "{}", ctx.1.var_id(*i))?;
+                i.fmt_ctx(f, ctx.1)?;
             }
-            InstKind::Param => {
-                write!(f, "param")?;
+            InstKind::Phi(phi) => {
+                // write!
             }
             InstKind::Dead => {
                 write!(f, "dead_value")?;
@@ -151,33 +149,14 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
                 }
             }
             Branch::Jump(target) => {
-                target.fmt_ctx(f, ctx)?;
+                write!(f, "{}", target.index())?;
             }
             Branch::CondJump { cond, target } => {
                 write!(f, "if ")?;
                 cond.fmt_ctx(f, ctx)?;
-                write!(f, " ")?;
-                target.fmt_ctx(f, ctx)?;
-            } // Branch::TableJump { .. } => {
-              //     todo!("No table jump for now");
-              // }
-        }
-        Ok(())
-    }
-}
-
-impl FormatContext<&mut TacFormatCtx> for BranchTarget {
-    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut TacFormatCtx) -> std::fmt::Result {
-        write!(f, "jump {} (", self.bb.index())?;
-        for (idx, (target_idx, source_idx)) in self.params.iter().enumerate() {
-            if idx != 0 {
-                write!(f, ", ")?;
+                write!(f, " {}", target.index())?;
             }
-            let target_var_id = ctx.var_id(*target_idx);
-            let source_var_id = ctx.var_id(*source_idx);
-            write!(f, "{} <- {}", target_var_id, source_var_id)?;
         }
-        write!(f, ")")?;
         Ok(())
     }
 }
