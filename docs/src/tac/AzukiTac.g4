@@ -44,6 +44,7 @@ BRANCH: 'br';
 IF: 'if';
 UNREACHABLE: 'unreachable';
 RETURN: 'return';
+CALL: 'call';
 
 // misc
 LINEFEED: '\n';
@@ -56,11 +57,15 @@ int_ty: IntegerType;
 bool_ty: BooleanType;
 unit_ty: UnitType;
 ptr_ty: '*' ty;
-ty: int_ty | bool_ty | unit_ty | ptr_ty;
+func_ty: FN function_param '->' ty;
+ty: int_ty | bool_ty | unit_ty | ptr_ty | func_ty;
 
 // instructions
 binary_op: ADD | SUB | MUL | DIV | GT | GE | LT | LE | EQ | NE;
 binary_inst: value binary_op value;
+
+fn_param_list: (value (',' value)*)?;
+fn_call_inst: CALL GlobalVariable '(' fn_param_list ')';
 
 phi_source: '(' Variable ',' BasicBlock ')';
 phi_inst: PHI '[' (phi_source (',' phi_source)*)? ']';
@@ -69,7 +74,7 @@ val_inst: value;
 
 variable: Variable;
 inst_lhs: ty variable | DiscardVariable;
-inst_rhs: binary_inst | phi_inst | val_inst;
+inst_rhs: binary_inst | phi_inst | val_inst | fn_call_inst;
 inst: inst_lhs '=' inst_rhs LINEFEED;
 
 unreachable_inst: UNREACHABLE;
