@@ -128,8 +128,21 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
             InstKind::Assign(i) => {
                 i.fmt_ctx(f, ctx.1)?;
             }
+            InstKind::Param(id) => {
+                write!(f, "param {}", id)?;
+            }
             InstKind::Phi(phi) => {
-                // write!
+                write!(f, "phi [")?;
+                let mut first = true;
+                for source in phi {
+                    if !first {
+                        write!(f, ", ")?;
+                    } else {
+                        first = false;
+                    }
+                    write!(f, "({}, {})", ctx.1.var_id(source.val), source.bb.index())?;
+                }
+                write!(f, "]")?;
             }
             InstKind::Dead => {
                 write!(f, "dead_value")?;
@@ -149,12 +162,11 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
                 }
             }
             Branch::Jump(target) => {
-                write!(f, "{}", target.index())?;
+                write!(f, "br {}", target.index())?;
             }
             Branch::CondJump { cond, target } => {
-                write!(f, "if ")?;
+                write!(f, "br {} if ", target.index())?;
                 cond.fmt_ctx(f, ctx)?;
-                write!(f, " {}", target.index())?;
             }
         }
         Ok(())
@@ -176,7 +188,7 @@ impl std::fmt::Display for TacFunc {
             BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
         while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
             let v = self.basic_blocks.node_weight(k).unwrap();
-            writeln!(f, "bb {}:", k.index())?;
+            writeln!(f, "bb{}:", k.index())?;
             if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {

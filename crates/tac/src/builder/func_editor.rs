@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use petgraph::visit::EdgeRef;
 use tinyvec::TinyVec;
 
@@ -315,10 +317,10 @@ impl<'a> FuncEditor<'a> {
             .collect()
     }
 
-    pub fn insert_param(&mut self, bb_id: BBId, ty: Ty) -> Result<OpRef, Error> {
+    pub fn insert_phi(&mut self, bb_id: BBId, ty: Ty) -> Result<OpRef, Error> {
         self.insert_at_start_of(
             Inst {
-                kind: InstKind::Param,
+                kind: InstKind::Phi(BTreeSet::new()),
                 ty,
             },
             bb_id,

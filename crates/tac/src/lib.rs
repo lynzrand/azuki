@@ -19,8 +19,9 @@ pub mod parser;
 pub mod ty;
 pub mod util;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
 use indexmap::map::Values;
 use petgraph::{
@@ -332,14 +333,14 @@ pub struct Inst {
     pub ty: Ty,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct PhiSource {
     pub val: OpRef,
     pub bb: BBId,
 }
 
 /// Kinds of an instruction
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, EnumAsInner)]
 pub enum InstKind {
     /// A binary operaton, e.g. plus, divide
     Binary(BinaryInst),
@@ -348,8 +349,10 @@ pub enum InstKind {
 
     /// An assignment from another instruction or constant
     Assign(Value),
-    /// A parameter
-    Phi(Vec<PhiSource>),
+    /// A phi instruction
+    Phi(BTreeSet<PhiSource>),
+    /// A function parameter
+    Param(usize),
     /// An unreachable value
     Dead,
 }
@@ -365,6 +368,7 @@ impl InstKind {
             InstKind::Phi(source) => VarIter::Iter(
                 Box::new(source.iter().map(|v| v.val.into())) as Box<dyn Iterator<Item = _>>
             ),
+            InstKind::Param(_) => VarIter::None,
             InstKind::Dead => VarIter::None,
         }
     }
@@ -380,10 +384,10 @@ pub enum Branch {
     /// Returns the given value.
     Return(Option<Value>),
 
-    /// Jumps to the given target with given parameters.
+    /// Jumps to the given target
     Jump(BBId),
 
-    /// Conditional jump to the given targets.
+    /// Conditional jump to the given target.
     ///
     /// `cond` must be a boolean or integer.
     CondJump { cond: Value, target: BBId },
