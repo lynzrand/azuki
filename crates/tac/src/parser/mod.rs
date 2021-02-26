@@ -1,8 +1,8 @@
 use combine::{
     choice, easy,
     error::{Format, Info, StreamError, UnexpectedParse},
-    many1, optional,
-    parser::char::{alpha_num, char, digit, spaces, string},
+    many, many1, one_of, optional,
+    parser::char::{alpha_num, char, digit, hex_digit, string},
     stream::StreamErrorFor,
     ParseError, Parser, Stream, StreamOnce,
 };
@@ -14,6 +14,31 @@ struct VariableNamingCtx {
     // local_vars:
 }
 
+/// Matches zero or more non-newline space characters
+fn spaces<Input>() -> impl Parser<Input, Output = ()>
+where
+    Input: Stream<Token = char>,
+{
+    many(one_of(" \t".chars()).map(|_| ()))
+}
+
+/// Matches one or more non-newline space characters
+fn spaces1<Input>() -> impl Parser<Input, Output = ()>
+where
+    Input: Stream<Token = char>,
+{
+    many1(one_of(" \t".chars()).map(|_| ()))
+}
+/// Parse a comma-separated list. The internal parser should skip spaces.
+fn comma_sep_list<TOut, I, P>(parse_internal: P) -> impl Parser<I, Output = Vec<TOut>>
+where
+    P: Parser<I, Output = TOut>,
+    I: Stream<Token = char>,
+    I::Error: ParseError<I::Token, I::Range, I::Position>,
+{
+    combine::sep_by(parse_internal, char(',').skip(spaces()))
+}
+
 fn ident<Input>() -> impl Parser<Input, Output = String>
 where
     Input: Stream<Token = char>,
@@ -21,20 +46,42 @@ where
     (char('@'), many1(alpha_num())).map(|x| x.1).skip(spaces())
 }
 
-fn num<Input>() -> impl Parser<Input, Output = i64>
+fn dec_number<I>() -> impl Parser<I, Output = i64>
+where
+    I: Stream<Token = char>,
+    I::Error: ParseError<I::Token, I::Range, I::Position>,
+{
+    (optional(choice((char('-'), char('+')))), many1(digit())).and_then(
+        |(neg, digits)| -> Result<_, StreamErrorFor<I>> {
+            let _: &String = &digits;
+            let x = i64::from_str(&digits).map_err(StreamErrorFor::<I>::message_format)?;
+            if neg == Some('-') {
+                Ok(-x)
+            } else {
+                Ok(x)
+            }
+        },
+    )
+}
+
+fn hex_number<I>() -> impl Parser<I, Output = i64>
+where
+    I: Stream<Token = char>,
+    I::Error: ParseError<I::Token, I::Range, I::Position>,
+{
+    (string("0x"), many1(hex_digit())).and_then(|(_, digits)| {
+        let _: &String = &digits;
+        i64::from_str_radix(&digits, 16).map_err(StreamErrorFor::<I>::message_format)
+    })
+}
+
+fn number<Input>() -> impl Parser<Input, Output = i64>
 where
     Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    (char('#'), optional(char('-')), many1(digit()))
-        .map(|(_, neg, digits)| {
-            let _: &String = &digits;
-            let x = i64::from_str(&digits).unwrap();
-            if neg.is_some() {
-                -x
-            } else {
-                x
-            }
-        })
+    (char('#'), choice((hex_number(), dec_number())))
+        .map(|(_, num)| num)
         .skip(spaces())
 }
 
@@ -58,7 +105,7 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     choice((
-        num().map(Value::Imm),
+        number().map(Value::Imm),
         // TODO: map input variable number to arena indices
         // THIS IS ONLY A PLACEHOLDER
         variable().map(|v| Value::Dest(OpRef::from_bits(v as u64))),
@@ -81,7 +128,7 @@ where
         string("eq"),
         string("ne"),
     ])
-    .skip(spaces())
+    .skip(spaces1())
     .map(|i| match i {
         "add" => BinaryOp::Add,
         "sub" => BinaryOp::Sub,
@@ -106,11 +153,21 @@ where
         .map(|(op, lhs, rhs)| BinaryInst { op, lhs, rhs })
 }
 
+fn value_instruction<Input>() -> impl Parser<Input, Output = Value>
+where
+    Input: Stream<Token = char>,
+{
+    value()
+}
+
 fn instruction<Input>() -> impl Parser<Input, Output = InstKind>
 where
     Input: Stream<Token = char>,
 {
-    choice((binary_instruction().map(|x| InstKind::Binary(x)),))
+    choice((
+        binary_instruction().map(InstKind::Binary),
+        value_instruction().map(InstKind::Assign),
+    ))
 }
 
-fn parse_func() {}
+pub fn parse_func() {}

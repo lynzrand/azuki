@@ -339,12 +339,11 @@ pub enum InstKind {
     Binary(BinaryInst),
     /// A call to another function.
     FunctionCall(FunctionCall),
-    /// A constant value.
-    Const(Immediate),
-    /// An assignment from another value
-    Assign(Index),
+
+    /// An assignment from another instruction or constant
+    Assign(Value),
     /// A parameter
-    Param,
+    Phi,
     /// An unreachable value
     Dead,
 }
@@ -354,9 +353,8 @@ impl InstKind {
         match self {
             InstKind::Binary(b) => VarIter::Two(b.lhs.clone(), b.rhs.clone()),
             InstKind::FunctionCall(f) => VarIter::Iter(f.params.iter().cloned()),
-            InstKind::Const(v) => VarIter::One(Value::Imm(*v)),
-            InstKind::Assign(v) => VarIter::One((*v).into()),
-            InstKind::Param => VarIter::None,
+            InstKind::Assign(v) => VarIter::One(v.clone()),
+            InstKind::Phi => VarIter::None,
             InstKind::Dead => VarIter::None,
         }
     }
