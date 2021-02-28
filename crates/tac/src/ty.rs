@@ -1,6 +1,6 @@
 //! Type system definitions and stuff.
 use enum_as_inner::EnumAsInner;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 pub const PTR_SIZE: usize = 8;
 
@@ -9,7 +9,7 @@ pub const PTR_SIZE: usize = 8;
 ///
 /// > I know this is worse than using an external type repository, but hey you
 /// > can directly compare these!
-#[derive(Debug, Clone, PartialEq, Eq, EnumAsInner)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumAsInner, Hash)]
 pub enum Ty {
     Unit,
     Func(Arc<FuncTy>),
@@ -51,7 +51,7 @@ impl Ty {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NumericTy {
     pub kind: TyKind,
     pub size: u8,
@@ -77,14 +77,40 @@ impl NumericTy {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TyKind {
     Bool,
     Int,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FuncTy {
     pub return_type: Ty,
     pub params: Vec<Ty>,
 }
+
+// pub struct TypeInterner {
+//     interned: HashSet<Arc<Ty>>,
+// }
+
+// impl TypeInterner {
+//     /// Intern the given type so it takes up less space.
+//     pub fn intern_ty(&mut self, ty: Ty) -> Ty {
+//         match &ty {
+//             Ty::Unit => ty,
+//             Ty::Numeric(_) => ty,
+//             Ty::Func(f) => {}
+//             Ty::Ptr(p) => {}
+//         }
+//     }
+
+//     pub fn interned_arced(&mut self, ty: Arc<Ty>) -> Arc<Ty> {
+//         if self.interned
+//         match ty{
+//             Ty::Unit => {}
+//             Ty::Numeric(_) => {}
+//             Ty::Func(_) => {}
+//             Ty::Ptr(_) => {}
+//         }
+//     }
+// }

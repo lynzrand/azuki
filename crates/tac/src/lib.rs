@@ -55,8 +55,6 @@ pub struct TacFunc {
     pub name: SmolStr,
     /// Function type
     pub ty: Ty,
-    /// Mapping between function parameters and instructions
-    pub param_map: BTreeMap<usize, OpRef>,
     /// An arena to allocate instructions
     arena: Arena<Tac>,
     /// Basic blocks inside this function
@@ -77,7 +75,6 @@ impl TacFunc {
         TacFunc {
             name,
             ty,
-            param_map: BTreeMap::new(),
             arena: Arena::new(),
             basic_blocks,
             starting_block,
@@ -86,14 +83,6 @@ impl TacFunc {
 
     pub fn new_untyped(name: SmolStr) -> TacFunc {
         Self::new(name, Ty::unit())
-    }
-
-    pub fn param_map(&self) -> &BTreeMap<usize, OpRef> {
-        &self.param_map
-    }
-
-    pub fn param_map_mut(&mut self) -> &mut BTreeMap<usize, OpRef> {
-        &mut self.param_map
     }
 
     /// Insert a new TAC into arena with no next instruction, and belongs to Basic Block `bb`.

@@ -1,6 +1,6 @@
 grammar AzukiTac;
 
-WS: [ \t]* -> skip;
+WS: [ \t]+ -> skip;
 
 // Basic parts
 fragment Digit: [0-9];
@@ -77,7 +77,7 @@ val_inst: value;
 variable: Variable;
 inst_lhs: ty variable | DiscardVariable;
 inst_rhs: binary_inst | phi_inst | val_inst | fn_call_inst;
-inst: inst_lhs '=' inst_rhs LINEFEED;
+inst: inst_lhs '=' ty inst_rhs LINEFEED;
 
 unreachable_inst: UNREACHABLE;
 uncond_branch_inst: BRANCH BasicBlock;

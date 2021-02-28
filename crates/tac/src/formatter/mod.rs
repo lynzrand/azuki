@@ -128,7 +128,7 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
         ctx: (VarId, &mut TacFormatCtx),
     ) -> std::fmt::Result {
         write!(f, "{} = ", ctx.0)?;
-        write!(f, "<{}> ", self.inst.ty)?;
+        write!(f, "{} ", self.inst.ty)?;
         match &self.inst.kind {
             InstKind::Binary(i) => {
                 write!(f, "{} ", i.op)?;

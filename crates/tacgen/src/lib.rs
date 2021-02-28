@@ -115,12 +115,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         let return_ty = self.visit_ty(&func.ret_ty)?;
         let mut params_ty = vec![];
         for (idx, param) in func.params.iter().enumerate() {
-            let (param_op, param_ty) = self.visit_func_param_real(param, idx)?;
-            self.builder
-                .editor
-                .func
-                .param_map_mut()
-                .insert(params_ty.len(), param_op);
+            let (_param_op, param_ty) = self.visit_func_param_real(param, idx)?;
             params_ty.push(param_ty);
         }
         let func_ty = Ty::func_of(return_ty, params_ty);

@@ -1,24 +1,71 @@
 mod lexer;
 
 use combine::{
-    choice, easy,
-    error::{Format, Info, StreamError, UnexpectedParse},
+    between, choice,
+    error::StreamError,
     many, many1, one_of, optional, parser,
-    parser::char::{alpha_num, char, digit, hex_digit, newline, spaces as nl_spaces, string},
+    parser::{
+        char::{alpha_num, char, digit, hex_digit, newline, spaces as nl_spaces, string},
+        combinator::factory,
+    },
     stream::StreamErrorFor,
-    ParseError, Parser, Stream, StreamOnce,
+    ParseError, Parser, Stream,
 };
 use petgraph::Graph;
 use smol_str::SmolStr;
-use std::{str::FromStr, todo};
-
-use crate::{
-    err::Error, BinaryInst, BinaryOp, FunctionCall, InstKind, NumericTy, OpRef, TacFunc, Ty,
-    TyKind, Value,
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashMap, HashSet},
+    rc::Rc,
+    str::FromStr,
+    todo,
 };
 
-struct VariableNamingCtx {
-    // local_vars:
+use crate::{
+    builder::FuncEditor, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind, NumericTy,
+    OpRef, TacFunc, Ty, TyKind, Value,
+};
+
+struct VariableNamingCtx<'f> {
+    func: FuncEditor<'f>,
+    local_vars: BTreeMap<usize, OpRef>,
+    // type_interner: HashSet<Ty>,
+    curr_bb: BBId,
+}
+
+impl<'f> VariableNamingCtx<'f> {
+    pub fn new(func: &'f mut TacFunc) -> VariableNamingCtx<'f> {
+        VariableNamingCtx {
+            func: FuncEditor::new(func),
+            local_vars: BTreeMap::new(),
+            // type_interner: HashSet::new(),
+            curr_bb: BBId::default(),
+        }
+    }
+
+    pub fn new_var(&mut self, var_id: usize) -> OpRef {
+        if let Some(&mapping) = self.local_vars.get(&var_id) {
+            mapping
+        } else {
+            // insert placeholder instruction
+            self.func.func.tac_new(
+                Inst {
+                    kind: InstKind::Dead,
+                    ty: Ty::unit(),
+                },
+                self.curr_bb,
+            )
+        }
+    }
+
+    pub fn set_var(&mut self, idx: OpRef, inst: Inst) {
+        let inst_ref = self
+            .func
+            .func
+            .arena_get_mut(idx)
+            .expect("The supplied index must be valid");
+        inst_ref.inst = inst;
+    }
 }
 
 /// Matches zero or more non-newline space characters
@@ -115,16 +162,16 @@ where
     })
 }
 
-fn value<Input>() -> impl Parser<Input, Output = Value>
+fn value<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = Value> + 'a
 where
-    Input: Stream<Token = char>,
+    Input: Stream<Token = char> + 'a,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     choice((
         number().map(Value::Imm),
-        // TODO: map input variable number to arena indices
-        // THIS IS ONLY A PLACEHOLDER
-        variable().map(|v| Value::Dest(OpRef::from_bits(v as u64))),
+        variable().map(move |v| Value::Dest(ctx.borrow_mut().new_var(v))),
     ))
 }
 
@@ -179,12 +226,15 @@ where
 {
     (
         string("fn").skip(spaces0()),
-        char('(').skip(spaces0()),
-        comma_sep_list(ty().skip(spaces0())).skip(spaces0()),
+        between(
+            char('(').skip(spaces0()),
+            char(')').skip(spaces0()),
+            comma_sep_list(ty().skip(spaces0())).skip(spaces0()),
+        ),
         string("->").skip(spaces0()),
         ty(),
     )
-        .map(|(_, _, params, _, ret_ty)| Ty::func_of(ret_ty, params))
+        .map(|(_, params, _, ret_ty)| Ty::func_of(ret_ty, params))
 }
 
 fn _ty<Input>() -> impl Parser<Input, Output = Ty>
@@ -232,59 +282,108 @@ where
     })
 }
 
-fn binary_instruction<Input>() -> impl Parser<Input, Output = BinaryInst>
+fn binary_instruction<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = BinaryInst> + 'a
 where
-    Input: Stream<Token = char>,
+    Input: Stream<Token = char> + 'a,
 {
     (
         binary_op().skip(spaces1()),
-        value().skip(spaces1()),
-        value(),
+        value(ctx).skip(spaces1()),
+        value(ctx),
     )
         .map(|(op, lhs, rhs)| BinaryInst { op, lhs, rhs })
 }
 
-fn value_instruction<Input>() -> impl Parser<Input, Output = Value>
+fn value_instruction<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = Value> + 'a
 where
-    Input: Stream<Token = char>,
+    Input: Stream<Token = char> + 'a,
 {
-    value()
+    value(ctx)
 }
 
-fn func_call_instruction<Input>() -> impl Parser<Input, Output = FunctionCall>
+fn func_call_instruction<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = FunctionCall> + 'a
 where
-    Input: Stream<Token = char>,
+    Input: Stream<Token = char> + 'a,
 {
     (
         string("call").skip(spaces1()),
         ident().skip(spaces0()),
-        string("(").skip(spaces0()),
-        comma_sep_list(value()).skip(spaces0()),
-        string(")"),
+        between(
+            string("(").skip(spaces0()),
+            string(")"),
+            comma_sep_list(value(ctx)).skip(spaces0()),
+        ),
     )
-        .map(|(_, func, _, params, _)| FunctionCall {
+        .map(|(_, func, params)| FunctionCall {
             name: func.into(),
             params,
         })
 }
 
-fn instruction<Input>() -> impl Parser<Input, Output = InstKind>
+fn instruction<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = ()> + 'a
 where
-    Input: Stream<Token = char>,
+    Input: Stream<Token = char> + 'a,
 {
-    choice((
-        binary_instruction().map(InstKind::Binary),
-        value_instruction().map(InstKind::Assign),
-        func_call_instruction().map(InstKind::FunctionCall),
-    ))
-    .skip(nl1())
+    (
+        variable().skip(spaces0()).skip(string("=")).skip(spaces0()),
+        ty().skip(spaces1()),
+        choice((
+            binary_instruction(ctx).map(InstKind::Binary),
+            value_instruction(ctx).map(InstKind::Assign),
+            func_call_instruction(ctx).map(InstKind::FunctionCall),
+        )),
+    )
+        .map(move |(v, ty, kind)| {
+            let inst = Inst { kind, ty };
+            let mut ctx = ctx.borrow_mut();
+            let idx = ctx.new_var(v);
+            ctx.set_var(idx, inst);
+            // ctx.func.
+            // TODO: Attach function
+        })
 }
 
-fn basic_blocks<I>() -> impl Parser<I, Output = Graph<crate::BasicBlock, ()>>
+fn single_basic_block<'a, Input>(
+    i: Input,
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+    bb_id_map: &'a mut BTreeMap<i64, BBId>,
+) -> impl Parser<Input, Output = ()> + 'a
 where
-    I: Stream<Token = char>,
+    Input: Stream<Token = char> + 'a,
 {
-    spaces0().map(|_| todo!())
+    combine::parser::function::parser(move |i| {
+        // all parsers commit to the result
+        let (header, _) = (string("bb"), (unsigned_dec_number()), (string(":")))
+            .map(|(_, i, _)| i)
+            .parse_stream(i)
+            .into_result()?;
+        let bb_id = *bb_id_map
+            .entry(header)
+            .or_insert_with(|| ctx.borrow_mut().func.new_bb());
+        ctx.borrow_mut().func.set_current_bb(bb_id).unwrap();
+        // many(instruction(ctx).map(|i|))
+        todo!("Implement basic block parsing")
+    })
+}
+
+fn basic_blocks<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = ()> + 'a
+where
+    Input: Stream<Token = char> + 'a,
+{
+    // this parser edits the internal states of `ctx`, thus returns `()`
+    combine::parser::function::parser(|i| {
+        todo!("Implement basic blocks");
+    })
 }
 
 fn func_header<I>() -> impl Parser<I, Output = (SmolStr, Ty)>
@@ -294,29 +393,38 @@ where
     (
         string("fn").skip(spaces1()),
         ident().skip(spaces0()),
-        comma_sep_list(ty().skip(spaces0())).skip(spaces0()),
+        between(
+            string("(").skip(spaces0()),
+            string(")").skip(spaces0()),
+            comma_sep_list(ty().skip(spaces0())).skip(spaces0()),
+        ),
         string("->").skip(spaces0()),
         ty(),
     )
         .map(|(_, name, params, _, ret_ty)| (name.into(), Ty::func_of(ret_ty, params)))
 }
 
-pub fn parse_func<I>() -> impl Parser<I, Output = TacFunc>
+pub fn parse_func<'a, I>() -> impl Parser<I, Output = TacFunc>
 where
-    I: Stream<Token = char>,
+    I: Stream<Token = char> + 'a,
 {
-    (
-        func_header().skip(spaces0()),
-        string("{").skip(nl1()),
-        basic_blocks(),
-        string("}").skip(nl1()),
-    )
-        .map(|((name, ty), _, blocks, _)| TacFunc {
-            name,
-            ty,
-            param_map: todo!(),
-            arena: todo!(),
-            basic_blocks: blocks,
-            starting_block: todo!(),
+    combine::parser::function::parser(|i| {
+        let mut func = TacFunc::new_untyped(SmolStr::default());
+        let ctx = RefCell::new(VariableNamingCtx::new(&mut func));
+        let res = (
+            func_header().skip(spaces0()),
+            between(
+                string("{").skip(nl1()),
+                string("}").skip(nl1()),
+                basic_blocks(&ctx),
+            ),
+        )
+            .parse_stream(i);
+        res.map(|((name, ty), _)| {
+            func.name = name;
+            func.ty = ty;
+            func
         })
+        .into_result()
+    })
 }
