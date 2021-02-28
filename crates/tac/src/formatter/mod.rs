@@ -79,6 +79,24 @@ impl Display for NumericTy {
     }
 }
 
+impl Display for BinaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            BinaryOp::Add => "add",
+            BinaryOp::Sub => "sub",
+            BinaryOp::Mul => "mul",
+            BinaryOp::Div => "div",
+            BinaryOp::Lt => "lt",
+            BinaryOp::Gt => "gt",
+            BinaryOp::Le => "le",
+            BinaryOp::Ge => "ge",
+            BinaryOp::Eq => "eq",
+            BinaryOp::Ne => "ne",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 struct VarId(u32);
 impl Display for VarId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -113,7 +131,7 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
         write!(f, "<{}> ", self.inst.ty)?;
         match &self.inst.kind {
             InstKind::Binary(i) => {
-                write!(f, "{:?} ", i.op)?;
+                write!(f, "{} ", i.op)?;
                 i.lhs.fmt_ctx(f, ctx.1)?;
                 write!(f, " ")?;
                 i.rhs.fmt_ctx(f, ctx.1)?;

@@ -1,5 +1,7 @@
 grammar AzukiTac;
 
+WS: [ \t]* -> skip;
+
 // Basic parts
 fragment Digit: [0-9];
 fragment Letter: [a-zA-Z];
@@ -82,10 +84,12 @@ uncond_branch_inst: BRANCH BasicBlock;
 cond_branch_inst: BRANCH BasicBlock IF value;
 return_inst: RETURN value;
 jump_inst:
-	unreachable_inst
-	| uncond_branch_inst
-	| cond_branch_inst
-	| return_inst;
+	(
+		unreachable_inst
+		| uncond_branch_inst
+		| cond_branch_inst
+		| return_inst
+	) LINEFEED;
 
 // basic block
 basic_block_id: BasicBlock ':';
@@ -94,8 +98,8 @@ basic_block: basic_block_id LINEFEED inst* jump_inst+;
 // function
 function_param: '(' (ty (',' ty)*)? ')';
 function:
-	FN GlobalVariable function_param '{' LINEFEED basic_block+ '}';
+	FN GlobalVariable function_param '->' ty '{' LINEFEED basic_block+ '}' LINEFEED;
 
 // program
-global_var: GLOBAL GlobalVariable '=' literal;
+global_var: GLOBAL GlobalVariable '=' literal LINEFEED;
 program: (global_var | function)*;
