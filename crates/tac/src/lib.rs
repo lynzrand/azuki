@@ -19,8 +19,9 @@ pub mod parser;
 pub mod ty;
 pub mod util;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
 use indexmap::map::Values;
 use petgraph::{
@@ -332,19 +333,26 @@ pub struct Inst {
     pub ty: Ty,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub struct PhiSource {
+    pub val: OpRef,
+    pub bb: BBId,
+}
+
 /// Kinds of an instruction
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, EnumAsInner)]
 pub enum InstKind {
     /// A binary operaton, e.g. plus, divide
     Binary(BinaryInst),
     /// A call to another function.
     FunctionCall(FunctionCall),
-    /// A constant value.
-    Const(Immediate),
-    /// An assignment from another value
-    Assign(Index),
-    /// A parameter
-    Param,
+
+    /// An assignment from another instruction or constant
+    Assign(Value),
+    /// A phi instruction
+    Phi(BTreeSet<PhiSource>),
+    /// A function parameter
+    Param(usize),
     /// An unreachable value
     Dead,
 }
@@ -353,10 +361,14 @@ impl InstKind {
     pub fn params_iter(&self) -> impl Iterator<Item = Value> + '_ {
         match self {
             InstKind::Binary(b) => VarIter::Two(b.lhs.clone(), b.rhs.clone()),
-            InstKind::FunctionCall(f) => VarIter::Iter(f.params.iter().cloned()),
-            InstKind::Const(v) => VarIter::One(Value::Imm(*v)),
-            InstKind::Assign(v) => VarIter::One((*v).into()),
-            InstKind::Param => VarIter::None,
+            InstKind::FunctionCall(f) => {
+                VarIter::Iter(Box::new(f.params.iter().cloned()) as Box<dyn Iterator<Item = _>>)
+            }
+            InstKind::Assign(v) => VarIter::One(v.clone()),
+            InstKind::Phi(source) => VarIter::Iter(
+                Box::new(source.iter().map(|v| v.val.into())) as Box<dyn Iterator<Item = _>>
+            ),
+            InstKind::Param(_) => VarIter::None,
             InstKind::Dead => VarIter::None,
         }
     }
@@ -372,13 +384,13 @@ pub enum Branch {
     /// Returns the given value.
     Return(Option<Value>),
 
-    /// Jumps to the given target with given parameters.
-    Jump(BranchTarget),
+    /// Jumps to the given target
+    Jump(BBId),
 
-    /// Conditional jump to the given targets.
+    /// Conditional jump to the given target.
     ///
     /// `cond` must be a boolean or integer.
-    CondJump { cond: Value, target: BranchTarget },
+    CondJump { cond: Value, target: BBId },
 }
 
 // impl Default for Branch {
@@ -391,71 +403,10 @@ impl Branch {
     pub fn target_iter(&self) -> impl Iterator<Item = BBId> + '_ {
         match self {
             Branch::Return(_) => util::OptionIter::<BBId>::None,
-            Branch::Jump(t) => util::OptionIter::One(t.bb),
-            Branch::CondJump { target, .. } => util::OptionIter::One(target.bb),
+            Branch::Jump(t) => util::OptionIter::One(*t),
+            Branch::CondJump { target, .. } => util::OptionIter::One(*target),
             // Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
             // Branch::Unreachable => util::VarIter::None,
-        }
-    }
-
-    pub fn target(&self) -> Option<&BranchTarget> {
-        match self {
-            Branch::Return(_) => None,
-            Branch::Jump(j) => Some(j),
-            Branch::CondJump { target, .. } => Some(target),
-        }
-    }
-
-    pub fn target_mut(&mut self) -> Option<&mut BranchTarget> {
-        match self {
-            Branch::Return(_) => None,
-            Branch::Jump(j) => Some(j),
-            Branch::CondJump { target, .. } => Some(target),
-        }
-    }
-
-    pub fn add_param(&mut self, bb_id: BBId, param: Index, source_var: Index) {
-        match self {
-            Branch::Return(_) => {}
-            Branch::Jump(target) => {
-                target.add_param_if_bb(bb_id, param, source_var);
-            }
-            Branch::CondJump { target, .. } => {
-                target.add_param_if_bb(bb_id, param, source_var);
-            } // Branch::TableJump { target, .. } => {
-              //     for branch_target in target {
-              //         branch_target.add_param_if_bb(bb_id, param, source_var);
-              //     }
-              // } // Branch::Unreachable => {}
-        }
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct BranchTarget {
-    pub bb: BBId,
-    /// Basic block parameters, described as a Index-Index mapping (similar to phi)
-    pub params: BTreeMap<Index, Index>,
-}
-
-impl BranchTarget {
-    pub fn add_param(&mut self, param: Index, source: Index) {
-        self.params.insert(param, source);
-    }
-
-    pub fn add_param_if_bb(&mut self, bb_id: BBId, param: Index, source: Index) {
-        if self.bb == bb_id {
-            self.add_param(param, source)
-        }
-    }
-
-    pub fn remove_param(&mut self, param: Index) {
-        self.params.remove(&param);
-    }
-
-    pub fn remove_param_if_bb(&mut self, bb_id: BBId, param: Index) {
-        if self.bb == bb_id {
-            self.remove_param(param)
         }
     }
 }

@@ -1,5 +1,5 @@
 //! Type system definitions and stuff.
-
+use enum_as_inner::EnumAsInner;
 use std::sync::Arc;
 
 pub const PTR_SIZE: usize = 8;
@@ -9,7 +9,7 @@ pub const PTR_SIZE: usize = 8;
 ///
 /// > I know this is worse than using an external type repository, but hey you
 /// > can directly compare these!
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumAsInner)]
 pub enum Ty {
     Unit,
     Func(Arc<FuncTy>),
@@ -47,20 +47,6 @@ impl Ty {
             Ty::Func(_) => None,
             Ty::Ptr(_) => Some(PTR_SIZE),
             Ty::Numeric(n) => Some(n.size() as usize),
-        }
-    }
-
-    pub fn as_numeric(&self) -> Option<&NumericTy> {
-        match self {
-            Ty::Numeric(n) => Some(n),
-            _ => None,
-        }
-    }
-
-    pub fn as_func(&self) -> Option<&FuncTy> {
-        match self {
-            Ty::Func(n) => Some(n),
-            _ => None,
         }
     }
 }

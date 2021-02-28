@@ -2,14 +2,18 @@
 
 use indexmap::IndexSet;
 use petgraph::visit;
-use std::{fmt::Display, writeln};
+use std::{
+    cell::{RefCell, UnsafeCell},
+    fmt::Display,
+    writeln,
+};
 use ty::FuncTy;
-use util::BiasedRevPostOrderDfs;
+use util::{BiasedRevPostOrderDfs, ListFormatter};
 use visit::Walker;
 
 use crate::*;
 
-trait FormatContext<C> {
+pub trait FormatContext<C> {
     fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: C) -> std::fmt::Result;
 }
 
@@ -124,14 +128,25 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                 }
                 write!(f, ")")?;
             }
-            InstKind::Const(i) => {
-                write!(f, "const {}", i)?;
-            }
+
             InstKind::Assign(i) => {
-                write!(f, "{}", ctx.1.var_id(*i))?;
+                i.fmt_ctx(f, ctx.1)?;
             }
-            InstKind::Param => {
-                write!(f, "param")?;
+            InstKind::Param(id) => {
+                write!(f, "param {}", id)?;
+            }
+            InstKind::Phi(phi) => {
+                write!(f, "phi [")?;
+                let mut first = true;
+                for source in phi {
+                    if !first {
+                        write!(f, ", ")?;
+                    } else {
+                        first = false;
+                    }
+                    write!(f, "({}, {})", ctx.1.var_id(source.val), source.bb.index())?;
+                }
+                write!(f, "]")?;
             }
             InstKind::Dead => {
                 write!(f, "dead_value")?;
@@ -151,53 +166,35 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
                 }
             }
             Branch::Jump(target) => {
-                target.fmt_ctx(f, ctx)?;
+                write!(f, "br bb{}", target.index())?;
             }
             Branch::CondJump { cond, target } => {
-                write!(f, "if ")?;
+                write!(f, "br bb{} if ", target.index())?;
                 cond.fmt_ctx(f, ctx)?;
-                write!(f, " ")?;
-                target.fmt_ctx(f, ctx)?;
-            } // Branch::TableJump { .. } => {
-              //     todo!("No table jump for now");
-              // }
-        }
-        Ok(())
-    }
-}
-
-impl FormatContext<&mut TacFormatCtx> for BranchTarget {
-    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut TacFormatCtx) -> std::fmt::Result {
-        write!(f, "jump {} (", self.bb.index())?;
-        for (idx, (target_idx, source_idx)) in self.params.iter().enumerate() {
-            if idx != 0 {
-                write!(f, ", ")?;
             }
-            let target_var_id = ctx.var_id(*target_idx);
-            let source_var_id = ctx.var_id(*source_idx);
-            write!(f, "{} <- {}", target_var_id, source_var_id)?;
         }
-        write!(f, ")")?;
         Ok(())
     }
 }
 
 impl std::fmt::Display for TacFunc {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "fn @{}: {} {{", &self.name, &self.ty)?;
+        let ty = self.ty.as_func().unwrap();
+        let param_fmt = ListFormatter::new(ty.params.iter());
+        writeln!(
+            f,
+            "fn @{}({}) -> {} {{",
+            &self.name, param_fmt, &ty.return_type
+        )?;
         let mut ctx = TacFormatCtx {
             i_set: IndexSet::new(),
         };
-        writeln!(f, "params:")?;
-        for (&param_idx, &inst) in &self.param_map {
-            writeln!(f, "\t{} <- #{}", ctx.var_id(inst), param_idx)?;
-        }
 
         let mut reverse_dfs_path =
             BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
         while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
             let v = self.basic_blocks.node_weight(k).unwrap();
-            writeln!(f, "bb {}:", k.index())?;
+            writeln!(f, "bb{}:", k.index())?;
             if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {

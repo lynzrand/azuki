@@ -32,11 +32,9 @@ struct BreakTarget {
     pub continue_in: BBId,
 }
 
-fn empty_jump_target(bb_id: BBId) -> tac::BranchTarget {
-    tac::BranchTarget {
-        bb: bb_id,
-        params: BTreeMap::new(),
-    }
+// TODO: Remove this function
+fn empty_jump_target(bb_id: BBId) -> BBId {
+    bb_id
 }
 
 pub struct FuncCompiler<'a> {
@@ -65,7 +63,11 @@ impl<'a> FuncCompiler<'a> {
         }
     }
 
-    fn visit_func_param_real(&mut self, param: &FuncParam) -> Result<(OpRef, Ty), Error> {
+    fn visit_func_param_real(
+        &mut self,
+        param: &FuncParam,
+        idx: usize,
+    ) -> Result<(OpRef, Ty), Error> {
         let ty = self.visit_ty(&param.ty)?;
         let mut scope = self.scope_builder.borrow_mut();
         let var = scope
@@ -73,7 +75,7 @@ impl<'a> FuncCompiler<'a> {
             .ok_or_else(|| Error::DuplicateVar(param.name.name.clone()))?;
 
         let val = self.builder.insert_after_current_place(Inst {
-            kind: InstKind::Param,
+            kind: InstKind::Param(idx),
             ty: ty.clone(),
         });
 
@@ -112,8 +114,8 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         let return_ty = self.visit_ty(&func.ret_ty)?;
         let mut params_ty = vec![];
-        for param in &func.params {
-            let (param_op, param_ty) = self.visit_func_param_real(param)?;
+        for (idx, param) in func.params.iter().enumerate() {
+            let (param_op, param_ty) = self.visit_func_param_real(param, idx)?;
             self.builder
                 .editor
                 .func
@@ -181,7 +183,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
             }
             Value::Imm(i) => {
                 let target = self.builder.insert_after_current_place(Inst {
-                    kind: InstKind::Const(i),
+                    kind: InstKind::Assign(Value::Imm(i)),
                     ty: val_ty,
                 });
                 self.builder.write_variable_cur(var_id, target).unwrap();

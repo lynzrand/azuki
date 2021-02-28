@@ -109,7 +109,7 @@ where
         if let Some(phis) = self.incomplete_phi.remove(&bb_id) {
             let bb_preds = self.pred_of_bb(bb_id);
             for (var, phi) in phis {
-                self.add_phi_operands(var, phi, bb_id, &bb_preds);
+                self.add_phi_operands(var, phi, &bb_preds);
             }
         }
 
@@ -187,7 +187,7 @@ where
     fn read_variable_recursive(&mut self, var: TVar, bb_id: BBId) -> Option<Index> {
         let var_ty = self.variable_map.get(&var)?.0.clone();
         let val = if !self.sealed_bbs.contains(bb_id.index()) {
-            let param = self.editor.insert_param(bb_id, var_ty).unwrap();
+            let param = self.editor.insert_phi(bb_id, var_ty).unwrap();
 
             let block = self.incomplete_phi.entry(bb_id).or_insert_with(Vec::new);
             block.push((var.clone(), param));
@@ -198,9 +198,9 @@ where
             if preds.len() == 1 {
                 self.read_variable(var.clone(), preds[0])?
             } else {
-                let inst = self.editor.insert_param(bb_id, var_ty).unwrap();
+                let inst = self.editor.insert_phi(bb_id, var_ty).unwrap();
                 self.write_variable(var.clone(), inst, bb_id).unwrap();
-                self.add_phi_operands(var.clone(), inst, bb_id, &preds);
+                self.add_phi_operands(var.clone(), inst, &preds);
                 inst
             }
         };
@@ -210,13 +210,20 @@ where
     }
 
     /// This function directly corresponds to `addPhiOperands` in the algorithm.
-    fn add_phi_operands(&mut self, var: TVar, phi: Index, current_bb: BBId, preds: &[BBId]) {
+    fn add_phi_operands(&mut self, var: TVar, phi: Index, preds: &[BBId]) {
         for &pred in preds {
             let source = self.read_variable(var.clone(), pred).unwrap();
-            let bb = self.editor.func.basic_blocks.node_weight_mut(pred).unwrap();
-            bb.jumps
-                .iter_mut()
-                .for_each(|x| x.add_param(current_bb, phi, source));
+            self.func
+                .arena_get_mut(phi)
+                .unwrap()
+                .inst
+                .kind
+                .as_phi_mut()
+                .unwrap()
+                .insert(PhiSource {
+                    val: source,
+                    bb: pred,
+                });
         }
         self.try_remove_trivial_phi(phi);
     }
@@ -228,45 +235,30 @@ where
         let preds = self.pred_of_bb(phi_bb);
 
         // for op in phi.operands:
-        'bb: for &bb in &preds {
-            let bb = self.editor.func.basic_blocks.node_weight(bb).unwrap();
-            for branch in bb
-                .jumps
-                .iter()
-                .filter_map(|b| b.target())
-                .filter(|t| t.bb == phi_bb)
-            {
-                let operand = *branch
-                    .params
-                    .get(&phi_op)
-                    .expect("Phi operation should reside in bb's direct predecessor");
-                // if op == same || op == phi
-                if operand == phi_op || same.map_or(false, |x| x == operand) {
-                    continue 'bb;
-                }
-                if same.is_some() {
-                    // not trivial
-                    return;
-                }
-                same = Some(operand);
+
+        for PhiSource {
+            val: operand,
+            bb: _,
+        } in phi.inst.kind.as_phi().unwrap()
+        {
+            let operand = *operand;
+            // if op == same || op == phi
+            if operand == phi_op || same.map_or(false, |x| x == operand) {
+                continue;
             }
+            if same.is_some() {
+                // not trivial
+                return;
+            }
+            same = Some(operand);
         }
+
         let replace_value = match same {
             None => InstKind::Dead,
-            Some(same) => InstKind::Assign(same),
+            Some(same) => InstKind::Assign(same.into()),
         };
         // remove traces of this phi
-        for &bb in &preds {
-            let bb = self.editor.func.basic_blocks.node_weight_mut(bb).unwrap();
-            for branch in bb
-                .jumps
-                .iter_mut()
-                .filter_map(|b| b.target_mut())
-                .filter(|t| t.bb == phi_bb)
-            {
-                branch.params.remove(&phi_op);
-            }
-        }
+
         // FIXME: workaround for not being able to track a phi's users
         // replace usage of this phi
         self.editor.func.arena_get_mut(phi_op).unwrap().inst.kind = replace_value;
