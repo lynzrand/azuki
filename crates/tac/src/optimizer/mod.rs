@@ -3,6 +3,8 @@ use std::borrow::Cow;
 use crate::{Program, TacFunc};
 use anymap::AnyMap;
 
+pub mod sanity_checker;
+
 /// Represents a single pass inside the compilation pipeline.
 ///
 /// A `Pass` should be constructible from an [`OptimizeEnvironment`], which
@@ -12,6 +14,11 @@ pub trait Pass {
     /// Returns the name of this pass.
     fn name(&self) -> Cow<str>;
 
+    /// Whether this pass edits the program. This method should correctly
+    /// represent the function of [`optimize_program`], since mutable references
+    /// are given anyway.
+    fn edits_program(&self) -> bool;
+
     /// Optimize at program level.
     fn optimize_program(&mut self, env: &mut OptimizeEnvironment, program: &mut Program);
 }
@@ -20,14 +27,35 @@ pub trait FunctionOptimizer {
     /// Returns the name of this pass.
     fn name(&self) -> Cow<str>;
 
+    /// Whether this pass edits the program. This method should correctly
+    /// represent the function of [`optimize_program`], since mutable references
+    /// are given anyway.
+    fn edits_program(&self) -> bool;
+
     /// Reset this instance for optimizing another function.
-    fn reset(&mut self);
+    fn reset(&mut self) {}
 
     /// Optimize a single function.
     fn optimize_func(&mut self, env: &mut OptimizeEnvironment, func: &mut TacFunc);
+
+    /// Perform initialization before any functions are processed.
+    fn do_initialization(&mut self, _env: &mut OptimizeEnvironment, _prog: &Program) {}
+
+    /// Perform finalization after all functions are processed.
+    fn do_finalization(&mut self, _env: &mut OptimizeEnvironment, _prog: &Program) {}
+
+    /// Transform this optimizer into a pass. You should not overwrite this method
+    /// in most cases.
+    fn make_pass(self) -> FunctionOptimizerPass<Self>
+    where
+        Self: Sized,
+    {
+        FunctionOptimizerPass(self)
+    }
 }
 
-struct FunctionOptimizerPass<F>(F);
+/// A simple wrapper over a [`FunctionOptimizer`] to create a pass.
+pub struct FunctionOptimizerPass<F: ?Sized>(pub F);
 impl<F> Pass for FunctionOptimizerPass<F>
 where
     F: FunctionOptimizer,
@@ -36,11 +64,17 @@ where
         self.0.name()
     }
 
+    fn edits_program(&self) -> bool {
+        self.0.edits_program()
+    }
+
     fn optimize_program(&mut self, env: &mut OptimizeEnvironment, program: &mut Program) {
+        self.0.do_initialization(env, program);
         for func in program.functions.values_mut() {
             self.0.reset();
             self.0.optimize_func(env, func);
         }
+        self.0.do_finalization(env, program);
     }
 }
 

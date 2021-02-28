@@ -2,14 +2,18 @@
 
 use indexmap::IndexSet;
 use petgraph::visit;
-use std::{fmt::Display, writeln};
+use std::{
+    cell::{RefCell, UnsafeCell},
+    fmt::Display,
+    writeln,
+};
 use ty::FuncTy;
-use util::BiasedRevPostOrderDfs;
+use util::{BiasedRevPostOrderDfs, ListFormatter};
 use visit::Walker;
 
 use crate::*;
 
-trait FormatContext<C> {
+pub trait FormatContext<C> {
     fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: C) -> std::fmt::Result;
 }
 
@@ -162,10 +166,10 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
                 }
             }
             Branch::Jump(target) => {
-                write!(f, "br {}", target.index())?;
+                write!(f, "br bb{}", target.index())?;
             }
             Branch::CondJump { cond, target } => {
-                write!(f, "br {} if ", target.index())?;
+                write!(f, "br bb{} if ", target.index())?;
                 cond.fmt_ctx(f, ctx)?;
             }
         }
@@ -175,14 +179,16 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
 
 impl std::fmt::Display for TacFunc {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "fn @{}: {} {{", &self.name, &self.ty)?;
+        let ty = self.ty.as_func().unwrap();
+        let param_fmt = ListFormatter::new(ty.params.iter());
+        writeln!(
+            f,
+            "fn @{}({}) -> {} {{",
+            &self.name, param_fmt, &ty.return_type
+        )?;
         let mut ctx = TacFormatCtx {
             i_set: IndexSet::new(),
         };
-        writeln!(f, "params:")?;
-        for (&param_idx, &inst) in &self.param_map {
-            writeln!(f, "\t{} <- #{}", ctx.var_id(inst), param_idx)?;
-        }
 
         let mut reverse_dfs_path =
             BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);

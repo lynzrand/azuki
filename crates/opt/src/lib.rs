@@ -28,11 +28,6 @@ impl FunctionOptimizer for DeadCodeEliminator {
         for bb in func.basic_blocks.node_indices() {
             let bb = func.basic_blocks.node_weight(bb).unwrap();
             for br in &bb.jumps {
-                if let Some(target) = br.target() {
-                    for (target, source) in &target.params {
-                        self.graph.add_edge(*source, *target, ());
-                    }
-                }
                 if let Branch::Return(Some(Value::Dest(idx))) = br {
                     self.find_roots.include_node(*idx);
                 }
@@ -58,25 +53,15 @@ impl FunctionOptimizer for DeadCodeEliminator {
                     editor.remove_current();
                 }
             }
-            let bb = editor.current_bb_mut();
-            for br in &mut bb.jumps {
-                if let Some(target) = br.target_mut() {
-                    let keys = target
-                        .params
-                        .keys()
-                        .filter(|k| !retained.contains(k))
-                        .cloned()
-                        .collect::<Vec<_>>();
-                    for key in keys {
-                        target.params.remove(&key);
-                    }
-                }
-            }
         }
     }
 
     fn reset(&mut self) {
         self.graph.clear();
         self.find_roots.clear();
+    }
+
+    fn edits_program(&self) -> bool {
+        true
     }
 }
