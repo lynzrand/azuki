@@ -7,9 +7,10 @@ use combine::{
     parser::{
         char::{alpha_num, char, digit, hex_digit, newline, spaces as nl_spaces, string},
         combinator::factory,
+        function::env_parser,
     },
     stream::StreamErrorFor,
-    ParseError, Parser, Stream,
+    ParseError, Parser, StdParseResult, Stream,
 };
 use petgraph::Graph;
 use smol_str::SmolStr;
@@ -43,7 +44,7 @@ impl<'f> VariableNamingCtx<'f> {
         }
     }
 
-    pub fn new_var(&mut self, var_id: usize) -> OpRef {
+    pub fn declared_var(&mut self, var_id: usize) -> OpRef {
         if let Some(&mapping) = self.local_vars.get(&var_id) {
             mapping
         } else {
@@ -171,7 +172,7 @@ where
 {
     choice((
         number().map(Value::Imm),
-        variable().map(move |v| Value::Dest(ctx.borrow_mut().new_var(v))),
+        variable().map(move |v| Value::Dest(ctx.borrow_mut().declared_var(v))),
     ))
 }
 
@@ -344,45 +345,59 @@ where
         .map(move |(v, ty, kind)| {
             let inst = Inst { kind, ty };
             let mut ctx = ctx.borrow_mut();
-            let idx = ctx.new_var(v);
+            let idx = ctx.declared_var(v);
             ctx.set_var(idx, inst);
-            // ctx.func.
-            // TODO: Attach function
+            ctx.func.put_inst_after_current_place(idx).unwrap();
         })
 }
 
-fn single_basic_block<'a, Input>(
-    i: Input,
-    ctx: &'a RefCell<VariableNamingCtx<'a>>,
-    bb_id_map: &'a mut BTreeMap<i64, BBId>,
-) -> impl Parser<Input, Output = ()> + 'a
+// Hey clippy, THIS is type gymnastics!
+#[allow(clippy::type_complexity)]
+fn single_basic_block<'b, Input>(
+    ctx: (
+        &'b RefCell<VariableNamingCtx<'b>>,
+        Rc<RefCell<BTreeMap<i64, BBId>>>,
+    ),
+    input: &mut Input,
+) -> StdParseResult<(), Input>
 where
-    Input: Stream<Token = char> + 'a,
+    Input: Stream<Token = char> + 'b,
 {
-    combine::parser::function::parser(move |i| {
-        // all parsers commit to the result
-        let (header, _) = (string("bb"), (unsigned_dec_number()), (string(":")))
-            .map(|(_, i, _)| i)
-            .parse_stream(i)
-            .into_result()?;
-        let bb_id = *bb_id_map
-            .entry(header)
-            .or_insert_with(|| ctx.borrow_mut().func.new_bb());
-        ctx.borrow_mut().func.set_current_bb(bb_id).unwrap();
-        // many(instruction(ctx).map(|i|))
-        todo!("Implement basic block parsing")
-    })
+    // all parsers commit to the result
+    (
+        string("bb"),
+        unsigned_dec_number().skip(spaces0()),
+        (string(":")),
+    )
+        .then(move |(_, id, _)| {
+            let (ctx, bb_id_map) = ctx.clone();
+
+            let bb_id = *bb_id_map
+                .borrow_mut()
+                .entry(id)
+                .or_insert_with(|| ctx.borrow_mut().func.new_bb());
+            ctx.borrow_mut().func.set_current_bb(bb_id).unwrap();
+
+            many(instruction(ctx)).map(|_: ()| ())
+        })
+        .parse_stream(input)
+        .into_result()
 }
 
-fn basic_blocks<'a, Input>(
-    ctx: &'a RefCell<VariableNamingCtx<'a>>,
-) -> impl Parser<Input, Output = ()> + 'a
+fn basic_blocks<'b, Input>(
+    ctx: &'b RefCell<VariableNamingCtx<'b>>,
+) -> impl Parser<Input, Output = ()> + 'b
 where
-    Input: Stream<Token = char> + 'a,
+    Input: Stream<Token = char> + 'b,
 {
     // this parser edits the internal states of `ctx`, thus returns `()`
-    combine::parser::function::parser(|i| {
-        todo!("Implement basic blocks");
+    combine::parser::function::parser(move |i| {
+        let ctx = &*ctx;
+        let bb_id_map = Rc::new(RefCell::new(BTreeMap::new()));
+
+        let single_blk = env_parser((ctx, bb_id_map), single_basic_block);
+        let res = many1(single_blk).parse_stream(i);
+        res.into_result()
     })
 }
 

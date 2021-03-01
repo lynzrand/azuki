@@ -148,28 +148,8 @@ impl<'a> FuncEditor<'a> {
     /// only instruction of the basic block.
     pub fn insert_after_current_place(&mut self, inst: Inst) -> OpRef {
         let idx = self.func.tac_new(inst, self.current_bb_id());
-        if let Some(cur_idx) = self.current_idx {
-            self.func.tac_set_after(cur_idx, idx).unwrap();
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
-
-            // reset tail pointer, since insertion might be at the end
-            if bb.tail == Some(cur_idx) {
-                bb.tail = Some(idx);
-            }
-        } else {
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
-            bb.head = Some(idx);
-            bb.tail = Some(idx);
-        }
-        self.current_idx = Some(idx);
+        // this line is infailable
+        self.put_inst_after_current_place(idx).unwrap();
         idx
     }
 
@@ -180,28 +160,7 @@ impl<'a> FuncEditor<'a> {
     /// only instruction of the basic block.
     pub fn insert_before_current_place(&mut self, inst: Inst) -> OpRef {
         let idx = self.func.tac_new(inst, self.current_bb_id());
-        if let Some(cur_idx) = self.current_idx {
-            self.func.tac_set_before(cur_idx, idx).unwrap();
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
-
-            // reset head pointer, since insertion might be at the start
-            if bb.head == self.current_idx {
-                bb.head = Some(idx);
-            }
-        } else {
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
-            bb.head = Some(idx);
-            bb.tail = Some(idx);
-        }
-        self.current_idx = Some(idx);
+        self.put_inst_before_current_place(idx).unwrap();
         idx
     }
 
@@ -229,6 +188,82 @@ impl<'a> FuncEditor<'a> {
             self.current_idx = curr_idx;
         }
         Ok(insert_pos)
+    }
+
+    /// Attach the free-standing instruction to the place after [`current_idx`],
+    /// and advance one instruction forward.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the instruction is not free-standing (`inst.prev` or
+    /// `inst.next` is not [`None`]).
+    pub fn put_inst_after_current_place(&mut self, idx: OpRef) -> TacResult<()> {
+        {
+            let inst = self.func.arena_get(idx)?;
+            assert_eq!(inst.prev, None);
+            assert_eq!(inst.next, None);
+        }
+        if let Some(cur_idx) = self.current_idx {
+            self.func.tac_set_after(cur_idx, idx).unwrap();
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb_id)
+                .unwrap();
+
+            // reset tail pointer, since insertion might be at the end
+            if bb.tail == Some(cur_idx) {
+                bb.tail = Some(idx);
+            }
+        } else {
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb_id)
+                .unwrap();
+            bb.head = Some(idx);
+            bb.tail = Some(idx);
+        }
+        self.current_idx = Some(idx);
+        Ok(())
+    }
+
+    /// Attach the free-standing instruction to the place before [`current_idx`],
+    /// and advance one instruction back.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the instruction is not free-standing (`inst.prev` or
+    /// `inst.next` is not [`None`]).
+    fn put_inst_before_current_place(&mut self, idx: OpRef) -> TacResult<()> {
+        {
+            let inst = self.func.arena_get(idx)?;
+            assert_eq!(inst.prev, None);
+            assert_eq!(inst.next, None);
+        }
+        if let Some(cur_idx) = self.current_idx {
+            self.func.tac_set_before(cur_idx, idx).unwrap();
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb_id)
+                .unwrap();
+
+            // reset head pointer, since insertion might be at the start
+            if bb.head == self.current_idx {
+                bb.head = Some(idx);
+            }
+        } else {
+            let bb = self
+                .func
+                .basic_blocks
+                .node_weight_mut(self.current_bb_id)
+                .unwrap();
+            bb.head = Some(idx);
+            bb.tail = Some(idx);
+        }
+        self.current_idx = Some(idx);
+        Ok(())
     }
 
     /// Add a branching instruction to the given basic block's jump instruction list.

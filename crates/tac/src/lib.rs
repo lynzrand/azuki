@@ -92,6 +92,18 @@ impl TacFunc {
         self.arena.insert(Tac::independent(inst, bb))
     }
 
+    /// Insert a new TAC into arena with no next instruction, without a proper
+    /// basic block ID.
+    pub fn tac_new_no_bb(&mut self, inst: Inst) -> OpRef {
+        self.arena.insert(Tac::independent(inst, BBId::end()))
+    }
+
+    /// Set the basic block field of this TAC.
+    pub fn tac_set_bb(&mut self, idx: OpRef, bb: BBId) -> TacResult<()> {
+        self.arena_get_mut(idx)?.bb = bb;
+        Ok(())
+    }
+
     #[inline]
     pub fn arena_get(&self, idx: OpRef) -> TacResult<&Tac> {
         self.arena.get(idx).ok_or(Error::NoSuchTacIdx(idx))
