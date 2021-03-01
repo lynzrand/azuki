@@ -23,8 +23,8 @@ use std::{
 };
 
 use crate::{
-    builder::FuncEditor, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind, NumericTy,
-    OpRef, TacFunc, Ty, TyKind, Value,
+    builder::FuncEditor, util::Captures, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind,
+    NumericTy, OpRef, TacFunc, Ty, TyKind, Value,
 };
 
 struct VariableNamingCtx<'f> {
@@ -351,17 +351,13 @@ where
         })
 }
 
-// Hey clippy, THIS is type gymnastics!
 #[allow(clippy::type_complexity)]
-fn single_basic_block<'b, Input>(
-    ctx: (
-        &'b RefCell<VariableNamingCtx<'b>>,
-        Rc<RefCell<BTreeMap<i64, BBId>>>,
-    ),
-    input: &mut Input,
-) -> StdParseResult<(), Input>
+fn single_basic_block<'a: 'b, 'b, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+    bb_id_map: &'b RefCell<BTreeMap<i64, BBId>>,
+) -> impl Parser<Input, Output = ()> + Captures<'a> + 'b
 where
-    Input: Stream<Token = char> + 'b,
+    Input: Stream<Token = char> + 'a,
 {
     // all parsers commit to the result
     (
@@ -370,7 +366,7 @@ where
         (string(":")),
     )
         .then(move |(_, id, _)| {
-            let (ctx, bb_id_map) = ctx.clone();
+            // let (ctx, bb_id_map) = ctx.clone();
 
             let bb_id = *bb_id_map
                 .borrow_mut()
@@ -380,8 +376,7 @@ where
 
             many(instruction(ctx)).map(|_: ()| ())
         })
-        .parse_stream(input)
-        .into_result()
+        .map(|_| ())
 }
 
 fn basic_blocks<'b, Input>(
@@ -393,10 +388,11 @@ where
     // this parser edits the internal states of `ctx`, thus returns `()`
     combine::parser::function::parser(move |i| {
         let ctx = &*ctx;
-        let bb_id_map = Rc::new(RefCell::new(BTreeMap::new()));
+        let bb_id_map = RefCell::new(BTreeMap::new());
 
-        let single_blk = env_parser((ctx, bb_id_map), single_basic_block);
+        let single_blk = single_basic_block(ctx, &bb_id_map);
         let res = many1(single_blk).parse_stream(i);
+
         res.into_result()
     })
 }
