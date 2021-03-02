@@ -8,6 +8,7 @@ use combine::{
         char::{alpha_num, char, digit, hex_digit, newline, spaces as nl_spaces, string},
         combinator::factory,
         function::env_parser,
+        range::recognize,
     },
     stream::StreamErrorFor,
     ParseError, Parser, StdParseResult, Stream,
@@ -17,6 +18,8 @@ use smol_str::SmolStr;
 use std::{
     cell::RefCell,
     collections::{BTreeMap, HashMap, HashSet},
+    fmt::Display,
+    ops::Neg,
     rc::Rc,
     str::FromStr,
     todo,
@@ -110,36 +113,42 @@ where
     (char('@'), many1(alpha_num())).map(|x| x.1)
 }
 
-fn unsigned_dec_number<I>() -> impl Parser<I, Output = i64>
+fn unsigned_dec_number<I, N>() -> impl Parser<I, Output = N>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
+    N: num::Num,
+    N::FromStrRadixErr: Display,
 {
     many1(digit()).and_then(|digits: String| {
-        i64::from_str(&digits).map_err(StreamErrorFor::<I>::message_format)
+        N::from_str_radix(&digits, 10).map_err(StreamErrorFor::<I>::message_format)
     })
 }
 
-fn dec_number<I>() -> impl Parser<I, Output = i64>
+fn dec_number<I, N>() -> impl Parser<I, Output = N>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
+    N: num::Num + Neg<Output = N>,
+    N::FromStrRadixErr: Display,
 {
     (
         optional(choice((char('-'), char('+')))),
         unsigned_dec_number(),
     )
-        .map(|(neg, x)| if neg == Some('-') { -x } else { x })
+        .map(|(neg, x): (_, N)| if neg == Some('-') { -x } else { x })
 }
 
-fn hex_number<I>() -> impl Parser<I, Output = i64>
+fn hex_number<I, N>() -> impl Parser<I, Output = N>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
+    N: num::Num,
+    N::FromStrRadixErr: Display,
 {
     (string("0x"), many1(hex_digit())).and_then(|(_, digits)| {
         let _: &String = &digits;
-        i64::from_str_radix(&digits, 16).map_err(StreamErrorFor::<I>::message_format)
+        N::from_str_radix(&digits, 16).map_err(StreamErrorFor::<I>::message_format)
     })
 }
 
@@ -156,11 +165,7 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    (char('%'), many1(digit())).and_then(|(_, digits): (_, String)| {
-        digits
-            .parse::<usize>()
-            .map_err(StreamErrorFor::<Input>::message_format)
-    })
+    (char('%'), unsigned_dec_number::<_, usize>()).map(|(_, digits)| digits)
 }
 
 fn value<'a, Input>(
@@ -176,6 +181,13 @@ where
     ))
 }
 
+fn bb_id<Input>() -> impl Parser<Input, Output = u32>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    (string("bb"), unsigned_dec_number::<_, u32>()).map(|(_, bb_id)| bb_id)
+}
 // ========= Types ==========
 
 fn int_ty<Input>() -> impl Parser<Input, Output = Ty>
@@ -351,21 +363,91 @@ where
         })
 }
 
-#[allow(clippy::type_complexity)]
+fn branch_or_branch_if_jump_instruction<'a: 'b, 'b, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+    bb_id_map: &'b RefCell<BTreeMap<u32, BBId>>,
+) -> impl Parser<Input, Output = ()> + Captures<'a> + 'b
+where
+    Input: Stream<Token = char> + 'a,
+{
+    (
+        string("br").skip(spaces1()),
+        bb_id(),
+        optional((spaces1(), string("if"), value(ctx))),
+    )
+        .map(move |(_, id, cond)| {
+            let bb_id = *bb_id_map
+                .borrow_mut()
+                .entry(id)
+                .or_insert_with(|| ctx.borrow_mut().func.new_bb());
+
+            let mut ctx = ctx.borrow_mut();
+            let curr_bb = ctx.func.current_bb_id();
+            if let Some((_, _, val)) = cond {
+                ctx.func
+                    .add_branch(
+                        crate::Branch::CondJump {
+                            cond: val,
+                            target: bb_id,
+                        },
+                        curr_bb,
+                    )
+                    .unwrap();
+            } else {
+                ctx.func
+                    .add_branch(crate::Branch::Jump(bb_id), curr_bb)
+                    .unwrap();
+            }
+        })
+}
+
+fn unreachable_jump_instruction<Input>() -> impl Parser<Input, Output = ()>
+where
+    Input: Stream<Token = char>,
+{
+    string("unreachable").map(|_| ())
+}
+
+fn return_jump_instruction<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = ()> + 'a
+where
+    Input: Stream<Token = char> + 'a,
+{
+    (string("return"), optional((spaces1(), value(ctx)))).map(move |(_, val)| {
+        let mut ctx = ctx.borrow_mut();
+        let curr_bb_id = ctx.func.current_bb_id();
+        let val = val.map(|(_, v)| v);
+        ctx.func
+            .add_branch(crate::Branch::Return(val), curr_bb_id)
+            .unwrap();
+    })
+}
+
+fn jump_instructions<'a: 'b, 'b, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+    bb_id_map: &'b RefCell<BTreeMap<u32, BBId>>,
+) -> impl Parser<Input, Output = ()> + Captures<'a> + 'b
+where
+    Input: Stream<Token = char> + 'a,
+{
+    choice((
+        unreachable_jump_instruction(),
+        return_jump_instruction(ctx),
+        many1(branch_or_branch_if_jump_instruction(ctx, bb_id_map).map(|_| ())),
+    ))
+}
+
 fn single_basic_block<'a: 'b, 'b, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-    bb_id_map: &'b RefCell<BTreeMap<i64, BBId>>,
+    bb_id_map: &'b RefCell<BTreeMap<u32, BBId>>,
 ) -> impl Parser<Input, Output = ()> + Captures<'a> + 'b
 where
     Input: Stream<Token = char> + 'a,
 {
     // all parsers commit to the result
-    (
-        string("bb"),
-        unsigned_dec_number().skip(spaces0()),
-        (string(":")),
-    )
-        .then(move |(_, id, _)| {
+    (bb_id().skip(spaces0()), (string(":")))
+        .then(move |(id, _)| {
             // let (ctx, bb_id_map) = ctx.clone();
 
             let bb_id = *bb_id_map
