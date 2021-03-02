@@ -162,7 +162,7 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                     } else {
                         first = false;
                     }
-                    write!(f, "({}, {})", ctx.1.var_id(source.val), source.bb.index())?;
+                    write!(f, "({}, bb{})", ctx.1.var_id(source.val), source.bb.index())?;
                 }
                 write!(f, "]")?;
             }

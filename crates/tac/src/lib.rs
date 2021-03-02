@@ -49,7 +49,7 @@ pub type BBId = NodeIndex;
 /// The instructions are represented as an indirect doubly linked list inside the
 /// `arena` using item indices. Every basic block holds the start and end index
 /// of its instructions.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TacFunc {
     /// Function name
     pub name: SmolStr,

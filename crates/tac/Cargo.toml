@@ -9,13 +9,15 @@ version = "0.1.0"
 [dependencies]
 anymap = "0.12"
 bit-set = "0.5.2"
-combine = "4.5"
+combine = {version = "4.5", optional = true}
 enum-as-inner = "0.3"
 indexmap = "1"
-lexpr = "0.2.6"
-logos = "0.12"
-num = "0.3"
+num = {version = "0.3", optional = true}
 petgraph = "0.5"
 smol_str = "0.1"
 thunderdome = "0.4"
 tinyvec = {version = "1", features = ["alloc"]}
+
+[features]
+default = ["parser"]
+parser = ["combine", "num"]

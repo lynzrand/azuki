@@ -1,36 +1,55 @@
-mod lexer;
+#![cfg(feature = "parser")]
+//! Module for parsing the text representation of Azuki TAC into real code.
+//!
+//! An ANTLR specification of Azuki TAC's text representation can be found in
+//! `/docs/src/tac/AzukiTac.g4`.
+
+pub use combine::easy as easy_parse;
+pub use combine::stream as parse_stream;
+pub use combine::{EasyParser, Parser, Stream};
 
 use combine::{
-    between, choice,
+    attempt, between, choice,
     error::StreamError,
     many, many1, one_of, optional, parser,
     parser::char::{alpha_num, char, digit, hex_digit, newline, spaces as nl_spaces, string},
     stream::StreamErrorFor,
-    ParseError, Parser, Stream,
+    ParseError,
 };
 use smol_str::SmolStr;
-use std::{cell::RefCell, collections::BTreeMap, fmt::Display, ops::Neg};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    fmt::Display,
+    ops::Neg,
+};
 
 use crate::{
     builder::FuncEditor, util::Captures, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind,
-    NumericTy, OpRef, TacFunc, Ty, TyKind, Value,
+    NumericTy, OpRef, PhiSource, TacFunc, Ty, TyKind, Value,
 };
 
 struct VariableNamingCtx<'f> {
+    is_first_bb: bool,
     func: FuncEditor<'f>,
     local_vars: BTreeMap<usize, OpRef>,
-    // type_interner: HashSet<Ty>,
-    curr_bb: BBId,
+    bb_id_map: BTreeMap<u32, BBId>,
 }
 
 impl<'f> VariableNamingCtx<'f> {
     pub fn new(func: &'f mut TacFunc) -> VariableNamingCtx<'f> {
         VariableNamingCtx {
-            func: FuncEditor::new(func),
+            is_first_bb: true,
+            func: FuncEditor::new_blank(func),
             local_vars: BTreeMap::new(),
-            // type_interner: HashSet::new(),
-            curr_bb: BBId::default(),
+            bb_id_map: BTreeMap::new(),
         }
+    }
+
+    pub fn is_first_bb(&mut self) -> bool {
+        let res = self.is_first_bb;
+        self.is_first_bb = false;
+        res
     }
 
     pub fn declared_var(&mut self, var_id: usize) -> OpRef {
@@ -38,13 +57,15 @@ impl<'f> VariableNamingCtx<'f> {
             mapping
         } else {
             // insert placeholder instruction
-            self.func.func.tac_new(
+            let var = self.func.func.tac_new(
                 Inst {
                     kind: InstKind::Dead,
                     ty: Ty::unit(),
                 },
-                self.curr_bb,
-            )
+                BBId::end(),
+            );
+            self.local_vars.insert(var_id, var);
+            var
         }
     }
 
@@ -55,6 +76,11 @@ impl<'f> VariableNamingCtx<'f> {
             .arena_get_mut(idx)
             .expect("The supplied index must be valid");
         inst_ref.inst = inst;
+    }
+
+    pub fn declared_bb(&mut self, bb_id: u32) -> BBId {
+        let func = &mut self.func;
+        *self.bb_id_map.entry(bb_id).or_insert_with(|| func.new_bb())
     }
 }
 
@@ -83,11 +109,12 @@ where
 }
 
 /// Parse a comma-separated list. The internal parser should skip spaces.
-fn comma_sep_list<TOut, I, P>(parse_internal: P) -> impl Parser<I, Output = Vec<TOut>>
+fn comma_sep_list<TOut, TList, I, P>(parse_internal: P) -> impl Parser<I, Output = TList>
 where
     P: Parser<I, Output = TOut>,
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
+    TList: Default + Extend<TOut>,
 {
     combine::sep_by(parse_internal, char(',').skip(spaces0()))
 }
@@ -255,16 +282,16 @@ where
     Input: Stream<Token = char>,
 {
     choice([
-        string("add"),
-        string("sub"),
-        string("mul"),
-        string("div"),
-        string("gt"),
-        string("lt"),
-        string("ge"),
-        string("le"),
-        string("eq"),
-        string("ne"),
+        attempt(string("add")),
+        attempt(string("sub")),
+        attempt(string("mul")),
+        attempt(string("div")),
+        attempt(string("gt")),
+        attempt(string("lt")),
+        attempt(string("ge")),
+        attempt(string("le")),
+        attempt(string("eq")),
+        attempt(string("ne")),
     ])
     .map(|i| match i {
         "add" => BinaryOp::Add,
@@ -325,6 +352,44 @@ where
         })
 }
 
+fn phi_instruction<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = BTreeSet<PhiSource>> + 'a
+where
+    Input: Stream<Token = char> + 'a,
+{
+    (
+        string("phi").skip(spaces0()),
+        between(
+            char('[').skip(spaces0()),
+            char(']').skip(spaces0()),
+            comma_sep_list(between(
+                char('(').skip(spaces0()),
+                char(')').skip(spaces0()),
+                (
+                    variable().skip(spaces0()),
+                    char(',').skip(spaces0()),
+                    bb_id().skip(spaces0()),
+                )
+                    .map(move |(var, _, bb)| {
+                        let mut ctx = ctx.borrow_mut();
+                        let val = ctx.declared_var(var);
+                        let bb = ctx.declared_bb(bb);
+                        PhiSource { val, bb }
+                    }),
+            )),
+        ),
+    )
+        .map(|(_, list)| list)
+}
+
+fn param_instruction<'a, Input>() -> impl Parser<Input, Output = usize> + 'a
+where
+    Input: Stream<Token = char> + 'a,
+{
+    (string("param").skip(spaces1()), unsigned_dec_number()).map(|(_, i)| i)
+}
+
 fn instruction<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
 ) -> impl Parser<Input, Output = ()> + 'a
@@ -335,9 +400,11 @@ where
         variable().skip(spaces0()).skip(string("=")).skip(spaces0()),
         ty().skip(spaces1()),
         choice((
-            binary_instruction(ctx).map(InstKind::Binary),
-            value_instruction(ctx).map(InstKind::Assign),
-            func_call_instruction(ctx).map(InstKind::FunctionCall),
+            attempt(param_instruction().map(InstKind::Param)),
+            attempt(binary_instruction(ctx).map(InstKind::Binary)),
+            attempt(value_instruction(ctx).map(InstKind::Assign)),
+            attempt(func_call_instruction(ctx).map(InstKind::FunctionCall)),
+            attempt(phi_instruction(ctx).map(InstKind::Phi)),
         )),
     )
         .map(move |(v, ty, kind)| {
@@ -349,25 +416,26 @@ where
         })
 }
 
-fn branch_or_branch_if_jump_instruction<'a: 'b, 'b, Input>(
+fn branch_or_branch_if_jump_instruction<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-    bb_id_map: &'b RefCell<BTreeMap<u32, BBId>>,
-) -> impl Parser<Input, Output = ()> + Captures<'a> + 'b
+) -> impl Parser<Input, Output = ()> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
     (
         string("br").skip(spaces1()),
         bb_id(),
-        optional((spaces1(), string("if"), value(ctx))),
+        optional(attempt((
+            spaces1(),
+            string("if").skip(spaces1()),
+            value(ctx),
+        ))),
     )
         .map(move |(_, id, cond)| {
-            let bb_id = *bb_id_map
-                .borrow_mut()
-                .entry(id)
-                .or_insert_with(|| ctx.borrow_mut().func.new_bb());
-
             let mut ctx = ctx.borrow_mut();
+
+            let bb_id = ctx.declared_bb(id);
+
             let curr_bb = ctx.func.current_bb_id();
             if let Some((_, _, val)) = cond {
                 ctx.func
@@ -400,7 +468,7 @@ fn return_jump_instruction<'a, Input>(
 where
     Input: Stream<Token = char> + 'a,
 {
-    (string("return"), optional((spaces1(), value(ctx)))).map(move |(_, val)| {
+    (string("return"), optional(attempt((spaces1(), value(ctx))))).map(move |(_, val)| {
         let mut ctx = ctx.borrow_mut();
         let curr_bb_id = ctx.func.current_bb_id();
         let val = val.map(|(_, v)| v);
@@ -410,45 +478,50 @@ where
     })
 }
 
-fn jump_instructions<'a: 'b, 'b, Input>(
+fn jump_instructions<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-    bb_id_map: &'b RefCell<BTreeMap<u32, BBId>>,
-) -> impl Parser<Input, Output = ()> + Captures<'a> + 'b
+) -> impl Parser<Input, Output = ()> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
     choice((
-        unreachable_jump_instruction().skip(nl1()),
-        return_jump_instruction(ctx).skip(nl1()),
-        many1(
-            branch_or_branch_if_jump_instruction(ctx, bb_id_map)
+        attempt(unreachable_jump_instruction().skip(nl1())),
+        attempt(return_jump_instruction(ctx).skip(nl1())),
+        many1(attempt(
+            branch_or_branch_if_jump_instruction(ctx)
                 .map(|_| ())
                 .skip(nl1()),
-        ),
+        )),
     ))
 }
 
-fn single_basic_block<'a: 'b, 'b, Input>(
+fn single_basic_block<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-    bb_id_map: &'b RefCell<BTreeMap<u32, BBId>>,
-) -> impl Parser<Input, Output = ()> + Captures<'a> + 'b
+) -> impl Parser<Input, Output = ()> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
     // all parsers commit to the result
-    (bb_id().skip(spaces0()), (string(":")))
+    (bb_id().skip(spaces0()), string(":").skip(nl1()))
+        .message("When parsing BB label")
         .then(move |(id, _)| {
-            // let (ctx, bb_id_map) = ctx.clone();
-
-            let bb_id = *bb_id_map
-                .borrow_mut()
-                .entry(id)
-                .or_insert_with(|| ctx.borrow_mut().func.new_bb());
-            ctx.borrow_mut().func.set_current_bb(bb_id).unwrap();
-
-            many(instruction(ctx))
-                .map(|_: ()| ())
-                .and(jump_instructions(ctx, bb_id_map))
+            {
+                let mut ctx = ctx.borrow_mut();
+                let bb_id = ctx.declared_bb(id);
+                if ctx.is_first_bb() {
+                    ctx.func.func.starting_block = bb_id;
+                }
+                ctx.func.set_current_bb(bb_id).unwrap();
+            }
+            many(attempt(
+                instruction(ctx)
+                    .message("When parsing instruction")
+                    .skip(nl1()),
+            ))
+            .map(|_: ()| ())
+            .and(attempt(
+                jump_instructions(ctx).message("When parsing jump instructions"),
+            ))
         })
         .map(|_| ())
 }
@@ -460,15 +533,7 @@ where
     Input: Stream<Token = char> + 'b,
 {
     // this parser edits the internal states of `ctx`, thus returns `()`
-    combine::parser::function::parser(move |i| {
-        let ctx = &*ctx;
-        let bb_id_map = RefCell::new(BTreeMap::new());
-
-        let single_blk = single_basic_block(ctx, &bb_id_map);
-        let res = many1(single_blk).parse_stream(i);
-
-        res.into_result()
-    })
+    many1(attempt(single_basic_block(ctx)))
 }
 
 fn func_header<I>() -> impl Parser<I, Output = (SmolStr, Ty)>
@@ -486,6 +551,7 @@ where
         string("->").skip(spaces0()),
         ty(),
     )
+        .message("When parsing function header")
         .map(|(_, name, params, _, ret_ty)| (name.into(), Ty::func_of(ret_ty, params)))
 }
 
@@ -494,7 +560,7 @@ where
     I: Stream<Token = char> + 'a,
 {
     combine::parser::function::parser(|i| {
-        let mut func = TacFunc::new_untyped(SmolStr::default());
+        let mut func = TacFunc::default();
         let ctx = RefCell::new(VariableNamingCtx::new(&mut func));
         let res = (
             func_header().skip(spaces0()),
@@ -504,6 +570,7 @@ where
                 basic_blocks(&ctx),
             ),
         )
+            .message("When parsing function")
             .parse_stream(i);
         res.map(|((name, ty), _)| {
             func.name = name;

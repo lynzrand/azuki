@@ -51,6 +51,12 @@ impl Ty {
     }
 }
 
+impl Default for Ty {
+    fn default() -> Self {
+        Ty::Unit
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NumericTy {
     pub kind: TyKind,

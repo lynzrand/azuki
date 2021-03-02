@@ -9,14 +9,13 @@ use crate::{
     FuncCompiler,
 };
 
+use azuki_tac::parser::EasyParser;
+
 #[test]
 fn test_basic_func_generation() {
     let program = r"
     fn fib(n: int) -> int {
         let r: int;
-        while 0 != 1 {
-            r = r;
-        }
         if n <= 1 {
             r = 1;
         } else {
@@ -40,4 +39,18 @@ fn test_basic_func_generation() {
     compiler.builder.sanity_check();
 
     eprintln!("{}", result);
+
+    let res = result.to_string();
+
+    let stream = azuki_tac::parser::parse_stream::position::Stream::new(res.as_str());
+    let parsed = azuki_tac::parser::parse_func().easy_parse(stream);
+    match parsed {
+        Ok(r) => {
+            eprintln!("{}", r.0);
+        }
+        Err(e) => {
+            eprintln!("{}", e);
+            panic!("failed");
+        }
+    }
 }

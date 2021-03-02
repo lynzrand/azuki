@@ -42,6 +42,20 @@ impl<'a> FuncEditor<'a> {
         }
     }
 
+    /// Create a new function editor with ABSOLUTELY nothing initialized.
+    ///
+    /// PLEASE DEFINITELY REMEMBER TO INITIALIZE BEFORE PUTTING ANYTHING INSIDE
+    pub fn new_blank(func: &'a mut TacFunc) -> FuncEditor<'a> {
+        let starting_idx = None;
+        let current_bb = func.starting_block;
+
+        FuncEditor {
+            func,
+            current_bb_id: current_bb,
+            current_idx: starting_idx,
+        }
+    }
+
     pub fn set_type(&mut self, ty: Ty) {
         self.func.ty = ty;
     }
