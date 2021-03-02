@@ -83,17 +83,16 @@ unreachable_inst: UNREACHABLE;
 uncond_branch_inst: BRANCH BasicBlock;
 cond_branch_inst: BRANCH BasicBlock IF value;
 return_inst: RETURN value;
-jump_inst:
+jump_insts:
 	(
-		unreachable_inst
-		| uncond_branch_inst
-		| cond_branch_inst
-		| return_inst
-	) LINEFEED;
+		unreachable_inst LINEFEED
+		| return_inst LINEFEED
+		| (( uncond_branch_inst | cond_branch_inst) LINEFEED)+
+	);
 
 // basic block
 basic_block_id: BasicBlock ':';
-basic_block: basic_block_id LINEFEED inst* jump_inst+;
+basic_block: basic_block_id LINEFEED inst* jump_insts;
 
 // function
 function_param: '(' (ty (',' ty)*)? ')';

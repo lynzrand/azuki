@@ -4,26 +4,12 @@ use combine::{
     between, choice,
     error::StreamError,
     many, many1, one_of, optional, parser,
-    parser::{
-        char::{alpha_num, char, digit, hex_digit, newline, spaces as nl_spaces, string},
-        combinator::factory,
-        function::env_parser,
-        range::recognize,
-    },
+    parser::char::{alpha_num, char, digit, hex_digit, newline, spaces as nl_spaces, string},
     stream::StreamErrorFor,
-    ParseError, Parser, StdParseResult, Stream,
+    ParseError, Parser, Stream,
 };
-use petgraph::Graph;
 use smol_str::SmolStr;
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashMap, HashSet},
-    fmt::Display,
-    ops::Neg,
-    rc::Rc,
-    str::FromStr,
-    todo,
-};
+use std::{cell::RefCell, collections::BTreeMap, fmt::Display, ops::Neg};
 
 use crate::{
     builder::FuncEditor, util::Captures, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind,
@@ -194,7 +180,7 @@ fn int_ty<Input>() -> impl Parser<Input, Output = Ty>
 where
     Input: Stream<Token = char>,
 {
-    (char('i'), dec_number()).and_then(|(_, size)| {
+    (char('i'), unsigned_dec_number::<_, u8>()).and_then(|(_, size)| {
         if size > 64 || (size & size.wrapping_sub(1) != 0) {
             return Err(StreamErrorFor::<Input>::message_format(format_args!(
                 "size {} must be smaller than 64 and is a power of 2",
@@ -212,7 +198,7 @@ fn bool_ty<Input>() -> impl Parser<Input, Output = Ty>
 where
     Input: Stream<Token = char>,
 {
-    (char('b'), dec_number()).and_then(|(_, size)| {
+    (char('b'), unsigned_dec_number::<_, u8>()).and_then(|(_, size)| {
         if size > 64 || (size & size.wrapping_sub(1) != 0) {
             return Err(StreamErrorFor::<Input>::message_format(format_args!(
                 "size {} must be smaller than 64 and is a power of 2",
@@ -432,9 +418,13 @@ where
     Input: Stream<Token = char> + 'a,
 {
     choice((
-        unreachable_jump_instruction(),
-        return_jump_instruction(ctx),
-        many1(branch_or_branch_if_jump_instruction(ctx, bb_id_map).map(|_| ())),
+        unreachable_jump_instruction().skip(nl1()),
+        return_jump_instruction(ctx).skip(nl1()),
+        many1(
+            branch_or_branch_if_jump_instruction(ctx, bb_id_map)
+                .map(|_| ())
+                .skip(nl1()),
+        ),
     ))
 }
 
@@ -456,7 +446,9 @@ where
                 .or_insert_with(|| ctx.borrow_mut().func.new_bb());
             ctx.borrow_mut().func.set_current_bb(bb_id).unwrap();
 
-            many(instruction(ctx)).map(|_: ()| ())
+            many(instruction(ctx))
+                .map(|_: ()| ())
+                .and(jump_instructions(ctx, bb_id_map))
         })
         .map(|_| ())
 }
