@@ -117,9 +117,7 @@ impl<'src> Vm<'src> {
             azuki_tac::InstKind::Assign(v) => last.eval(*v),
             azuki_tac::InstKind::Phi(sources) => {
                 let last_bb = last.last_bb;
-                sources
-                    .get(&last_bb)
-                    .and_then(|source| last.eval(source.val.into()))
+                sources.get(&last_bb).and_then(|&val| last.eval(val.into()))
             }
             azuki_tac::InstKind::Param(i) => last.params.get(*i).cloned(),
             azuki_tac::InstKind::Dead => None,

@@ -220,10 +220,7 @@ where
                 .kind
                 .as_phi_mut()
                 .unwrap()
-                .insert(PhiSource {
-                    val: source,
-                    bb: pred,
-                });
+                .insert(pred, source);
         }
         self.try_remove_trivial_phi(phi);
     }
@@ -236,21 +233,16 @@ where
 
         // for op in phi.operands:
 
-        for PhiSource {
-            val: operand,
-            bb: _,
-        } in phi.inst.kind.as_phi().unwrap()
-        {
-            let operand = *operand;
+        for (&bb, &val) in phi.inst.kind.as_phi().unwrap() {
             // if op == same || op == phi
-            if operand == phi_op || same.map_or(false, |x| x == operand) {
+            if val == phi_op || same.map_or(false, |x| x == val) {
                 continue;
             }
             if same.is_some() {
                 // not trivial
                 return;
             }
-            same = Some(operand);
+            same = Some(val);
         }
 
         let replace_value = match same {

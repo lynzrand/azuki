@@ -156,13 +156,13 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
             InstKind::Phi(phi) => {
                 write!(f, "phi [")?;
                 let mut first = true;
-                for source in phi {
+                for (&bb, &val) in phi {
                     if !first {
                         write!(f, ", ")?;
                     } else {
                         first = false;
                     }
-                    write!(f, "({}, bb{})", ctx.1.var_id(source.val), source.bb.index())?;
+                    write!(f, "({}, bb{})", ctx.1.var_id(val), bb.index())?;
                 }
                 write!(f, "]")?;
             }

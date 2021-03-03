@@ -19,14 +19,14 @@ use combine::{
 use smol_str::SmolStr;
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, },
     fmt::Display,
     ops::Neg,
 };
 
 use crate::{
     builder::FuncEditor, util::Captures, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind,
-    NumericTy, OpRef, PhiSource, TacFunc, Ty, TyKind, Value,
+    NumericTy, OpRef, TacFunc, Ty, TyKind, Value,
 };
 
 struct VariableNamingCtx<'f> {
@@ -354,7 +354,7 @@ where
 
 fn phi_instruction<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-) -> impl Parser<Input, Output = BTreeSet<PhiSource>> + 'a
+) -> impl Parser<Input, Output = BTreeMap<BBId, OpRef>> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
@@ -375,7 +375,7 @@ where
                         let mut ctx = ctx.borrow_mut();
                         let val = ctx.declared_var(var);
                         let bb = ctx.declared_bb(bb);
-                        PhiSource { val, bb }
+                        (bb, val)
                     }),
             )),
         ),

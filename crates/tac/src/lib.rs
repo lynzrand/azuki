@@ -337,42 +337,6 @@ pub struct Inst {
     pub ty: Ty,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct PhiSource {
-    pub val: OpRef,
-    pub bb: BBId,
-}
-
-impl PartialEq<BBId> for PhiSource {
-    fn eq(&self, other: &BBId) -> bool {
-        self.bb == *other
-    }
-}
-impl PartialOrd<BBId> for PhiSource {
-    fn partial_cmp(&self, other: &BBId) -> Option<std::cmp::Ordering> {
-        self.bb.partial_cmp(other)
-    }
-}
-impl PartialOrd<PhiSource> for PhiSource {
-    fn partial_cmp(&self, other: &PhiSource) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for PhiSource {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match self.bb.cmp(&other.bb) {
-            std::cmp::Ordering::Equal => self.val.cmp(&other.val),
-            other => other,
-        }
-    }
-}
-// Typing magic for getting a `PhiSource` from a set
-impl Borrow<BBId> for PhiSource {
-    fn borrow(&self) -> &BBId {
-        &self.bb
-    }
-}
-
 /// Kinds of an instruction
 #[derive(Debug, Clone, Eq, PartialEq, EnumAsInner)]
 pub enum InstKind {
@@ -384,7 +348,7 @@ pub enum InstKind {
     /// An assignment from another instruction or constant
     Assign(Value),
     /// A phi instruction
-    Phi(BTreeSet<PhiSource>),
+    Phi(BTreeMap<BBId, OpRef>),
     /// A function parameter
     Param(usize),
     /// An unreachable value
@@ -399,9 +363,10 @@ impl InstKind {
                 VarIter::Iter(Box::new(f.params.iter().cloned()) as Box<dyn Iterator<Item = _>>)
             }
             InstKind::Assign(v) => VarIter::One(*v),
-            InstKind::Phi(source) => VarIter::Iter(
-                Box::new(source.iter().map(|v| v.val.into())) as Box<dyn Iterator<Item = _>>
-            ),
+            InstKind::Phi(source) => {
+                VarIter::Iter(Box::new(source.iter().map(|(_, &val)| val.into()))
+                    as Box<dyn Iterator<Item = _>>)
+            }
             InstKind::Param(_) => VarIter::None,
             InstKind::Dead => VarIter::None,
         }
