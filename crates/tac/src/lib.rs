@@ -19,7 +19,10 @@ pub mod parser;
 pub mod ty;
 pub mod util;
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::{
+    borrow::Borrow,
+    collections::{BTreeMap, BTreeSet, HashMap},
+};
 
 use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
@@ -236,9 +239,9 @@ impl TacFunc {
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     /// Linked list head
-    pub(crate) head: Option<OpRef>,
+    pub head: Option<OpRef>,
     /// Linked list tail
-    pub(crate) tail: Option<OpRef>,
+    pub tail: Option<OpRef>,
 
     /// The branch instruction at the end of this basic block
     pub jumps: Vec<Branch>,
@@ -334,10 +337,40 @@ pub struct Inst {
     pub ty: Ty,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PhiSource {
     pub val: OpRef,
     pub bb: BBId,
+}
+
+impl PartialEq<BBId> for PhiSource {
+    fn eq(&self, other: &BBId) -> bool {
+        self.bb == *other
+    }
+}
+impl PartialOrd<BBId> for PhiSource {
+    fn partial_cmp(&self, other: &BBId) -> Option<std::cmp::Ordering> {
+        self.bb.partial_cmp(other)
+    }
+}
+impl PartialOrd<PhiSource> for PhiSource {
+    fn partial_cmp(&self, other: &PhiSource) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for PhiSource {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.bb.cmp(&other.bb) {
+            std::cmp::Ordering::Equal => self.val.cmp(&other.val),
+            other => other,
+        }
+    }
+}
+// Typing magic for getting a `PhiSource` from a set
+impl Borrow<BBId> for PhiSource {
+    fn borrow(&self) -> &BBId {
+        &self.bb
+    }
 }
 
 /// Kinds of an instruction
@@ -361,11 +394,11 @@ pub enum InstKind {
 impl InstKind {
     pub fn params_iter(&self) -> impl Iterator<Item = Value> + '_ {
         match self {
-            InstKind::Binary(b) => VarIter::Two(b.lhs.clone(), b.rhs.clone()),
+            InstKind::Binary(b) => VarIter::Two(b.lhs, b.rhs),
             InstKind::FunctionCall(f) => {
                 VarIter::Iter(Box::new(f.params.iter().cloned()) as Box<dyn Iterator<Item = _>>)
             }
-            InstKind::Assign(v) => VarIter::One(v.clone()),
+            InstKind::Assign(v) => VarIter::One(*v),
             InstKind::Phi(source) => VarIter::Iter(
                 Box::new(source.iter().map(|v| v.val.into())) as Box<dyn Iterator<Item = _>>
             ),
@@ -426,7 +459,7 @@ pub enum BinaryOp {
     Ne,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Value {
     Dest(OpRef),
     Imm(Immediate),
