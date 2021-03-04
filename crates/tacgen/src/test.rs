@@ -1,19 +1,11 @@
 #![cfg(test)]
-use std::{cell::RefCell, rc::Rc};
 
-use azuki_syntax::{lexer::spanned_lexer, parser, visitor::AstVisitor};
-use azuki_tac::TacFunc;
-
-use crate::{
-    symbol::{NumberingCounter, ScopeBuilder, StringInterner},
-    FuncCompiler,
-};
-
+use azuki_syntax::parse;
 use azuki_tac::parser::EasyParser;
 
 #[test]
 fn test_basic_func_generation() {
-    let program = r"
+    let input = r"
     fn fib(n: int) -> int {
         let r: int;
         if n <= 1 {
@@ -24,23 +16,11 @@ fn test_basic_func_generation() {
         return r;
     }
     ";
-    let mut parser = parser::Parser::new(spanned_lexer(program));
-    let program = parser.parse().unwrap();
-    let func = &program.funcs[0];
+    let program = parse(input).unwrap();
+    let result = crate::compile(&program).unwrap();
+    eprintln!("{}", result.functions["fib"]);
 
-    let interner = Rc::new(RefCell::new(StringInterner::new()));
-    let counter = Rc::new(NumberingCounter::new(0));
-
-    let scope_builder = Rc::new(RefCell::new(ScopeBuilder::new(counter, interner.clone())));
-    let mut result = TacFunc::new_untyped("fib".into());
-    let mut compiler = FuncCompiler::new(&mut result, interner, scope_builder);
-
-    compiler.visit_func(&func).unwrap();
-    compiler.builder.sanity_check();
-
-    eprintln!("{}", result);
-
-    let res = result.to_string();
+    let res = result.functions["fib"].to_string();
 
     let stream = azuki_tac::parser::parse_stream::position::Stream::new(res.as_str());
     let parsed = azuki_tac::parser::parse_func().easy_parse(stream);

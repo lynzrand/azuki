@@ -20,7 +20,12 @@ pub mod visitor;
 pub use lexer::Lexer;
 pub use token::Token;
 
-mod prelude {
+pub mod prelude {
     pub use crate::span::Span;
     pub use crate::util::{Mut, MutWeak, P};
+}
+
+pub fn parse(program: &str) -> Result<ast::Program, parser::err::ParseError> {
+    let mut parser = parser::Parser::new(lexer::spanned_lexer(program));
+    parser.parse()
 }

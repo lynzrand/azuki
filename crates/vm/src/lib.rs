@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use azuki_tac::{BBId, BinaryInst, Inst, OpRef, Program, TacFunc, Value};
 use smol_str::SmolStr;
 
+#[cfg(test)]
+mod test;
+
 pub struct Vm<'src> {
     program: &'src Program,
     stack: Vec<Frame<'src>>,

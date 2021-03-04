@@ -6,7 +6,12 @@ use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
 use err::Error;
 use smol_str::SmolStr;
-use std::{cell::RefCell, collections::BTreeMap, rc::Rc, todo};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashMap},
+    rc::Rc,
+    todo,
+};
 use symbol::{NumberingCounter, ScopeBuilder, StringInterner};
 
 use tac::{
@@ -14,17 +19,21 @@ use tac::{
     Ty, Value,
 };
 
-pub fn compile(tac: &Program) {
+pub fn compile(tac: &Program) -> Result<tac::Program, Error> {
     let interner = Rc::new(RefCell::new(StringInterner::new()));
     let counter = Rc::new(NumberingCounter::new(0));
     let global_scope_builder = Rc::new(RefCell::new(ScopeBuilder::new(counter, interner.clone())));
 
+    let mut funcs = HashMap::new();
     for func in &tac.funcs {
-        let mut result = TacFunc::new_untyped(func.name.name.clone());
+        let name = func.name.name.clone();
+        let mut result = TacFunc::new_untyped(name.clone());
         let mut compiler =
             FuncCompiler::new(&mut result, interner.clone(), global_scope_builder.clone());
-        compiler.visit_func(func).unwrap();
+        compiler.visit_func(func)?;
+        funcs.insert(name, result);
     }
+    Ok(tac::Program { functions: funcs })
 }
 
 struct BreakTarget {
