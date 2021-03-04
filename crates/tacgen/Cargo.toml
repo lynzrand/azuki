@@ -12,3 +12,5 @@ azuki-tac = {path = "../tac"}
 bit-set = "0.5.2"
 smol_str = "0.1"
 vec1 = "1.6"
+
+[dev-dependencies]

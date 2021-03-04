@@ -10,3 +10,8 @@ version = "0.1.0"
 azuki-tac = {path = "../tac"}
 petgraph = "0.5"
 smol_str = "0.1"
+
+[dev-dependencies]
+azuki-syntax = {path = "../syntax"}
+azuki-tac = {path = "../tac"}
+azuki-tacgen = {path = "../tacgen"}

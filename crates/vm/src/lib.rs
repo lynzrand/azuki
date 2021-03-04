@@ -83,7 +83,10 @@ impl<'src> Vm<'src> {
             bb: func.starting_block,
         });
 
-        self.run_till_return()
+        let ret = self.run_till_return()?;
+
+        self.stack.pop();
+        Some(ret)
     }
 
     fn run_till_return(&mut self) -> Option<i64> {
@@ -91,7 +94,12 @@ impl<'src> Vm<'src> {
         loop {
             let last = self.stack.last_mut().unwrap();
             match last.instruction {
-                CurrInst::Instruction(i) => self.run_inst_in_curr_func(i),
+                CurrInst::Instruction(i) => {
+                    let next = last.func.arena_get(i).unwrap().next;
+                    self.run_inst_in_curr_func(i);
+                    let last = self.stack.last_mut().unwrap();
+                    last.instruction = next.into();
+                }
                 CurrInst::Jump => {
                     if let Some(value) = run_jump_inst(last) {
                         return value;

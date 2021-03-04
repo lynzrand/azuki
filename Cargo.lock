@@ -72,7 +72,9 @@ dependencies = [
 name = "azuki-tacvm"
 version = "0.1.0"
 dependencies = [
+ "azuki-syntax",
  "azuki-tac",
+ "azuki-tacgen",
  "petgraph",
  "smol_str",
 ]
