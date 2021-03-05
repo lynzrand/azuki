@@ -4,8 +4,7 @@ use std::ops::{Deref, DerefMut};
 
 use bit_set::BitSet;
 pub use func_editor::*;
-use petgraph::{graph::EdgeIndex, visit::EdgeRef};
-use tinyvec::TinyVec;
+use petgraph::graph::EdgeIndex;
 
 use crate::*;
 
@@ -229,11 +228,11 @@ where
         let mut same = None;
         let phi = self.editor.func.arena_get(phi_op).unwrap();
         let phi_bb = phi.bb;
-        let preds = self.pred_of_bb(phi_bb);
+        let _preds = self.pred_of_bb(phi_bb);
 
         // for op in phi.operands:
 
-        for (&bb, &val) in phi.inst.kind.as_phi().unwrap() {
+        for (&_bb, &val) in phi.inst.kind.as_phi().unwrap() {
             // if op == same || op == phi
             if val == phi_op || same.map_or(false, |x| x == val) {
                 continue;

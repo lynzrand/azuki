@@ -3,10 +3,10 @@ use std::{collections::HashMap, fmt::Debug};
 
 use petgraph::{
     visit::{
-        depth_first_search, GraphRef, IntoNeighbors, IntoNeighborsDirected, IntoNodeIdentifiers,
-        VisitMap, Visitable, Walker,
+        depth_first_search, GraphRef, IntoNeighborsDirected, IntoNodeIdentifiers, VisitMap,
+        Visitable, Walker,
     },
-    EdgeDirection::{Incoming, Outgoing},
+    EdgeDirection::Outgoing,
 };
 
 pub struct BiasedRevPostOrderDfs<TNode, TVisit> {

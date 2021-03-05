@@ -5,13 +5,8 @@ mod test;
 use azuki_syntax::{ast::*, visitor::AstVisitor};
 use azuki_tac as tac;
 use err::Error;
-use smol_str::SmolStr;
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashMap},
-    rc::Rc,
-    todo,
-};
+
+use std::{cell::RefCell, collections::HashMap, rc::Rc, todo};
 use symbol::{NumberingCounter, ScopeBuilder, StringInterner};
 
 use tac::{

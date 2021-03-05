@@ -23,8 +23,8 @@ use smol_str::SmolStr;
 use std::{cell::RefCell, collections::BTreeMap, fmt::Display, ops::Neg};
 
 use crate::{
-    builder::FuncEditor, util::Captures, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind,
-    NumericTy, OpRef, Program, TacFunc, Ty, TyKind, Value,
+    builder::FuncEditor, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind, NumericTy,
+    OpRef, Program, TacFunc, Ty, TyKind, Value,
 };
 
 struct VariableNamingCtx<'f> {

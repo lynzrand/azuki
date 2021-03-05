@@ -19,18 +19,12 @@ pub mod parser;
 pub mod ty;
 pub mod util;
 
-use std::{
-    borrow::Borrow,
-    collections::{BTreeMap, BTreeSet, HashMap},
-};
+use std::collections::{BTreeMap, HashMap};
 
 use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
-use indexmap::map::Values;
-use petgraph::{
-    graph::DiGraph,
-    graph::{self, NodeIndex},
-};
+
+use petgraph::{graph::DiGraph, graph::NodeIndex};
 use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 

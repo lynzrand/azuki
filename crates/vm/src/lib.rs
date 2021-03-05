@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-use azuki_tac::{BBId, BinaryInst, Inst, OpRef, Program, TacFunc, Value};
-use smol_str::SmolStr;
+use azuki_tac::{BBId, BinaryInst, OpRef, Program, TacFunc, Value};
 
-#[cfg(test)]
 mod test;
 
 pub struct Vm<'src> {

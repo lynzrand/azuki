@@ -1,6 +1,6 @@
 //! Type system definitions and stuff.
 use enum_as_inner::EnumAsInner;
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 pub const PTR_SIZE: usize = 8;
 

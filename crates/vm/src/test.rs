@@ -1,7 +1,7 @@
+#![cfg(test)]
 use crate::Vm;
-use azuki_syntax::parse;
-use azuki_tac::parser::{self, parse_func, parse_program, parse_program_from_string, EasyParser};
-use azuki_tacgen::compile;
+
+use azuki_tac::parser::parse_program_from_string;
 
 #[test]
 fn run_fib() {

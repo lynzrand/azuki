@@ -2,14 +2,9 @@
 
 use indexmap::IndexSet;
 use petgraph::visit;
-use std::{
-    cell::{RefCell, UnsafeCell},
-    fmt::Display,
-    writeln,
-};
+use std::{fmt::Display, writeln};
 use ty::FuncTy;
 use util::{BiasedRevPostOrderDfs, ListFormatter};
-use visit::Walker;
 
 use crate::*;
 

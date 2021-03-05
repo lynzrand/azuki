@@ -1,6 +1,4 @@
-use std::{borrow::BorrowMut, fmt::Display};
-
-use crate::formatter::FormatContext;
+use std::fmt::Display;
 
 pub struct ListFormatter<I>(I);
 
@@ -29,5 +27,3 @@ where
         Ok(())
     }
 }
-
-
