@@ -4,8 +4,8 @@
 
 - [Lab1 词法分析](lab/lab1.md)
   - [实现指导](lab/lab1-guide.md)
-- [Lab2 语法分析]()
-  - [实现指导]()
+- [Lab2 语法分析](lab/lab2.md)
+  - [实现指导](lab/lab2-guide.md)
 - [Lab3 代码生成]()
   - [实现指导]()
 - [Lab4 代码优化]()
