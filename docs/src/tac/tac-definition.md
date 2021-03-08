@@ -6,6 +6,6 @@ TAC 是一种
 
 ## 文法
 
-```
-
+```c++
+{{#include AzukiTac.g4}}
 ```
