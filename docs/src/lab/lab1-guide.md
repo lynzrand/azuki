@@ -146,7 +146,7 @@ Token nextToken() {
 
 Token lexNumberRest() {
     // 当依然能构成数字的时候继续
-    while (ch == '0' || ch == '1') next();
+    while (iter.peek() == '0' || iter.peek() == '1') next();
     return new Token(TokenKind.Number, take());
 }
 ```
