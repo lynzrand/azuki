@@ -5,6 +5,7 @@ use inspector::Inspector;
 
 pub mod inspector;
 mod test;
+pub mod value;
 
 pub struct Vm<'src> {
     program: &'src Program,
@@ -111,14 +112,14 @@ impl<'src> Vm<'src> {
             func,
             instruction: func
                 .basic_blocks
-                .node_weight(func.starting_block)
+                .node_weight(func.starting_block().unwrap())
                 .unwrap()
                 .head
                 .map_or(CurrInst::Jump, CurrInst::Instruction),
             params,
             vars: HashMap::new(),
             last_bb: BBId::end(),
-            bb: func.starting_block,
+            bb: func.starting_block().unwrap(),
         });
 
         let ret = self.run_till_return()?;

@@ -203,9 +203,10 @@ impl std::fmt::Display for TacFunc {
             i_set: IndexSet::new(),
         };
 
-        let mut reverse_dfs_path =
-            BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
-        while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
+        // let mut reverse_dfs_path =
+        //     BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
+        // while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
+        for &k in &self.bb_seq {
             let v = self.basic_blocks.node_weight(k).unwrap();
             writeln!(f, "bb{}:", k.index())?;
             if let Some(x) = v.head {
@@ -228,6 +229,9 @@ impl std::fmt::Display for TacFunc {
                 write!(f, "\t")?;
                 target.fmt_ctx(f, &mut ctx)?;
                 writeln!(f)?;
+            }
+            if v.jumps.is_empty() {
+                writeln!(f, "\tunreachable")?;
             }
         }
         writeln!(f, "}}")?;

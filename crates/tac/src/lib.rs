@@ -56,8 +56,8 @@ pub struct TacFunc {
     arena: Arena<Tac>,
     /// Basic blocks inside this function
     pub basic_blocks: DiGraph<BasicBlock, ()>,
-    /// The initial basic block to start with, usually the smallest index in graph
-    pub starting_block: BBId,
+    /// The sequence of basic blocks
+    pub bb_seq: Vec<BBId>,
 }
 
 impl TacFunc {
@@ -74,12 +74,16 @@ impl TacFunc {
             ty,
             arena: Arena::new(),
             basic_blocks,
-            starting_block,
+            bb_seq: vec![starting_block],
         }
     }
 
     pub fn new_untyped(name: SmolStr) -> TacFunc {
         Self::new(name, Ty::unit())
+    }
+
+    pub fn starting_block(&self) -> Option<BBId> {
+        self.bb_seq.first().cloned()
     }
 
     /// Insert a new TAC into arena with no next instruction, and belongs to Basic Block `bb`.

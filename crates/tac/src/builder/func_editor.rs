@@ -28,12 +28,9 @@ pub struct FuncEditor<'a> {
 
 impl<'a> FuncEditor<'a> {
     pub fn new(func: &'a mut TacFunc) -> FuncEditor<'a> {
-        let starting_idx = func
-            .basic_blocks
-            .node_weight(func.starting_block)
-            .unwrap()
-            .head;
-        let current_bb = func.starting_block;
+        let starting_block = func.bb_seq.first().cloned().unwrap_or_default();
+        let starting_idx = func.basic_blocks.node_weight(starting_block).unwrap().head;
+        let current_bb = starting_block;
 
         FuncEditor {
             func,
@@ -47,7 +44,7 @@ impl<'a> FuncEditor<'a> {
     /// PLEASE DEFINITELY REMEMBER TO INITIALIZE BEFORE PUTTING ANYTHING INSIDE
     pub fn new_blank(func: &'a mut TacFunc) -> FuncEditor<'a> {
         let starting_idx = None;
-        let current_bb = func.starting_block;
+        let current_bb = func.bb_seq.first().cloned().unwrap_or_default();
 
         FuncEditor {
             func,
@@ -103,11 +100,13 @@ impl<'a> FuncEditor<'a> {
 
     /// Add an free-standing empty basic block into the function.
     pub fn new_bb(&mut self) -> BBId {
-        self.func.basic_blocks.add_node(BasicBlock {
+        let bb = self.func.basic_blocks.add_node(BasicBlock {
             jumps: vec![],
             head: None,
             tail: None,
-        })
+        });
+        self.func.bb_seq.push(bb);
+        bb
     }
 
     /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)

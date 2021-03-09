@@ -28,7 +28,6 @@ use crate::{
 };
 
 struct VariableNamingCtx<'f> {
-    is_first_bb: bool,
     func: FuncEditor<'f>,
     local_vars: BTreeMap<usize, OpRef>,
     bb_id_map: BTreeMap<u32, BBId>,
@@ -37,17 +36,10 @@ struct VariableNamingCtx<'f> {
 impl<'f> VariableNamingCtx<'f> {
     pub fn new(func: &'f mut TacFunc) -> VariableNamingCtx<'f> {
         VariableNamingCtx {
-            is_first_bb: true,
             func: FuncEditor::new_blank(func),
             local_vars: BTreeMap::new(),
             bb_id_map: BTreeMap::new(),
         }
-    }
-
-    pub fn is_first_bb(&mut self) -> bool {
-        let res = self.is_first_bb;
-        self.is_first_bb = false;
-        res
     }
 
     pub fn declared_var(&mut self, var_id: usize) -> OpRef {
@@ -515,9 +507,7 @@ where
             {
                 let mut ctx = ctx.borrow_mut();
                 let bb_id = ctx.declared_bb(id);
-                if ctx.is_first_bb() {
-                    ctx.func.func.starting_block = bb_id;
-                }
+                // ctx.func.func.bb_seq.push(bb_id);
                 ctx.func.set_current_bb(bb_id).unwrap();
             }
             many(attempt(
