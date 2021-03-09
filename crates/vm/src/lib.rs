@@ -1,15 +1,18 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use azuki_tac::{BBId, BinaryInst, OpRef, Program, TacFunc, Value};
+use azuki_tac::{BBId, BinaryInst, Inst, OpRef, Program, TacFunc, Value};
+use inspector::Inspector;
 
+pub mod inspector;
 mod test;
 
 pub struct Vm<'src> {
     program: &'src Program,
     stack: Vec<Frame<'src>>,
+    inspectors: Vec<Rc<RefCell<dyn Inspector>>>,
 }
 
-struct Frame<'f> {
+pub struct Frame<'f> {
     func: &'f TacFunc,
     last_bb: BBId,
     bb: BBId,
@@ -29,6 +32,34 @@ impl<'f> Frame<'f> {
     pub fn move_to(&mut self, bb: BBId) {
         self.bb = bb;
         self.instruction = self.func.basic_blocks.node_weight(bb).unwrap().head.into();
+    }
+
+    /// Get a reference to the frame's bb.
+    pub fn bb(&self) -> &BBId {
+        &self.bb
+    }
+
+    /// Get a reference to the frame's last bb.
+    pub fn last_bb(&self) -> &BBId {
+        &self.last_bb
+    }
+
+    /// Get a reference to the frame's func.
+    pub fn func(&self) -> &'f TacFunc {
+        self.func
+    }
+
+    /// Get a reference to the frame's instruction.
+    pub fn instruction(&self) -> Option<&Inst> {
+        match self.instruction {
+            CurrInst::Instruction(i) => Some(&self.func.arena_get(i).unwrap().inst),
+            CurrInst::Jump => None,
+        }
+    }
+
+    /// Get a reference to the frame's vars.
+    pub fn vars(&self) -> &HashMap<OpRef, i64> {
+        &self.vars
     }
 }
 
@@ -57,7 +88,12 @@ impl<'src> Vm<'src> {
         Vm {
             program,
             stack: Vec::new(),
+            inspectors: Vec::new(),
         }
+    }
+
+    pub fn add_inspector_boxed(&mut self, inspector: Rc<RefCell<dyn Inspector>>) {
+        self.inspectors.push(inspector);
     }
 
     pub fn run_func(&mut self, name: &str, params: Vec<i64>) -> Option<i64> {
@@ -66,6 +102,10 @@ impl<'src> Vm<'src> {
             .functions
             .get(name)
             .expect("Function does not exist");
+
+        self.inspectors
+            .iter_mut()
+            .for_each(|i| i.borrow_mut().before_call(&params, func));
 
         self.stack.push(Frame {
             func,
@@ -99,7 +139,7 @@ impl<'src> Vm<'src> {
                     last.instruction = next.into();
                 }
                 CurrInst::Jump => {
-                    if let Some(value) = run_jump_inst(last) {
+                    if let Some(value) = self.run_jump_inst() {
                         return value;
                     }
                 }
@@ -112,6 +152,11 @@ impl<'src> Vm<'src> {
 
         let last = self.stack.last().unwrap();
         let inst = last.func.arena_get(idx).unwrap();
+
+        self.inspectors
+            .iter_mut()
+            .for_each(|i| i.borrow_mut().before_inst(&inst.inst, last));
+
         let res = match &inst.inst.kind {
             azuki_tac::InstKind::Binary(bin) => self.run_binary_inst(last, bin),
             azuki_tac::InstKind::FunctionCall(func) => {
@@ -121,6 +166,7 @@ impl<'src> Vm<'src> {
                     .map(|x| last.eval(*x))
                     .collect::<Option<Vec<_>>>()
                     .unwrap();
+
                 self.run_func(&func.name, params)
             }
             azuki_tac::InstKind::Assign(v) => last.eval(*v),
@@ -153,35 +199,46 @@ impl<'src> Vm<'src> {
         };
         Some(res)
     }
-}
 
-fn run_jump_inst(mut last: &mut Frame) -> Option<Option<i64>> {
-    last.last_bb = last.bb;
-    let mut action = JumpAction::Error;
-    for inst in &last.func.basic_blocks.node_weight(last.bb).unwrap().jumps {
-        match inst {
-            azuki_tac::Branch::Return(v) => {
-                action = JumpAction::Return(*v);
-                break;
-            }
-            azuki_tac::Branch::Jump(target) => {
-                action = JumpAction::Goto(*target);
-                break;
-            }
-            azuki_tac::Branch::CondJump { cond, target } => {
-                if last.eval(*cond).map_or(false, |x| x != 0) {
+    fn run_jump_inst(&mut self) -> Option<Option<i64>> {
+        let last = self.stack.last_mut().unwrap();
+
+        last.last_bb = last.bb;
+        let mut action = JumpAction::Error;
+        for inst in &last.func.basic_blocks.node_weight(last.bb).unwrap().jumps {
+            self.inspectors
+                .iter_mut()
+                .for_each(|i| i.borrow_mut().before_branch(inst, last));
+
+            match inst {
+                azuki_tac::Branch::Return(v) => {
+                    action = JumpAction::Return(*v);
+                    break;
+                }
+                azuki_tac::Branch::Jump(target) => {
                     action = JumpAction::Goto(*target);
                     break;
                 }
+                azuki_tac::Branch::CondJump { cond, target } => {
+                    if last.eval(*cond).map_or(false, |x| x != 0) {
+                        action = JumpAction::Goto(*target);
+                        break;
+                    }
+                }
             }
         }
-    }
-    match action {
-        JumpAction::Goto(bb) => last.move_to(bb),
-        JumpAction::Return(v) => return Some(v.and_then(|v| last.eval(v))),
-        JumpAction::Error => {
-            panic!("Error")
+        match action {
+            JumpAction::Goto(bb) => last.move_to(bb),
+            JumpAction::Return(v) => {
+                self.inspectors
+                    .iter_mut()
+                    .for_each(|i| i.borrow_mut().before_ret(&last));
+                return Some(v.and_then(|v| last.eval(v)));
+            }
+            JumpAction::Error => {
+                panic!("Error")
+            }
         }
+        None
     }
-    None
 }

@@ -1,3 +1,8 @@
+use clap::Clap;
+
+mod opt;
+
 fn main() {
-    println!("Hello, world!");
+    let opt = opt::Opt::parse();
+    println!("{:?}", opt);
 }

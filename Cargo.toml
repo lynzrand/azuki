@@ -3,16 +3,20 @@ authors = ["Rynco Maekawa <lynzrand@outlook.com>"]
 edition = "2018"
 name = "azuki"
 version = "0.1.0"
-
+default-run = "azuki"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "azvm"
+
 [dependencies]
-azuki-syntax = {path = "crates/syntax"}
-azuki-tac = {path = "crates/tac"}
-azuki-tacgen = {path = "crates/tacgen"}
+azuki-opt = { path = "crates/opt" }
+azuki-syntax = { path = "crates/syntax" }
+azuki-tac = { path = "crates/tac" }
+azuki-tacgen = { path = "crates/tacgen" }
+azuki-tacvm = { path = "crates/vm" }
+
+clap = "3.0.0-beta.2"
 
 [workspace]
-members = [
-  ".",
-  "./crates/*",
-]
+members = [".", "./crates/*"]

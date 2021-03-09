@@ -103,7 +103,16 @@ fn nl1<Input>() -> impl Parser<Input, Output = ()>
 where
     Input: Stream<Token = char>,
 {
-    (spaces0(), newline(), nl_spaces()).map(|_| ())
+    (
+        spaces0(),
+        choice((
+            string("\r\n").map(|_| ()),
+            char('\n').map(|_| ()),
+            char('\r').map(|_| ()),
+        )),
+        nl_spaces(),
+    )
+        .map(|_| ())
 }
 
 /// Parse a comma-separated list. The internal parser should skip spaces.
