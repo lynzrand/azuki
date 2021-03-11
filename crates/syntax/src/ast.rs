@@ -2,6 +2,8 @@
 //!
 //! For the pointer type, see `crate::util::{P, Mut}`
 
+pub mod formatter;
+
 use crate::{span::Span, util::P};
 #[cfg(feature = "serde_impl")]
 use serde::{Deserialize, Serialize};

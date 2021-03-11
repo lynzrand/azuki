@@ -1,0 +1,13 @@
+fn fib(n: int) -> int {
+    let r: int;
+    if n <= 1 {
+        r = 1;
+    } else {
+        r = fib(n - 1) + fib(n - 2);
+    }
+    return r;
+}
+
+fn main() -> int {
+    return fib(15);
+}

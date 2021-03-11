@@ -52,7 +52,7 @@ fn main() {
     vm.run_func(&opt.entry_point, opt.entry_params);
 
     if let Some(inst_cnt) = inst_cnt {
-        eprintln!("Instruction count: {}", inst_cnt.borrow().0);
+        eprintln!("azvm::instruction_cnt={}", inst_cnt.borrow().0);
     }
 }
 

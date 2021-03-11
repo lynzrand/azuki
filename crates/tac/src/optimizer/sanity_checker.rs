@@ -8,6 +8,7 @@ use super::FunctionOptimizer;
 use bit_set::BitSet;
 use smol_str::SmolStr;
 
+#[derive(Debug, Default)]
 pub struct SanityChecker {
     decl_vars: BitSet,
     use_vars: BitSet,
