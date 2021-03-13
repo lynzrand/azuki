@@ -9,7 +9,7 @@
 - [Lab3 语义分析](lab/lab3.md)
   - [实现指导]()
 - [Lab4 代码生成](lab/lab4.md)
-  - [实现指导]()
+  - [实现指导](lab/lab4-guide.md)
   - [Lab4-EX](lab/lab4-ex.md)
 - [Lab5 代码优化](lab/lab5.md)
   - [实现指导]()

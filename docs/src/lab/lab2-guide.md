@@ -96,10 +96,10 @@ def climb(lhs, min_pred):
         lookahead = peek_token()
 
         # 当下一个单词是左结合的二元运算符，且优先级大于当前优先级
-        # 或者是右结合的二元运算符，且优先级等于当前优先级时
+        # 或者是右结合的二元运算符，且优先级大于等于当前优先级时
         while is_binary_op(lookahead) && (
             (is_left_assoc(lookahead) && pred(lookahead) > min_pred) ||
-            (is_right_assoc(lookahead) && pred(lookahead) == min_pred)):
+            (is_right_assoc(lookahead) && pred(lookahead) >= min_pred)):
             # 解析一个更优先的表达式
             rhs = climb(rhs, pred(lookahead))
             # 向前看一个单词
