@@ -32,7 +32,7 @@ impl<'f> Frame<'f> {
 
     pub fn move_to(&mut self, bb: BBId) {
         self.bb = bb;
-        self.instruction = self.func.basic_blocks.node_weight(bb).unwrap().head.into();
+        self.instruction = self.func.bb_get(bb).unwrap().head.into();
     }
 
     /// Get a reference to the frame's bb.
@@ -53,7 +53,7 @@ impl<'f> Frame<'f> {
     /// Get a reference to the frame's instruction.
     pub fn instruction(&self) -> Option<&Inst> {
         match self.instruction {
-            CurrInst::Instruction(i) => Some(&self.func.arena_get(i).unwrap().inst),
+            CurrInst::Instruction(i) => Some(&self.func.tac_get(i).unwrap().inst),
             CurrInst::Jump => None,
         }
     }
@@ -111,14 +111,13 @@ impl<'src> Vm<'src> {
         self.stack.push(Frame {
             func,
             instruction: func
-                .basic_blocks
-                .node_weight(func.starting_block().unwrap())
+                .bb_get(func.starting_block().unwrap())
                 .unwrap()
                 .head
                 .map_or(CurrInst::Jump, CurrInst::Instruction),
             params,
             vars: HashMap::new(),
-            last_bb: BBId::end(),
+            last_bb: BBId::default(),
             bb: func.starting_block().unwrap(),
         });
 
@@ -134,7 +133,7 @@ impl<'src> Vm<'src> {
             let last = self.stack.last_mut().unwrap();
             match last.instruction {
                 CurrInst::Instruction(i) => {
-                    let next = last.func.arena_get(i).unwrap().next;
+                    let next = last.func.tac_get(i).unwrap().next;
                     self.run_inst_in_curr_func(i);
                     let last = self.stack.last_mut().unwrap();
                     last.instruction = next.into();
@@ -152,7 +151,7 @@ impl<'src> Vm<'src> {
         assert!(!self.stack.is_empty());
 
         let last = self.stack.last().unwrap();
-        let inst = last.func.arena_get(idx).unwrap();
+        let inst = last.func.tac_get(idx).unwrap();
 
         self.inspectors
             .iter_mut()
@@ -206,7 +205,7 @@ impl<'src> Vm<'src> {
 
         last.last_bb = last.bb;
         let mut action = JumpAction::Error;
-        for inst in &last.func.basic_blocks.node_weight(last.bb).unwrap().jumps {
+        for inst in &last.func.bb_get(last.bb).unwrap().jumps {
             self.inspectors
                 .iter_mut()
                 .for_each(|i| i.borrow_mut().before_branch(inst, last));

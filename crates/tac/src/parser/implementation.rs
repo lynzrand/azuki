@@ -52,7 +52,7 @@ impl<'f> VariableNamingCtx<'f> {
                     kind: InstKind::Dead,
                     ty: Ty::unit(),
                 },
-                BBId::end(),
+                BBId::default(),
             );
             self.local_vars.insert(var_id, var);
             var
@@ -63,7 +63,7 @@ impl<'f> VariableNamingCtx<'f> {
         let inst_ref = self
             .func
             .func
-            .arena_get_mut(idx)
+            .tac_get_mut(idx)
             .expect("The supplied index must be valid");
         inst_ref.inst = inst;
     }

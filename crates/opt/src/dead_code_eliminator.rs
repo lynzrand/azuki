@@ -25,8 +25,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
                 self.graph.add_edge(source, idx, ());
             }
         }
-        for bb in func.basic_blocks.node_indices() {
-            let bb = func.basic_blocks.node_weight(bb).unwrap();
+        for (_, bb) in func.all_bb_unordered() {
             for br in &bb.jumps {
                 if let Branch::Return(Some(Value::Dest(idx))) = br {
                     self.find_roots.include_node(*idx);
@@ -45,7 +44,11 @@ impl FunctionOptimizer for DeadCodeEliminator {
         }
 
         let mut editor = FuncEditor::new(func);
-        let bbs = editor.func.basic_blocks.node_indices().collect::<Vec<_>>();
+        let bbs = editor
+            .func
+            .all_bb_unordered()
+            .map(|(id, _)| id)
+            .collect::<Vec<_>>();
         for bb in bbs {
             editor.set_current_bb_start(bb).unwrap();
             while editor.move_forward() {

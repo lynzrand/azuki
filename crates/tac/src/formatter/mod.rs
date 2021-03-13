@@ -157,7 +157,7 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                     } else {
                         first = false;
                     }
-                    write!(f, "({}, bb{})", ctx.1.var_id(val), bb.index())?;
+                    write!(f, "({}, bb{})", ctx.1.var_id(val), bb.unique_num())?;
                 }
                 write!(f, "]")?;
             }
@@ -179,10 +179,10 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
                 }
             }
             Branch::Jump(target) => {
-                write!(f, "br bb{}", target.index())?;
+                write!(f, "br bb{}", target.unique_num())?;
             }
             Branch::CondJump { cond, target } => {
-                write!(f, "br bb{} if ", target.index())?;
+                write!(f, "br bb{} if ", target.unique_num())?;
                 cond.fmt_ctx(f, ctx)?;
             }
         }
@@ -207,12 +207,12 @@ impl std::fmt::Display for TacFunc {
         //     BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
         // while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
         for &k in &self.bb_seq {
-            let v = self.basic_blocks.node_weight(k).unwrap();
-            writeln!(f, "bb{}:", k.index())?;
+            let v = self.bb_get(k).unwrap();
+            writeln!(f, "bb{}:", k.unique_num())?;
             if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {
-                    let i = self.arena.get(cur_idx).unwrap();
+                    let i = self.instructions_arena.get(cur_idx).unwrap();
                     let cur_id = ctx.var_id(cur_idx);
                     write!(f, "\t")?;
                     i.fmt_ctx(f, (cur_id, &mut ctx))?;

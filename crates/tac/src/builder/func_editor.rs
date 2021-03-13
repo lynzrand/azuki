@@ -29,7 +29,7 @@ pub struct FuncEditor<'a> {
 impl<'a> FuncEditor<'a> {
     pub fn new(func: &'a mut TacFunc) -> FuncEditor<'a> {
         let starting_block = func.bb_seq.first().cloned().unwrap_or_default();
-        let starting_idx = func.basic_blocks.node_weight(starting_block).unwrap().head;
+        let starting_idx = func.bb_get(starting_block).unwrap().head;
         let current_bb = starting_block;
 
         FuncEditor {
@@ -63,17 +63,11 @@ impl<'a> FuncEditor<'a> {
     }
 
     pub fn current_bb(&self) -> &BasicBlock {
-        self.func
-            .basic_blocks
-            .node_weight(self.current_bb_id)
-            .unwrap()
+        self.func.bb_get(self.current_bb_id).unwrap()
     }
 
     pub fn current_bb_mut(&mut self) -> &mut BasicBlock {
-        self.func
-            .basic_blocks
-            .node_weight_mut(self.current_bb_id)
-            .unwrap()
+        self.func.bb_get_mut(self.current_bb_id).unwrap()
     }
 
     /// Returns the current instruction this builder is working on. If
@@ -87,7 +81,7 @@ impl<'a> FuncEditor<'a> {
     }
 
     pub fn current_tac(&self) -> Option<&Tac> {
-        self.func.arena_get(self.current_idx?).ok()
+        self.func.tac_get(self.current_idx?).ok()
     }
 
     pub fn current_inst_mut(&mut self) -> Option<&mut Inst> {
@@ -95,16 +89,20 @@ impl<'a> FuncEditor<'a> {
     }
 
     pub fn current_tac_mut(&mut self) -> Option<&mut Tac> {
-        self.func.arena_get_mut(self.current_idx?).ok()
+        self.func.tac_get_mut(self.current_idx?).ok()
     }
 
     /// Add an free-standing empty basic block into the function.
     pub fn new_bb(&mut self) -> BBId {
-        let bb = self.func.basic_blocks.add_node(BasicBlock {
-            jumps: vec![],
-            head: None,
-            tail: None,
-        });
+        let bb = self
+            .func
+            .basic_block_arena
+            .insert(BasicBlock {
+                jumps: vec![],
+                head: None,
+                tail: None,
+            })
+            .into();
         self.func.bb_seq.push(bb);
         bb
     }
@@ -114,11 +112,7 @@ impl<'a> FuncEditor<'a> {
     ///
     /// Returns whether the position was **unchanged**.
     pub fn set_current_bb(&mut self, bb_id: BBId) -> TacResult<bool> {
-        let bb = self
-            .func
-            .basic_blocks
-            .node_weight(bb_id)
-            .ok_or(Error::NoSuchBB(bb_id))?;
+        let bb = self.func.bb_get(bb_id).ok_or(Error::NoSuchBB(bb_id))?;
         let same_pos = bb_id == self.current_bb_id && bb.tail == self.current_idx;
         self.current_bb_id = bb_id;
         self.current_idx = bb.tail;
@@ -130,11 +124,7 @@ impl<'a> FuncEditor<'a> {
     ///
     /// Returns whether the position was **unchanged**.
     pub fn set_current_bb_start(&mut self, bb_id: BBId) -> TacResult<bool> {
-        let bb = self
-            .func
-            .basic_blocks
-            .node_weight(bb_id)
-            .ok_or(Error::NoSuchBB(bb_id))?;
+        let bb = self.func.bb_get(bb_id).ok_or(Error::NoSuchBB(bb_id))?;
         let same_pos = bb_id == self.current_bb_id && bb.head == self.current_idx;
         self.current_bb_id = bb_id;
         self.current_idx = bb.head;
@@ -146,7 +136,7 @@ impl<'a> FuncEditor<'a> {
     ///
     /// Returns whether the position was **unchanged**.
     pub fn set_position_at_instruction(&mut self, inst_idx: OpRef) -> TacResult<bool> {
-        let inst = self.func.arena_get(inst_idx)?;
+        let inst = self.func.tac_get(inst_idx)?;
         let bb = inst.bb;
         let same_pos = bb == self.current_bb_id && Some(inst_idx) == self.current_idx;
         self.current_bb_id = bb;
@@ -212,28 +202,20 @@ impl<'a> FuncEditor<'a> {
     /// `inst.next` is not [`None`]).
     pub fn put_inst_after_current_place(&mut self, idx: OpRef) -> TacResult<()> {
         {
-            let inst = self.func.arena_get(idx)?;
+            let inst = self.func.tac_get(idx)?;
             assert_eq!(inst.prev, None);
             assert_eq!(inst.next, None);
         }
         if let Some(cur_idx) = self.current_idx {
             self.func.tac_set_after(cur_idx, idx).unwrap();
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
+            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
 
             // reset tail pointer, since insertion might be at the end
             if bb.tail == Some(cur_idx) {
                 bb.tail = Some(idx);
             }
         } else {
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
+            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
             bb.head = Some(idx);
             bb.tail = Some(idx);
         }
@@ -250,28 +232,20 @@ impl<'a> FuncEditor<'a> {
     /// `inst.next` is not [`None`]).
     fn put_inst_before_current_place(&mut self, idx: OpRef) -> TacResult<()> {
         {
-            let inst = self.func.arena_get(idx)?;
+            let inst = self.func.tac_get(idx)?;
             assert_eq!(inst.prev, None);
             assert_eq!(inst.next, None);
         }
         if let Some(cur_idx) = self.current_idx {
             self.func.tac_set_before(cur_idx, idx).unwrap();
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
+            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
 
             // reset head pointer, since insertion might be at the start
             if bb.head == self.current_idx {
                 bb.head = Some(idx);
             }
         } else {
-            let bb = self
-                .func
-                .basic_blocks
-                .node_weight_mut(self.current_bb_id)
-                .unwrap();
+            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
             bb.head = Some(idx);
             bb.tail = Some(idx);
         }
@@ -281,15 +255,15 @@ impl<'a> FuncEditor<'a> {
 
     /// Add a branching instruction to the given basic block's jump instruction list.
     pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
-        if self.func.basic_blocks.node_weight(bb_id).is_none() {
+        if self.func.bb_get(bb_id).is_none() {
             return Err(Error::NoSuchBB(bb_id));
         }
 
         for target in inst.target_iter() {
-            self.func.basic_blocks.add_edge(bb_id, target, ());
+            self.func.basic_blocks_graph.add_edge(bb_id, target, ());
         }
 
-        let bb = self.func.basic_blocks.node_weight_mut(bb_id).unwrap();
+        let bb = self.func.bb_get_mut(bb_id).unwrap();
 
         bb.jumps.push(inst);
 
@@ -303,15 +277,11 @@ impl<'a> FuncEditor<'a> {
         bb_id: BBId,
         f: F,
     ) -> TacResult<()> {
-        for edge in self.succ_edge_of_bb(bb_id) {
-            self.func.basic_blocks.remove_edge(edge);
+        for target in self.succ_of_bb(bb_id) {
+            self.func.basic_blocks_graph.remove_edge(bb_id, target);
         }
 
-        let bb = self
-            .func
-            .basic_blocks
-            .node_weight_mut(bb_id)
-            .ok_or(Error::NoSuchBB(bb_id))?;
+        let bb = self.func.bb_get_mut(bb_id).ok_or(Error::NoSuchBB(bb_id))?;
 
         f(&mut bb.jumps);
 
@@ -321,7 +291,7 @@ impl<'a> FuncEditor<'a> {
             .flat_map(|x| x.target_iter())
             .collect::<TinyVec<[_; 16]>>()
         {
-            self.func.basic_blocks.add_edge(bb_id, target, ());
+            self.func.basic_blocks_graph.add_edge(bb_id, target, ());
         }
 
         Ok(())
@@ -332,7 +302,7 @@ impl<'a> FuncEditor<'a> {
     /// The return type is to make the borrow checker happy.
     pub fn pred_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
         self.func
-            .basic_blocks
+            .basic_blocks_graph
             .neighbors_directed(bb_id, petgraph::Direction::Incoming)
             .collect()
     }
@@ -340,28 +310,8 @@ impl<'a> FuncEditor<'a> {
     /// Returns an iterator of all successors of a basic block.
     pub fn succ_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
         self.func
-            .basic_blocks
+            .basic_blocks_graph
             .neighbors_directed(bb_id, petgraph::Direction::Outgoing)
-            .collect()
-    }
-
-    /// Returns an iterator of all predecessors of a basic block.
-    ///
-    /// The return type is to make the borrow checker happy.
-    pub fn pred_edge_of_bb(&self, bb_id: BBId) -> SmallEdgeVec {
-        self.func
-            .basic_blocks
-            .edges_directed(bb_id, petgraph::Direction::Incoming)
-            .map(|e| e.id())
-            .collect()
-    }
-
-    /// Returns an iterator of all successors of a basic block.
-    pub fn succ_edge_of_bb(&self, bb_id: BBId) -> SmallEdgeVec {
-        self.func
-            .basic_blocks
-            .edges_directed(bb_id, petgraph::Direction::Outgoing)
-            .map(|e| e.id())
             .collect()
     }
 
