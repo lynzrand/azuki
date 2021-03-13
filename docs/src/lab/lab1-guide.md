@@ -155,6 +155,21 @@ Token lexNumberRest() {
 
 仿照这个示例，你就能把实验要求的词法分析器写出来了。
 
+等等，似乎忘了什么……对了，我们还要跳过空白符！
+
+```java
+/** 这个是对外的接口 */
+Token next() {
+    Token token;
+    do {
+        token = nextToken();
+    } while (token.kind != TokenKind.WS);
+    return token;
+}
+```
+
+这下完整了。
+
 > ……什么，你想知道参考实现里的词法分析器是怎么写的？
 > 
 > 当然是自动生成的啦！欸嘿 (\*/ω＼\*)
