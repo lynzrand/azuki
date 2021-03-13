@@ -8,9 +8,8 @@ default-run = "azuki"
 
 
 [profile.release]
-debug = 0
-lto = true
-opt-level = "z"
+# lto = true
+opt-level = 'z'
 
 [[bin]]
 name = "azvm"

@@ -212,7 +212,7 @@ impl std::fmt::Display for TacFunc {
             if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {
-                    let i = self.arena.get(cur_idx).unwrap();
+                    let i = self.instructions_arena.get(cur_idx).unwrap();
                     let cur_id = ctx.var_id(cur_idx);
                     write!(f, "\t")?;
                     i.fmt_ctx(f, (cur_id, &mut ctx))?;

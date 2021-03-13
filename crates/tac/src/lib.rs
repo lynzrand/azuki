@@ -52,8 +52,15 @@ pub struct TacFunc {
     pub name: SmolStr,
     /// Function type
     pub ty: Ty,
+
+    // The followings are allocating spaces for data types
     /// An arena to allocate instructions
-    arena: Arena<Tac>,
+    instructions_arena: Arena<Tac>,
+    /// An arena to allocate branch instructions
+    branch_inst_arena: Arena<Branch>,
+    /// An arena to allocate basic block info
+    basic_block_arena: Arena<BasicBlock>,
+
     /// Basic blocks inside this function
     pub basic_blocks: DiGraph<BasicBlock, ()>,
     /// The sequence of basic blocks
@@ -72,7 +79,9 @@ impl TacFunc {
         TacFunc {
             name,
             ty,
-            arena: Arena::new(),
+            instructions_arena: Arena::new(),
+            branch_inst_arena: Arena::new(),
+            basic_block_arena: Arena::new(),
             basic_blocks,
             bb_seq: vec![starting_block],
         }
@@ -90,13 +99,14 @@ impl TacFunc {
     ///
     /// Note: The user **MUST** ensure the `bb` field to be correct.
     pub fn tac_new(&mut self, inst: Inst, bb: BBId) -> OpRef {
-        self.arena.insert(Tac::independent(inst, bb))
+        self.instructions_arena.insert(Tac::independent(inst, bb))
     }
 
     /// Insert a new TAC into arena with no next instruction, without a proper
     /// basic block ID.
     pub fn tac_new_no_bb(&mut self, inst: Inst) -> OpRef {
-        self.arena.insert(Tac::independent(inst, BBId::end()))
+        self.instructions_arena
+            .insert(Tac::independent(inst, BBId::end()))
     }
 
     /// Set the basic block field of this TAC.
@@ -107,12 +117,16 @@ impl TacFunc {
 
     #[inline]
     pub fn arena_get(&self, idx: OpRef) -> TacResult<&Tac> {
-        self.arena.get(idx).ok_or(Error::NoSuchTacIdx(idx))
+        self.instructions_arena
+            .get(idx)
+            .ok_or(Error::NoSuchTacIdx(idx))
     }
 
     #[inline]
     pub fn arena_get_mut(&mut self, idx: OpRef) -> TacResult<&mut Tac> {
-        self.arena.get_mut(idx).ok_or(Error::NoSuchTacIdx(idx))
+        self.instructions_arena
+            .get_mut(idx)
+            .ok_or(Error::NoSuchTacIdx(idx))
     }
 
     /// Insert a new TAC after the given instruction
@@ -179,7 +193,7 @@ impl TacFunc {
             let next = self.arena_get_mut(next_idx)?;
             next.prev = prev_idx;
         }
-        Ok(self.arena.remove(idx).unwrap().inst)
+        Ok(self.instructions_arena.remove(idx).unwrap().inst)
     }
 
     /// Connect TAC instruction `head` to the place after `tail`.
@@ -194,17 +208,17 @@ impl TacFunc {
     pub fn tac_connect(&mut self, tail: OpRef, head: OpRef) -> TacResult<()> {
         assert_ne!(tail, head, "Can't connect one same instruction!");
 
-        let tail_tac = self.arena.get_mut(tail);
+        let tail_tac = self.instructions_arena.get_mut(tail);
         let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
         if tail_tac.next.is_some() {
             return Err(Error::AlreadyConnected);
         }
         tail_tac.next = Some(head);
 
-        let head_tac = self.arena.get_mut(head);
+        let head_tac = self.instructions_arena.get_mut(head);
         let head_tac = head_tac.ok_or(Error::NoSuchTacIdx(head))?;
         if head_tac.prev.is_some() {
-            let tail_tac = self.arena.get_mut(tail);
+            let tail_tac = self.instructions_arena.get_mut(tail);
             let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
             tail_tac.next = None;
             return Err(Error::AlreadyConnected);
@@ -227,7 +241,7 @@ impl TacFunc {
     }
 
     pub fn all_inst_unordered(&self) -> impl Iterator<Item = (OpRef, BBId, &Inst)> {
-        self.arena
+        self.instructions_arena
             .iter()
             .map(|(idx, inst)| (idx, inst.bb, &inst.inst))
     }
