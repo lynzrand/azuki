@@ -10,7 +10,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc, todo};
 use symbol::{NumberingCounter, ScopeBuilder, StringInterner};
 
 use tac::{
-    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, TacFunc,
+    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstId, InstKind, TacFunc,
     Ty, Value,
 };
 
@@ -71,7 +71,7 @@ impl<'a> FuncCompiler<'a> {
         &mut self,
         param: &FuncParam,
         idx: usize,
-    ) -> Result<(OpRef, Ty), Error> {
+    ) -> Result<(InstId, Ty), Error> {
         let ty = self.visit_ty(&param.ty)?;
         let mut scope = self.scope_builder.borrow_mut();
         let var = scope

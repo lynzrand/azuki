@@ -1,10 +1,11 @@
 use std::ops::Index as IndexOp;
+use std::ops::IndexMut as IndexMutOp;
 
 use thunderdome::{Arena, Index};
 
 use crate::BasicBlock;
 
-pub type OpRef = thunderdome::Index;
+pub type InstId = thunderdome::Index;
 
 /// The index of a basic block.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -21,6 +22,20 @@ impl BBId {
 
     pub fn unique_num(self) -> u32 {
         self.0.slot()
+    }
+}
+
+impl IndexOp<BBId> for Arena<BasicBlock> {
+    type Output = BasicBlock;
+
+    fn index(&self, index: BBId) -> &Self::Output {
+        self.index(index.0)
+    }
+}
+
+impl IndexMutOp<BBId> for Arena<BasicBlock> {
+    fn index_mut(&mut self, index: BBId) -> &mut Self::Output {
+        self.index_mut(index.0)
     }
 }
 

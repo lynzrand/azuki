@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use azuki_tac::{BBId, BinaryInst, Inst, OpRef, Program, TacFunc, Value};
+use azuki_tac::{BBId, BinaryInst, Inst, InstId, Program, TacFunc, Value};
 use inspector::Inspector;
 
 pub mod inspector;
@@ -19,7 +19,7 @@ pub struct Frame<'f> {
     bb: BBId,
     params: Vec<i64>,
     instruction: CurrInst,
-    vars: HashMap<OpRef, i64>,
+    vars: HashMap<InstId, i64>,
 }
 
 impl<'f> Frame<'f> {
@@ -32,7 +32,7 @@ impl<'f> Frame<'f> {
 
     pub fn move_to(&mut self, bb: BBId) {
         self.bb = bb;
-        self.instruction = self.func.bb_get(bb).unwrap().head.into();
+        self.instruction = self.func.bb_get(bb).head.into();
     }
 
     /// Get a reference to the frame's bb.
@@ -53,24 +53,24 @@ impl<'f> Frame<'f> {
     /// Get a reference to the frame's instruction.
     pub fn instruction(&self) -> Option<&Inst> {
         match self.instruction {
-            CurrInst::Instruction(i) => Some(&self.func.tac_get(i).unwrap().inst),
+            CurrInst::Instruction(i) => Some(&self.func.tac_get(i).inst),
             CurrInst::Jump => None,
         }
     }
 
     /// Get a reference to the frame's vars.
-    pub fn vars(&self) -> &HashMap<OpRef, i64> {
+    pub fn vars(&self) -> &HashMap<InstId, i64> {
         &self.vars
     }
 }
 
 enum CurrInst {
-    Instruction(OpRef),
+    Instruction(InstId),
     Jump,
 }
 
-impl From<Option<OpRef>> for CurrInst {
-    fn from(x: Option<OpRef>) -> Self {
+impl From<Option<InstId>> for CurrInst {
+    fn from(x: Option<InstId>) -> Self {
         match x {
             Some(o) => Self::Instruction(o),
             None => Self::Jump,
@@ -112,7 +112,6 @@ impl<'src> Vm<'src> {
             func,
             instruction: func
                 .bb_get(func.starting_block().unwrap())
-                .unwrap()
                 .head
                 .map_or(CurrInst::Jump, CurrInst::Instruction),
             params,
@@ -133,7 +132,7 @@ impl<'src> Vm<'src> {
             let last = self.stack.last_mut().unwrap();
             match last.instruction {
                 CurrInst::Instruction(i) => {
-                    let next = last.func.tac_get(i).unwrap().next;
+                    let next = last.func.tac_get(i).next;
                     self.run_inst_in_curr_func(i);
                     let last = self.stack.last_mut().unwrap();
                     last.instruction = next.into();
@@ -147,11 +146,11 @@ impl<'src> Vm<'src> {
         }
     }
 
-    fn run_inst_in_curr_func(&mut self, idx: OpRef) {
+    fn run_inst_in_curr_func(&mut self, idx: InstId) {
         assert!(!self.stack.is_empty());
 
         let last = self.stack.last().unwrap();
-        let inst = last.func.tac_get(idx).unwrap();
+        let inst = last.func.tac_get(idx);
 
         self.inspectors
             .iter_mut()
@@ -205,7 +204,7 @@ impl<'src> Vm<'src> {
 
         last.last_bb = last.bb;
         let mut action = JumpAction::Error;
-        for inst in &last.func.bb_get(last.bb).unwrap().jumps {
+        for inst in &last.func.bb_get(last.bb).jumps {
             self.inspectors
                 .iter_mut()
                 .for_each(|i| i.borrow_mut().before_branch(inst, last));

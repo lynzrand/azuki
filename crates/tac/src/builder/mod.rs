@@ -214,7 +214,6 @@ where
             let source = self.read_variable(var.clone(), pred).unwrap();
             self.func
                 .tac_get_mut(phi)
-                .unwrap()
                 .inst
                 .kind
                 .as_phi_mut()
@@ -226,7 +225,7 @@ where
 
     fn try_remove_trivial_phi(&mut self, phi_op: Index) {
         let mut same = None;
-        let phi = self.editor.func.tac_get(phi_op).unwrap();
+        let phi = self.editor.func.tac_get(phi_op);
         let phi_bb = phi.bb;
         let _preds = self.pred_of_bb(phi_bb);
 
@@ -252,7 +251,7 @@ where
 
         // FIXME: workaround for not being able to track a phi's users
         // replace usage of this phi
-        self.editor.func.tac_get_mut(phi_op).unwrap().inst.kind = replace_value;
+        self.editor.func.tac_get_mut(phi_op).inst.kind = replace_value;
     }
 }
 

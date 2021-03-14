@@ -207,7 +207,7 @@ impl std::fmt::Display for TacFunc {
         //     BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
         // while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
         for &k in &self.bb_seq {
-            let v = self.bb_get(k).unwrap();
+            let v = self.bb_get(k);
             writeln!(f, "bb{}:", k.unique_num())?;
             if let Some(x) = v.head {
                 let mut cur_idx = x;

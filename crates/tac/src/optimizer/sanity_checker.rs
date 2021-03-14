@@ -45,7 +45,7 @@ impl FunctionOptimizer for SanityChecker {
         for (bb_id, bb) in func.basic_block_arena.iter() {
             for jump in &bb.jumps {
                 for target in jump.target_iter() {
-                    is_all_jumps_declared |= func.bb_get(target).is_some();
+                    // is_all_jumps_declared |= func.bb_get(target).is_some();
                 }
             }
         }

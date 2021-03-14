@@ -5,11 +5,12 @@ use tinyvec::TinyVec;
 
 use crate::{
     err::{Error, TacResult},
-    BBId, BasicBlock, Branch, Inst, InstKind, OpRef, Tac, TacFunc, Ty,
+    BBId, BasicBlock, Branch, Inst, InstId, InstKind, Tac, TacFunc, Ty,
 };
 
 use super::{SmallBBIdVec, SmallEdgeVec};
 
+/// An editor attached to the given function for linear editing purposes.
 pub struct FuncEditor<'a> {
     pub func: &'a mut TacFunc,
 
@@ -23,13 +24,13 @@ pub struct FuncEditor<'a> {
     ///
     /// **This value MUST refer to an instruction inside [`current_bb`](Self::current_bb).**
     /// **If this value is [`None`](Option::None), `current_bb` MUST be empty.**
-    current_idx: Option<OpRef>,
+    current_idx: Option<InstId>,
 }
 
 impl<'a> FuncEditor<'a> {
     pub fn new(func: &'a mut TacFunc) -> FuncEditor<'a> {
         let starting_block = func.bb_seq.first().cloned().unwrap_or_default();
-        let starting_idx = func.bb_get(starting_block).unwrap().head;
+        let starting_idx = func.bb_get(starting_block).head;
         let current_bb = starting_block;
 
         FuncEditor {
@@ -63,16 +64,16 @@ impl<'a> FuncEditor<'a> {
     }
 
     pub fn current_bb(&self) -> &BasicBlock {
-        self.func.bb_get(self.current_bb_id).unwrap()
+        self.func.bb_get(self.current_bb_id)
     }
 
     pub fn current_bb_mut(&mut self) -> &mut BasicBlock {
-        self.func.bb_get_mut(self.current_bb_id).unwrap()
+        self.func.bb_get_mut(self.current_bb_id)
     }
 
     /// Returns the current instruction this builder is working on. If
     /// [`current_bb`](Self::current_bb) is empty, returns [`None`](Option::None).
-    pub fn current_idx(&self) -> Option<OpRef> {
+    pub fn current_idx(&self) -> Option<InstId> {
         self.current_idx
     }
 
@@ -81,7 +82,7 @@ impl<'a> FuncEditor<'a> {
     }
 
     pub fn current_tac(&self) -> Option<&Tac> {
-        self.func.tac_get(self.current_idx?).ok()
+        Some(self.func.tac_get(self.current_idx?))
     }
 
     pub fn current_inst_mut(&mut self) -> Option<&mut Inst> {
@@ -89,7 +90,7 @@ impl<'a> FuncEditor<'a> {
     }
 
     pub fn current_tac_mut(&mut self) -> Option<&mut Tac> {
-        self.func.tac_get_mut(self.current_idx?).ok()
+        Some(self.func.tac_get_mut(self.current_idx?))
     }
 
     /// Add an free-standing empty basic block into the function.
@@ -112,7 +113,7 @@ impl<'a> FuncEditor<'a> {
     ///
     /// Returns whether the position was **unchanged**.
     pub fn set_current_bb(&mut self, bb_id: BBId) -> TacResult<bool> {
-        let bb = self.func.bb_get(bb_id).ok_or(Error::NoSuchBB(bb_id))?;
+        let bb = self.func.bb_get(bb_id);
         let same_pos = bb_id == self.current_bb_id && bb.tail == self.current_idx;
         self.current_bb_id = bb_id;
         self.current_idx = bb.tail;
@@ -124,7 +125,7 @@ impl<'a> FuncEditor<'a> {
     ///
     /// Returns whether the position was **unchanged**.
     pub fn set_current_bb_start(&mut self, bb_id: BBId) -> TacResult<bool> {
-        let bb = self.func.bb_get(bb_id).ok_or(Error::NoSuchBB(bb_id))?;
+        let bb = self.func.bb_get(bb_id);
         let same_pos = bb_id == self.current_bb_id && bb.head == self.current_idx;
         self.current_bb_id = bb_id;
         self.current_idx = bb.head;
@@ -135,8 +136,8 @@ impl<'a> FuncEditor<'a> {
     /// given instruction.
     ///
     /// Returns whether the position was **unchanged**.
-    pub fn set_position_at_instruction(&mut self, inst_idx: OpRef) -> TacResult<bool> {
-        let inst = self.func.tac_get(inst_idx)?;
+    pub fn set_position_at_instruction(&mut self, inst_idx: InstId) -> TacResult<bool> {
+        let inst = self.func.tac_get(inst_idx);
         let bb = inst.bb;
         let same_pos = bb == self.current_bb_id && Some(inst_idx) == self.current_idx;
         self.current_bb_id = bb;
@@ -149,8 +150,8 @@ impl<'a> FuncEditor<'a> {
     ///
     /// If the current basic block is empty, the instruction is inserted as the
     /// only instruction of the basic block.
-    pub fn insert_after_current_place(&mut self, inst: Inst) -> OpRef {
-        let idx = self.func.tac_new(inst, self.current_bb_id());
+    pub fn insert_after_current_place(&mut self, inst: Inst) -> InstId {
+        let idx = self.func.inst_new(inst);
         // this line is infailable
         self.put_inst_after_current_place(idx).unwrap();
         idx
@@ -161,14 +162,14 @@ impl<'a> FuncEditor<'a> {
     ///
     /// If the current basic block is empty, the instruction is inserted as the
     /// only instruction of the basic block.
-    pub fn insert_before_current_place(&mut self, inst: Inst) -> OpRef {
-        let idx = self.func.tac_new(inst, self.current_bb_id());
+    pub fn insert_before_current_place(&mut self, inst: Inst) -> InstId {
+        let idx = self.func.inst_new(inst);
         self.put_inst_before_current_place(idx).unwrap();
         idx
     }
 
     /// Insert the given instruction at the **end** of the given basic block.
-    pub fn insert_at_end_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<OpRef> {
+    pub fn insert_at_end_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<InstId> {
         let curr_bb = self.current_bb_id;
         let curr_idx = self.current_idx;
         let same_pos = self.set_current_bb(bb_id)?;
@@ -181,7 +182,7 @@ impl<'a> FuncEditor<'a> {
     }
 
     /// Insert the given instruction at the **start** of the given basic block.
-    pub fn insert_at_start_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<OpRef> {
+    pub fn insert_at_start_of(&mut self, inst: Inst, bb_id: BBId) -> TacResult<InstId> {
         let curr_bb = self.current_bb_id;
         let curr_idx = self.current_idx;
         let same_pos = self.set_current_bb_start(bb_id)?;
@@ -200,22 +201,22 @@ impl<'a> FuncEditor<'a> {
     ///
     /// Panics when the instruction is not free-standing (`inst.prev` or
     /// `inst.next` is not [`None`]).
-    pub fn put_inst_after_current_place(&mut self, idx: OpRef) -> TacResult<()> {
+    pub fn put_inst_after_current_place(&mut self, idx: InstId) -> TacResult<()> {
         {
-            let inst = self.func.tac_get(idx)?;
+            let inst = self.func.tac_get(idx);
             assert_eq!(inst.prev, None);
             assert_eq!(inst.next, None);
         }
         if let Some(cur_idx) = self.current_idx {
-            self.func.tac_set_after(cur_idx, idx).unwrap();
-            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
+            self.func.inst_set_after(cur_idx, idx);
+            let bb = self.func.bb_get_mut(self.current_bb_id);
 
             // reset tail pointer, since insertion might be at the end
             if bb.tail == Some(cur_idx) {
                 bb.tail = Some(idx);
             }
         } else {
-            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
+            let bb = self.func.bb_get_mut(self.current_bb_id);
             bb.head = Some(idx);
             bb.tail = Some(idx);
         }
@@ -230,22 +231,22 @@ impl<'a> FuncEditor<'a> {
     ///
     /// Panics when the instruction is not free-standing (`inst.prev` or
     /// `inst.next` is not [`None`]).
-    fn put_inst_before_current_place(&mut self, idx: OpRef) -> TacResult<()> {
+    fn put_inst_before_current_place(&mut self, idx: InstId) -> TacResult<()> {
         {
-            let inst = self.func.tac_get(idx)?;
+            let inst = self.func.tac_get(idx);
             assert_eq!(inst.prev, None);
             assert_eq!(inst.next, None);
         }
         if let Some(cur_idx) = self.current_idx {
-            self.func.tac_set_before(cur_idx, idx).unwrap();
-            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
+            self.func.inst_set_before(cur_idx, idx);
+            let bb = self.func.bb_get_mut(self.current_bb_id);
 
             // reset head pointer, since insertion might be at the start
             if bb.head == self.current_idx {
                 bb.head = Some(idx);
             }
         } else {
-            let bb = self.func.bb_get_mut(self.current_bb_id).unwrap();
+            let bb = self.func.bb_get_mut(self.current_bb_id);
             bb.head = Some(idx);
             bb.tail = Some(idx);
         }
@@ -255,15 +256,11 @@ impl<'a> FuncEditor<'a> {
 
     /// Add a branching instruction to the given basic block's jump instruction list.
     pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
-        if self.func.bb_get(bb_id).is_none() {
-            return Err(Error::NoSuchBB(bb_id));
-        }
-
         for target in inst.target_iter() {
             self.func.basic_blocks_graph.add_edge(bb_id, target, ());
         }
 
-        let bb = self.func.bb_get_mut(bb_id).unwrap();
+        let bb = self.func.bb_get_mut(bb_id);
 
         bb.jumps.push(inst);
 
@@ -281,7 +278,7 @@ impl<'a> FuncEditor<'a> {
             self.func.basic_blocks_graph.remove_edge(bb_id, target);
         }
 
-        let bb = self.func.bb_get_mut(bb_id).ok_or(Error::NoSuchBB(bb_id))?;
+        let bb = self.func.bb_get_mut(bb_id);
 
         f(&mut bb.jumps);
 
@@ -315,7 +312,7 @@ impl<'a> FuncEditor<'a> {
             .collect()
     }
 
-    pub fn insert_phi(&mut self, bb_id: BBId, ty: Ty) -> Result<OpRef, Error> {
+    pub fn insert_phi(&mut self, bb_id: BBId, ty: Ty) -> Result<InstId, Error> {
         self.insert_at_start_of(
             Inst {
                 kind: InstKind::Phi(BTreeMap::new()),
@@ -359,7 +356,7 @@ impl<'a> FuncEditor<'a> {
 
     pub fn remove_current(&mut self) -> Option<Inst> {
         if let Some(idx) = self.current_idx {
-            self.func.tac_remove_at(idx).ok()
+            Some(self.func.inst_remove(idx))
         } else {
             None
         }

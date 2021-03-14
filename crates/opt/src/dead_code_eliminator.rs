@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
-use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, Branch, OpRef, Value};
+use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, Branch, InstId, Value};
 use petgraph::{graphmap::DiGraphMap, visit};
 use visit::{FilterNode, Walker};
 
 pub struct DeadCodeEliminator {
-    graph: DiGraphMap<OpRef, ()>,
-    find_roots: HashSet<OpRef>,
+    graph: DiGraphMap<InstId, ()>,
+    find_roots: HashSet<InstId>,
 }
 
 impl FunctionOptimizer for DeadCodeEliminator {
