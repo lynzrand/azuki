@@ -5,7 +5,7 @@ mod implementation;
 /// An implicitly linked list, allowing freestanding items and multiple links
 /// inside itself.
 pub trait ImplicitLinkedList {
-    type Key: Copy + PartialEq;
+    type Key: Copy + Eq;
     type Item: ImplicitLinkedListItem<Key = Self::Key>;
 
     fn _get_item(&self, key: Self::Key) -> &Self::Item;
@@ -27,6 +27,14 @@ pub trait ImplicitLinkedList {
 
     fn remove_item<K: Into<Self::Key>>(&mut self, idx: K) -> Self::Item {
         self._remove_item(idx.into())
+    }
+
+    fn next_key<K: Into<Self::Key>>(&self, key: K) -> Option<Self::Key> {
+        self._get_item(key.into()).next()
+    }
+
+    fn prev_key<K: Into<Self::Key>>(&self, key: K) -> Option<Self::Key> {
+        self._get_item(key.into()).next()
     }
 
     /// Position this item after the given item.
@@ -136,10 +144,14 @@ pub trait ImplicitLinkedList {
     }
 }
 
+pub trait ImplicitLinkedListGet2: ImplicitLinkedList {
+    fn get2_mut(&mut self, i1: Self::Key, i2: Self::Key) -> (&mut Self::Item, &mut Self::Item);
+}
+
 /// An implicit linked list item. Contains keys for the previous and next items
 /// of `Self`.
 pub trait ImplicitLinkedListItem {
-    type Key: Copy + PartialEq;
+    type Key: Copy + Eq;
 
     fn next(&self) -> Option<Self::Key>;
     fn set_next(&mut self, key: Option<Self::Key>);
@@ -162,6 +174,17 @@ pub trait ImplicitLinkedListItem {
     }
 }
 
-pub struct Cursor<'a, Ctx> {
-    ctx: &'a mut Ctx,
-}
+// pub struct Cursor<Key> {
+//     curr: Option<Key>,
+//     head: Option<Key>,
+//     tail: Option<Key>,
+// }
+
+// impl<Ctx: ImplicitLinkedList<Key = Key>, Key> Cursor<Key> {
+//     pub fn move_next(&mut self, ctx: &Ctx) -> bool {
+//         if let Some(key) = curr {
+//             let next = ctx.next_key(key);
+//             self.curr = next;
+//         }
+//     }
+// }

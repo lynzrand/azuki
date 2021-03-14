@@ -279,10 +279,96 @@ impl TacFunc {
     }
 
     #[inline]
+    pub fn bb_get2_mut(&mut self, i1: BBId, i2: BBId) -> (&mut BasicBlock, &mut BasicBlock) {
+        let (v1, v2) = self.basic_block_arena.get2_mut(i1.into(), i2.into());
+        (
+            v1.unwrap_or_else(|| panic!("No index at {:?}", i1)),
+            v2.unwrap_or_else(|| panic!("No index at {:?}", i2)),
+        )
+    }
+
+    #[inline]
     pub fn all_bb_unordered(&self) -> impl Iterator<Item = (BBId, &BasicBlock)> {
         self.basic_block_arena
             .iter()
             .map(|(idx, bb)| (idx.into(), bb))
+    }
+
+    /// Split all instruction after `inst` into a new basic block. Returns the ID
+    /// of that basic block.
+    ///
+    /// - Creates a new basic block `new_bb`
+    /// - Move every instruction after `inst` and inside its basic block to `new_bb`
+    /// - Move every jump instruction to `new_bb` if `transfer_branches` is `true`
+    pub fn bb_split_after(&mut self, inst: InstId, transfer_branches: bool) -> BBId {
+        let after_head = self.inst_split_off_after(inst);
+        let first_bb_id = self.tac_get(inst).bb;
+        let first_bb = self.bb_get_mut(first_bb_id);
+        let orig_tail = first_bb.tail.take();
+
+        let jumps = transfer_branches
+            .then(|| std::mem::replace(&mut first_bb.jumps, vec![]))
+            .unwrap_or_else(Vec::new);
+        let new_bb_id = self.bb_new();
+
+        let new_bb = self.bb_get_mut(new_bb_id);
+        new_bb.tail = orig_tail;
+        new_bb.head = after_head;
+        new_bb.jumps = jumps;
+
+        {
+            // fix bb pointers
+            let mut it = new_bb.head;
+            while let Some(inst) = it {
+                let tac = self.tac_get_mut(inst);
+                tac.bb = new_bb_id;
+                it = tac.next();
+            }
+        }
+
+        new_bb_id
+    }
+
+    /// Concatenate basic block `back` into `front` and detaches `back` from
+    /// basic blocks. Returns branch instruction inside `front`.
+    ///
+    /// - Move every instruction inside `back` into `front`
+    /// - Remove all jump instruction inside `front`
+    /// - Move all instrcution inside `back` into `front`
+    /// - Detach `back`
+    pub fn bb_connect(&mut self, front: BBId, back: BBId) -> Vec<Branch> {
+        debug_assert_ne!(front, back, "Cannot connect a basic block to itself");
+
+        let (front_bb, back_bb) = self.bb_get2_mut(front, back);
+
+        let back_jump = std::mem::take(&mut back_bb.jumps);
+        let branches = std::mem::replace(&mut front_bb.jumps, back_jump);
+
+        let front_tail = front_bb.tail;
+        let back_head = back_bb.head;
+
+        if let Some(head) = back_head {
+            if let Some(tail) = front_tail {
+                front_bb.tail = back_bb.tail.take();
+                back_bb.head = None;
+                self.inst_connect(tail, head);
+            } else {
+                // `front` is empty, simply move `head` and `tail` around
+                front_bb.head = back_bb.head.take();
+                front_bb.tail = back_bb.tail.take();
+            }
+            {
+                // fix bb pointers
+                let mut it = back_head;
+                while let Some(inst) = it {
+                    let tac = self.tac_get_mut(inst);
+                    tac.bb = front;
+                    it = tac.next();
+                }
+            }
+        }
+
+        branches
     }
 }
 
