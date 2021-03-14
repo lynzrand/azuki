@@ -1,10 +1,21 @@
 # Azuki
 
-Azuki is a experimental lab experiment for Compilers Design course. This project serves as a part of Rynco Maekawa's bachelor's degree thesis.
+Azuki is an experimental lab experiment design & reference implementation for Compilers Design course. This project also serves as a part of Rynco Maekawa's bachelor's degree thesis.
+
+## Features
+
+- [x] Support for a C-like language (C0)
+  - [x] Lexing
+  - [x] Parsing
+  - [x] AST generation
+- [x] Generate SSA Intermediate Representation from AST
+- [ ] Perform optimization in IR
+  - [ ] TODO: List optimizations here
+- [x] Run IR inside a virtual machine
+- [ ] Handbook for students using this project
+- [ ] Grading tools and test cases
 
 ## Project structure
-
-This is a *planned* structure of this project.
 
 ```
 ./                      root folder
@@ -22,9 +33,12 @@ This is a *planned* structure of this project.
 
 ## Related projects
 
-Auto-grading system (online judge): [Rurikawa](https://github.com/BUAA-SE-Compiling/rurikawa)
+Online Judger (the other half of thesis project): [Rurikawa](https://github.com/BUAA-SE-Compiling/rurikawa)
 
-Previous attempt of this lab experiment: [Natrium](https://github.com/BUAA-SE-Compiling/natrium)
+Previous attempts of Compilers Design lab in The College of Software in BUAA: 
+
+- [Natrium](https://github.com/BUAA-SE-Compiling/natrium)
+- [C0](https://github.com/BUAA-SE-Compiling/c0-handbook)
 
 
 ## License
