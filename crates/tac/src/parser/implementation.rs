@@ -36,7 +36,7 @@ struct VariableNamingCtx<'f> {
 impl<'f> VariableNamingCtx<'f> {
     pub fn new(func: &'f mut TacFunc) -> VariableNamingCtx<'f> {
         VariableNamingCtx {
-            func: FuncEditor::new_blank(func),
+            func: FuncEditor::new(func),
             local_vars: BTreeMap::new(),
             bb_id_map: BTreeMap::new(),
         }
@@ -404,7 +404,7 @@ where
             let mut ctx = ctx.borrow_mut();
             let idx = ctx.declared_var(v);
             ctx.set_var(idx, inst);
-            ctx.func.put_inst_after_current_place(idx).unwrap();
+            ctx.func.put_inst_after_current_place(idx);
         })
 }
 
@@ -501,7 +501,7 @@ where
                 let mut ctx = ctx.borrow_mut();
                 let bb_id = ctx.declared_bb(id);
                 // ctx.func.func.bb_seq.push(bb_id);
-                ctx.func.set_current_bb(bb_id).unwrap();
+                ctx.func.set_current_bb(bb_id);
             }
             many(attempt(
                 instruction(ctx)

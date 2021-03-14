@@ -28,7 +28,7 @@ use std::{
 use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
 
-use linkedlist::ImplicitLinkedList;
+use linkedlist::{ImplicitLinkedList, ImplicitLinkedListItem};
 use petgraph::{graph::DiGraph, graph::NodeIndex, graphmap::DiGraphMap};
 use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
@@ -113,6 +113,10 @@ impl TacFunc {
             .insert(Tac::independent(inst, BBId::default()))
     }
 
+    pub fn inst_exists(&self, inst: InstId) -> bool {
+        self.instructions_arena.get(inst).is_some()
+    }
+
     pub fn inst_next(&self, inst: InstId) -> Option<InstId> {
         self.tac_get(inst).next
     }
@@ -149,13 +153,55 @@ impl TacFunc {
     /// Position this instruction after the given instruction.
     pub fn inst_set_after(&mut self, after: InstId, inst: InstId) {
         self.instructions_arena.attach_after(after, inst);
-        self.tac_get_mut(inst).bb = self.tac_get(after).bb;
+        let bb = self.tac_get(after).bb;
+        self.tac_get_mut(inst).bb = bb;
+
+        let bb = self.bb_get_mut(bb);
+        if bb.tail == Some(after) {
+            bb.tail = Some(inst);
+        }
     }
 
     /// Position this instruction before the given instruction.
     pub fn inst_set_before(&mut self, before: InstId, inst: InstId) {
         self.instructions_arena.attach_before(before, inst);
-        self.tac_get_mut(inst).bb = self.tac_get(before).bb;
+        let bb = self.tac_get(before).bb;
+        self.tac_get_mut(inst).bb = bb;
+
+        let bb = self.bb_get_mut(bb);
+        if bb.head == Some(before) {
+            bb.head = Some(inst);
+        }
+    }
+
+    /// Append the given instruction as the last instruction in basic block
+    pub fn inst_append_in_bb(&mut self, inst: InstId, bb: BBId) {
+        debug_assert!(self.tac_get(inst).is_freestanding());
+
+        self.tac_get_mut(inst).bb = bb;
+        let bb = self.bb_get_mut(bb);
+        let old_tail = bb.tail.replace(inst);
+        if bb.head.is_none() {
+            bb.head = Some(inst);
+        }
+        if let Some(old_tail) = old_tail {
+            self.inst_set_after(old_tail, inst);
+        }
+    }
+
+    /// Prepend the given instruction as the first instruction in basic block
+    pub fn inst_prepend_in_bb(&mut self, inst: InstId, bb: BBId) {
+        debug_assert!(self.tac_get(inst).is_freestanding());
+
+        self.tac_get_mut(inst).bb = bb;
+        let bb = self.bb_get_mut(bb);
+        let old_head = bb.head.replace(inst);
+        if bb.tail.is_none() {
+            bb.tail = Some(inst);
+        }
+        if let Some(old_head) = old_head {
+            self.inst_set_before(old_head, inst);
+        }
     }
 
     /// Detaches this instruction from the instruction chain.
@@ -216,6 +262,10 @@ impl TacFunc {
     /// Insert a new basic block into this function
     pub fn bb_new(&mut self) -> BBId {
         self.basic_block_arena.insert(BasicBlock::default()).into()
+    }
+
+    pub fn bb_exists(&self, idx: BBId) -> bool {
+        self.basic_block_arena.get(idx.into()).is_some()
     }
 
     #[inline]
