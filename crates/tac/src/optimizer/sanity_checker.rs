@@ -42,11 +42,10 @@ impl FunctionOptimizer for SanityChecker {
         let is_all_vars_declared = self.use_vars.is_subset(&self.decl_vars);
 
         let mut is_all_jumps_declared = true;
-        for bb_id in func.basic_blocks.node_indices() {
-            let bb = func.basic_blocks.node_weight(bb_id).unwrap();
+        for (bb_id, bb) in func.basic_block_arena.iter() {
             for jump in &bb.jumps {
                 for target in jump.target_iter() {
-                    is_all_jumps_declared |= func.basic_blocks.node_weight(target).is_some();
+                    // is_all_jumps_declared |= func.bb_get(target).is_some();
                 }
             }
         }

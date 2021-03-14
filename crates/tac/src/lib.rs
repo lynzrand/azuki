@@ -11,6 +11,7 @@
 //! [llvm]: https://llvm.org
 
 pub mod builder;
+pub mod containers;
 pub mod err;
 pub mod formatter;
 mod linkedlist;
@@ -19,33 +20,37 @@ pub mod parser;
 pub mod ty;
 pub mod util;
 
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    ops::Index as IndexOp,
+};
 
 use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
 
-use petgraph::{graph::DiGraph, graph::NodeIndex};
+use linkedlist::{ImplicitLinkedList, ImplicitLinkedListItem};
+use petgraph::{graph::DiGraph, graph::NodeIndex, graphmap::DiGraphMap};
 use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 
 pub use ty::{NumericTy, Ty, TyKind};
 use util::VarIter;
 
+pub use containers::{BBId, InstId};
+
 #[derive(Debug, Clone)]
 pub struct Program {
     pub functions: HashMap<SmolStr, TacFunc>,
 }
-
-pub type OpRef = Index;
-
-/// The index of a basic block.
-pub type BBId = NodeIndex;
 
 /// A function made of TAC instructions.
 ///
 /// The instructions are represented as an indirect doubly linked list inside the
 /// `arena` using item indices. Every basic block holds the start and end index
 /// of its instructions.
+///
+/// **ALL methods of this type will panic if you feed invalid indices into them.**
+/// If that happens, there's definitely bug inside your code.
 #[derive(Debug, Clone, Default)]
 pub struct TacFunc {
     /// Function name
@@ -62,19 +67,19 @@ pub struct TacFunc {
     basic_block_arena: Arena<BasicBlock>,
 
     /// Basic blocks inside this function
-    pub basic_blocks: DiGraph<BasicBlock, ()>,
+    pub basic_blocks_graph: DiGraphMap<BBId, ()>,
     /// The sequence of basic blocks
     pub bb_seq: Vec<BBId>,
 }
 
 impl TacFunc {
     pub fn new(name: SmolStr, ty: Ty) -> TacFunc {
-        let mut basic_blocks = DiGraph::new();
-        let starting_block = basic_blocks.add_node(BasicBlock {
-            head: None,
-            tail: None,
-            jumps: Default::default(),
-        });
+        // let mut basic_blocks = DiGraph::new();
+        // let starting_block = basic_blocks.add_node(BasicBlock {
+        //     head: None,
+        //     tail: None,
+        //     jumps: Default::default(),
+        // });
 
         TacFunc {
             name,
@@ -82,8 +87,8 @@ impl TacFunc {
             instructions_arena: Arena::new(),
             branch_inst_arena: Arena::new(),
             basic_block_arena: Arena::new(),
-            basic_blocks,
-            bb_seq: vec![starting_block],
+            basic_blocks_graph: DiGraphMap::new(),
+            bb_seq: vec![],
         }
     }
 
@@ -94,106 +99,131 @@ impl TacFunc {
     pub fn starting_block(&self) -> Option<BBId> {
         self.bb_seq.first().cloned()
     }
+}
 
-    /// Insert a new TAC into arena with no next instruction, and belongs to Basic Block `bb`.
-    ///
-    /// Note: The user **MUST** ensure the `bb` field to be correct.
-    pub fn tac_new(&mut self, inst: Inst, bb: BBId) -> OpRef {
-        self.instructions_arena.insert(Tac::independent(inst, bb))
-    }
-
+/// Methods for manipulating instructions inside a function.
+///
+/// Note: All functions are infallible, and would panic when you use it with an
+/// ID that does not exist with it.
+impl TacFunc {
     /// Insert a new TAC into arena with no next instruction, without a proper
     /// basic block ID.
-    pub fn tac_new_no_bb(&mut self, inst: Inst) -> OpRef {
+    pub fn inst_new(&mut self, inst: Inst) -> InstId {
         self.instructions_arena
-            .insert(Tac::independent(inst, BBId::end()))
+            .insert(Tac::independent(inst, BBId::default()))
     }
 
-    /// Set the basic block field of this TAC.
-    pub fn tac_set_bb(&mut self, idx: OpRef, bb: BBId) -> TacResult<()> {
-        self.arena_get_mut(idx)?.bb = bb;
-        Ok(())
+    pub fn inst_exists(&self, inst: InstId) -> bool {
+        self.instructions_arena.get(inst).is_some()
     }
 
+    pub fn inst_next(&self, inst: InstId) -> Option<InstId> {
+        self.tac_get(inst).next
+    }
+
+    pub fn inst_prev(&self, inst: InstId) -> Option<InstId> {
+        self.tac_get(inst).prev
+    }
+
+    /// Gets the instruction with extra information around it as a `Tac`
     #[inline]
-    pub fn arena_get(&self, idx: OpRef) -> TacResult<&Tac> {
-        self.instructions_arena
-            .get(idx)
-            .ok_or(Error::NoSuchTacIdx(idx))
+    pub fn tac_get(&self, idx: InstId) -> &Tac {
+        self.instructions_arena.get_item(idx)
     }
 
+    /// Gets a mutable reference of the instruction with extra information around it
+    /// as a `Tac`
     #[inline]
-    pub fn arena_get_mut(&mut self, idx: OpRef) -> TacResult<&mut Tac> {
-        self.instructions_arena
-            .get_mut(idx)
-            .ok_or(Error::NoSuchTacIdx(idx))
+    pub fn tac_get_mut(&mut self, idx: InstId) -> &mut Tac {
+        self.instructions_arena.get_item_mut(idx)
     }
 
-    /// Insert a new TAC after the given instruction
-    pub fn tac_set_after(&mut self, after: OpRef, inst: OpRef) -> TacResult<()> {
-        let after_inst = self.arena_get(after)?;
-        let n = after_inst.next;
-
-        let current_inst = self.arena_get_mut(inst)?;
-        current_inst.prev = Some(after);
-        current_inst.next = n;
-
-        let after_inst = self.arena_get_mut(after)?;
-        after_inst.next = Some(inst);
-
-        if let Some(idx) = n {
-            let next = self.arena_get_mut(idx)?;
-            next.prev = Some(inst);
-        };
-        Ok(())
+    /// Get the instruction body
+    #[inline]
+    pub fn inst_get(&self, idx: InstId) -> &Inst {
+        &self.tac_get(idx).inst
     }
 
-    /// Insert a new TAC before the given instruction
-    pub fn tac_set_before(&mut self, before: OpRef, inst: OpRef) -> TacResult<()> {
-        let before_inst = self.arena_get(before)?;
-        let n = before_inst.prev;
-
-        let current_inst = self.arena_get_mut(inst)?;
-        current_inst.next = Some(before);
-        current_inst.prev = n;
-
-        let before_inst = self.arena_get_mut(before)?;
-        before_inst.prev = Some(inst);
-
-        if let Some(idx) = n {
-            let next = self.arena_get_mut(idx)?;
-            next.next = Some(inst);
-        }
-        Ok(())
+    /// Get a mutable reference of the instruction body
+    #[inline]
+    pub fn inst_get_mut(&mut self, idx: InstId) -> &mut Inst {
+        &mut self.tac_get_mut(idx).inst
     }
 
-    /// Remove the next instruction of the given instruction
-    ///
-    /// Errors if the given instruction does not exist.
-    pub fn tac_remove_at(&mut self, idx: OpRef) -> TacResult<Inst> {
-        let target = self.arena_get(idx)?;
+    /// Position this instruction after the given instruction.
+    pub fn inst_set_after(&mut self, after: InstId, inst: InstId) {
+        self.instructions_arena.attach_after(after, inst);
+        let bb = self.tac_get(after).bb;
+        self.tac_get_mut(inst).bb = bb;
 
-        let next_idx = target.next;
-        let prev_idx = target.prev;
+        let bb = self.bb_get_mut(bb);
+        if bb.tail == Some(after) {
+            bb.tail = Some(inst);
+        }
+    }
 
-        let bb = target.bb;
-        let bb = self.basic_blocks.node_weight_mut(bb).unwrap();
-        if bb.head == Some(idx) {
-            bb.head = next_idx;
-        }
-        if bb.tail == Some(idx) {
-            bb.tail = prev_idx;
-        }
+    /// Position this instruction before the given instruction.
+    pub fn inst_set_before(&mut self, before: InstId, inst: InstId) {
+        self.instructions_arena.attach_before(before, inst);
+        let bb = self.tac_get(before).bb;
+        self.tac_get_mut(inst).bb = bb;
 
-        if let Some(prev_idx) = prev_idx {
-            let prev = self.arena_get_mut(prev_idx)?;
-            prev.next = next_idx;
+        let bb = self.bb_get_mut(bb);
+        if bb.head == Some(before) {
+            bb.head = Some(inst);
         }
-        if let Some(next_idx) = next_idx {
-            let next = self.arena_get_mut(next_idx)?;
-            next.prev = prev_idx;
+    }
+
+    /// Append the given instruction as the last instruction in basic block
+    pub fn inst_append_in_bb(&mut self, inst: InstId, bb: BBId) {
+        debug_assert!(self.tac_get(inst).is_freestanding());
+
+        self.tac_get_mut(inst).bb = bb;
+        let bb = self.bb_get_mut(bb);
+        let old_tail = bb.tail.replace(inst);
+        if bb.head.is_none() {
+            bb.head = Some(inst);
         }
-        Ok(self.instructions_arena.remove(idx).unwrap().inst)
+        if let Some(old_tail) = old_tail {
+            self.inst_set_after(old_tail, inst);
+        }
+    }
+
+    /// Prepend the given instruction as the first instruction in basic block
+    pub fn inst_prepend_in_bb(&mut self, inst: InstId, bb: BBId) {
+        debug_assert!(self.tac_get(inst).is_freestanding());
+
+        self.tac_get_mut(inst).bb = bb;
+        let bb = self.bb_get_mut(bb);
+        let old_head = bb.head.replace(inst);
+        if bb.tail.is_none() {
+            bb.tail = Some(inst);
+        }
+        if let Some(old_head) = old_head {
+            self.inst_set_before(old_head, inst);
+        }
+    }
+
+    /// Detaches this instruction from the instruction chain.
+    pub fn inst_detach(&mut self, idx: InstId) {
+        self.instructions_arena.detach(idx);
+        self.tac_get_mut(idx).bb = BBId::default();
+    }
+
+    /// Remove the given instruction
+    pub fn inst_remove(&mut self, idx: InstId) -> Inst {
+        debug_assert_eq!(
+            self.inst_next(idx),
+            None,
+            "The instruction should be detached from the chain"
+        );
+        debug_assert_eq!(
+            self.inst_prev(idx),
+            None,
+            "The instruction should be detached from the chain"
+        );
+
+        self.instructions_arena.remove(idx).unwrap().inst
     }
 
     /// Connect TAC instruction `head` to the place after `tail`.
@@ -205,55 +235,64 @@ impl TacFunc {
     ///
     /// This function requires `head` and `tail` to be different. Panics if
     /// `head == tail`.
-    pub fn tac_connect(&mut self, tail: OpRef, head: OpRef) -> TacResult<()> {
+    pub fn inst_connect(&mut self, tail: InstId, head: InstId) {
         assert_ne!(tail, head, "Can't connect one same instruction!");
-
-        let tail_tac = self.instructions_arena.get_mut(tail);
-        let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
-        if tail_tac.next.is_some() {
-            return Err(Error::AlreadyConnected);
-        }
-        tail_tac.next = Some(head);
-
-        let head_tac = self.instructions_arena.get_mut(head);
-        let head_tac = head_tac.ok_or(Error::NoSuchTacIdx(head))?;
-        if head_tac.prev.is_some() {
-            let tail_tac = self.instructions_arena.get_mut(tail);
-            let tail_tac = tail_tac.ok_or(Error::NoSuchTacIdx(tail))?;
-            tail_tac.next = None;
-            return Err(Error::AlreadyConnected);
-        }
-        head_tac.prev = Some(tail);
-
-        Ok(())
+        self.instructions_arena.connect(tail, head);
     }
 
-    /// Breaks off TAC chain after position `pos`. Returns the index of head instruction of the
-    /// latter chain.
+    /// Splits off instruction chain after position `pos`. Returns the index of
+    /// head instruction of the latter chain.
     ///
     /// Errors if `pos` does not exist or there is no code after `tail`.
-    pub fn tac_break_off_after(&mut self, pos: OpRef) -> TacResult<OpRef> {
-        let tail = self.arena_get_mut(pos)?;
-        if tail.next.is_none() {
-            return Err(Error::NotConnected);
-        }
-        Ok(tail.next.take().unwrap())
+    fn inst_split_off_after(&mut self, pos: InstId) -> Option<InstId> {
+        let tail = self.tac_get_mut(pos);
+        tail.next.take()
     }
 
-    pub fn all_inst_unordered(&self) -> impl Iterator<Item = (OpRef, BBId, &Inst)> {
+    /// Returns an iterator of all instructions inside this function, unordered.
+    pub fn all_inst_unordered(&self) -> impl Iterator<Item = (InstId, BBId, &Inst)> {
         self.instructions_arena
             .iter()
             .map(|(idx, inst)| (idx, inst.bb, &inst.inst))
     }
 }
 
+/// Methods for playing with basic blocks
+impl TacFunc {
+    /// Insert a new basic block into this function
+    pub fn bb_new(&mut self) -> BBId {
+        self.basic_block_arena.insert(BasicBlock::default()).into()
+    }
+
+    pub fn bb_exists(&self, idx: BBId) -> bool {
+        self.basic_block_arena.get(idx.into()).is_some()
+    }
+
+    #[inline]
+    pub fn bb_get(&self, idx: BBId) -> &BasicBlock {
+        &self.basic_block_arena[idx]
+    }
+
+    #[inline]
+    pub fn bb_get_mut(&mut self, idx: BBId) -> &mut BasicBlock {
+        &mut self.basic_block_arena[idx]
+    }
+
+    #[inline]
+    pub fn all_bb_unordered(&self) -> impl Iterator<Item = (BBId, &BasicBlock)> {
+        self.basic_block_arena
+            .iter()
+            .map(|(idx, bb)| (idx.into(), bb))
+    }
+}
+
 /// A single basic block, represented as an indirect doubly linked list of instructions.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct BasicBlock {
     /// Linked list head
-    pub head: Option<OpRef>,
+    pub head: Option<InstId>,
     /// Linked list tail
-    pub tail: Option<OpRef>,
+    pub tail: Option<InstId>,
 
     /// The branch instruction at the end of this basic block
     pub jumps: Vec<Branch>,
@@ -269,13 +308,13 @@ pub struct Tac {
     pub bb: BBId,
 
     /// The previous instruction in this list.
-    pub prev: Option<OpRef>,
+    pub prev: Option<InstId>,
     /// The next instruction in this list.
-    pub next: Option<OpRef>,
+    pub next: Option<InstId>,
 }
 
 impl Tac {
-    pub fn new(inst: Inst, prev: Option<OpRef>, next: Option<OpRef>, bb: BBId) -> Self {
+    pub fn new(inst: Inst, prev: Option<InstId>, next: Option<InstId>, bb: BBId) -> Self {
         Self {
             inst,
             prev,
@@ -291,42 +330,6 @@ impl Tac {
             prev: None,
             next: None,
         }
-    }
-}
-
-impl linkedlist::SinglyLinkedList for Tac {
-    type Key = OpRef;
-
-    type Context = Arena<Tac>;
-
-    fn next_value_key(&self) -> Option<Self::Key> {
-        self.next
-    }
-
-    fn get_value(ctx: &Self::Context, key: Self::Key) -> &Self {
-        ctx.get(key).unwrap()
-    }
-
-    fn get_value_mut(ctx: &mut Self::Context, key: Self::Key) -> &mut Self {
-        ctx.get_mut(key).unwrap()
-    }
-
-    fn insert_value_after(_ctx: &mut Self::Context, _value: Self) -> Self::Key {
-        todo!()
-    }
-
-    fn set_next_value_key(&mut self) {
-        todo!()
-    }
-}
-
-impl linkedlist::DoublyLinkedList for Tac {
-    fn prev_value_key(&self) -> Option<Self::Key> {
-        self.prev
-    }
-
-    fn set_prev_value_key(&mut self) {
-        todo!()
     }
 }
 
@@ -360,7 +363,7 @@ pub enum InstKind {
     /// An assignment from another instruction or constant
     Assign(Value),
     /// A phi instruction
-    Phi(BTreeMap<BBId, OpRef>),
+    Phi(BTreeMap<BBId, InstId>),
     /// A function parameter
     Param(usize),
     /// An unreachable value
@@ -384,7 +387,7 @@ impl InstKind {
         }
     }
 
-    pub fn param_op_iter(&self) -> impl Iterator<Item = OpRef> + '_ {
+    pub fn param_op_iter(&self) -> impl Iterator<Item = InstId> + '_ {
         self.params_iter().filter_map(|x| x.get_inst())
     }
 }
@@ -438,7 +441,7 @@ pub enum BinaryOp {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Value {
-    Dest(OpRef),
+    Dest(InstId),
     Imm(Immediate),
 }
 
@@ -450,7 +453,7 @@ impl Value {
         }
     }
 
-    pub fn get_inst(&self) -> Option<OpRef> {
+    pub fn get_inst(&self) -> Option<InstId> {
         match self {
             Value::Dest(o) => Some(*o),
             _ => None,
@@ -458,8 +461,8 @@ impl Value {
     }
 }
 
-impl From<OpRef> for Value {
-    fn from(x: OpRef) -> Self {
+impl From<InstId> for Value {
+    fn from(x: InstId) -> Self {
         Value::Dest(x)
     }
 }

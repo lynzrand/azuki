@@ -77,8 +77,8 @@ where
     /// This function panics when there is any basic block not _filled_,
     /// not _sealed_, or there is any incomplete phis lying around.
     pub fn sanity_check(self) {
-        for bb in self.editor.func.basic_blocks.node_indices() {
-            let bb = bb.index();
+        for (bb, _) in self.editor.func.all_bb_unordered() {
+            let bb = bb.unique_num() as usize;
             assert!(
                 self.filled_bbs.contains(bb),
                 "bb{} is not yet filled!\nfunc:\n{}",
@@ -112,24 +112,24 @@ where
             }
         }
 
-        self.sealed_bbs.insert(bb_id.index());
+        self.sealed_bbs.insert(bb_id.unique_num() as usize);
     }
 
     /// Mark the given basic block as _filled_.
     ///
     /// _Filled_ blocks have all its instructions inserted.
     pub fn mark_filled(&mut self, bb_id: BBId) {
-        self.filled_bbs.insert(bb_id.index());
+        self.filled_bbs.insert(bb_id.unique_num() as usize);
     }
 
     /// Check if the given basic block is sealed.
     pub fn is_sealed(&self, bb_id: BBId) -> bool {
-        self.sealed_bbs.contains(bb_id.index())
+        self.sealed_bbs.contains(bb_id.unique_num() as usize)
     }
 
     /// Check if the given basic block is filled.
     pub fn is_filled(&self, bb_id: BBId) -> bool {
-        self.filled_bbs.contains(bb_id.index())
+        self.filled_bbs.contains(bb_id.unique_num() as usize)
     }
 
     pub fn declare_var(&mut self, var: TVar, ty: Ty) {
@@ -185,7 +185,7 @@ where
     /// This function directly corresponds to `readVariableRecursive` in the algorithm.
     fn read_variable_recursive(&mut self, var: TVar, bb_id: BBId) -> Option<Index> {
         let var_ty = self.variable_map.get(&var)?.0.clone();
-        let val = if !self.sealed_bbs.contains(bb_id.index()) {
+        let val = if !self.sealed_bbs.contains(bb_id.unique_num() as usize) {
             let param = self.editor.insert_phi(bb_id, var_ty).unwrap();
 
             let block = self.incomplete_phi.entry(bb_id).or_insert_with(Vec::new);
@@ -213,8 +213,7 @@ where
         for &pred in preds {
             let source = self.read_variable(var.clone(), pred).unwrap();
             self.func
-                .arena_get_mut(phi)
-                .unwrap()
+                .tac_get_mut(phi)
                 .inst
                 .kind
                 .as_phi_mut()
@@ -226,7 +225,7 @@ where
 
     fn try_remove_trivial_phi(&mut self, phi_op: Index) {
         let mut same = None;
-        let phi = self.editor.func.arena_get(phi_op).unwrap();
+        let phi = self.editor.func.tac_get(phi_op);
         let phi_bb = phi.bb;
         let _preds = self.pred_of_bb(phi_bb);
 
@@ -252,7 +251,7 @@ where
 
         // FIXME: workaround for not being able to track a phi's users
         // replace usage of this phi
-        self.editor.func.arena_get_mut(phi_op).unwrap().inst.kind = replace_value;
+        self.editor.func.tac_get_mut(phi_op).inst.kind = replace_value;
     }
 }
 

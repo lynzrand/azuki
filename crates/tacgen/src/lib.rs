@@ -10,7 +10,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc, todo};
 use symbol::{NumberingCounter, ScopeBuilder, StringInterner};
 
 use tac::{
-    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstKind, OpRef, TacFunc,
+    builder::FuncBuilder, BBId, BinaryInst, Branch, FunctionCall, Inst, InstId, InstKind, TacFunc,
     Ty, Value,
 };
 
@@ -71,7 +71,7 @@ impl<'a> FuncCompiler<'a> {
         &mut self,
         param: &FuncParam,
         idx: usize,
-    ) -> Result<(OpRef, Ty), Error> {
+    ) -> Result<(InstId, Ty), Error> {
         let ty = self.visit_ty(&param.ty)?;
         let mut scope = self.scope_builder.borrow_mut();
         let var = scope
@@ -115,6 +115,8 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
     fn visit_func(&mut self, func: &FuncStmt) -> Self::FuncResult {
         self.scope_builder.borrow_mut().add_scope();
+        let initial = self.builder.new_bb();
+        self.builder.set_current_bb(initial);
 
         let return_ty = self.visit_ty(&func.ret_ty)?;
         let mut params_ty = vec![];
@@ -315,7 +317,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.mark_sealed(cur_bb);
         self.builder.mark_filled(cur_bb);
 
-        self.builder.set_current_bb(cond_bb).unwrap();
+        self.builder.set_current_bb(cond_bb);
         let (cond, _cond_ty) = self.visit_expr(&stmt.cond)?;
 
         let loop_bb = self.builder.new_bb();
@@ -340,7 +342,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
             )
             .unwrap();
 
-        self.builder.set_current_bb(loop_bb).unwrap();
+        self.builder.set_current_bb(loop_bb);
         self.visit_block_stmt(&stmt.body)?;
         let loop_end_bb = self.builder.current_bb_id();
 
@@ -358,7 +360,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
             .add_branch(Branch::Jump(empty_jump_target(next_bb)), cond_bb)
             .unwrap();
 
-        self.builder.set_current_bb(next_bb).unwrap();
+        self.builder.set_current_bb(next_bb);
 
         Ok(())
     }
@@ -384,7 +386,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
             )
             .unwrap();
 
-        self.builder.set_current_bb(if_bb).unwrap();
+        self.builder.set_current_bb(if_bb);
         self.visit_block_stmt(&stmt.if_block)?;
 
         let if_end_bb = self.builder.current_bb_id();
@@ -401,7 +403,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
                     .add_branch(Branch::Jump(empty_jump_target(else_bb)), last_bb)
                     .unwrap();
 
-                self.builder.set_current_bb(else_bb).unwrap();
+                self.builder.set_current_bb(else_bb);
 
                 match other {
                     IfElseBlock::None => unreachable!(),
@@ -439,7 +441,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.mark_filled(if_end_bb);
         self.builder.mark_sealed(if_end_bb);
 
-        self.builder.set_current_bb(next_bb).unwrap();
+        self.builder.set_current_bb(next_bb);
         Ok(())
     }
 
@@ -492,7 +494,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.mark_sealed(self.builder.current_bb_id());
 
         let next_bb = self.builder.new_bb();
-        self.builder.set_current_bb(next_bb).unwrap();
+        self.builder.set_current_bb(next_bb);
 
         Ok(())
     }
@@ -508,7 +510,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.mark_filled(cur_bb);
 
         let next_bb = self.builder.new_bb();
-        self.builder.set_current_bb(next_bb).unwrap();
+        self.builder.set_current_bb(next_bb);
 
         Ok(())
     }
@@ -524,7 +526,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.mark_filled(cur_bb);
 
         let next_bb = self.builder.new_bb();
-        self.builder.set_current_bb(next_bb).unwrap();
+        self.builder.set_current_bb(next_bb);
 
         Ok(())
     }

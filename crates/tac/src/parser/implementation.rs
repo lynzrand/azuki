@@ -23,48 +23,41 @@ use smol_str::SmolStr;
 use std::{cell::RefCell, collections::BTreeMap, fmt::Display, ops::Neg};
 
 use crate::{
-    builder::FuncEditor, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstKind, NumericTy,
-    OpRef, Program, TacFunc, Ty, TyKind, Value,
+    builder::FuncEditor, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstId, InstKind,
+    NumericTy, Program, TacFunc, Ty, TyKind, Value,
 };
 
 struct VariableNamingCtx<'f> {
     func: FuncEditor<'f>,
-    local_vars: BTreeMap<usize, OpRef>,
+    local_vars: BTreeMap<usize, InstId>,
     bb_id_map: BTreeMap<u32, BBId>,
 }
 
 impl<'f> VariableNamingCtx<'f> {
     pub fn new(func: &'f mut TacFunc) -> VariableNamingCtx<'f> {
         VariableNamingCtx {
-            func: FuncEditor::new_blank(func),
+            func: FuncEditor::new(func),
             local_vars: BTreeMap::new(),
             bb_id_map: BTreeMap::new(),
         }
     }
 
-    pub fn declared_var(&mut self, var_id: usize) -> OpRef {
+    pub fn declared_var(&mut self, var_id: usize) -> InstId {
         if let Some(&mapping) = self.local_vars.get(&var_id) {
             mapping
         } else {
             // insert placeholder instruction
-            let var = self.func.func.tac_new(
-                Inst {
-                    kind: InstKind::Dead,
-                    ty: Ty::unit(),
-                },
-                BBId::end(),
-            );
+            let var = self.func.func.inst_new(Inst {
+                kind: InstKind::Dead,
+                ty: Ty::unit(),
+            });
             self.local_vars.insert(var_id, var);
             var
         }
     }
 
-    pub fn set_var(&mut self, idx: OpRef, inst: Inst) {
-        let inst_ref = self
-            .func
-            .func
-            .arena_get_mut(idx)
-            .expect("The supplied index must be valid");
+    pub fn set_var(&mut self, idx: InstId, inst: Inst) {
+        let inst_ref = self.func.func.tac_get_mut(idx);
         inst_ref.inst = inst;
     }
 
@@ -353,7 +346,7 @@ where
 
 fn phi_instruction<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-) -> impl Parser<Input, Output = BTreeMap<BBId, OpRef>> + 'a
+) -> impl Parser<Input, Output = BTreeMap<BBId, InstId>> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
@@ -411,7 +404,7 @@ where
             let mut ctx = ctx.borrow_mut();
             let idx = ctx.declared_var(v);
             ctx.set_var(idx, inst);
-            ctx.func.put_inst_after_current_place(idx).unwrap();
+            ctx.func.put_inst_after_current_place(idx);
         })
 }
 
@@ -508,7 +501,7 @@ where
                 let mut ctx = ctx.borrow_mut();
                 let bb_id = ctx.declared_bb(id);
                 // ctx.func.func.bb_seq.push(bb_id);
-                ctx.func.set_current_bb(bb_id).unwrap();
+                ctx.func.set_current_bb(bb_id);
             }
             many(attempt(
                 instruction(ctx)
