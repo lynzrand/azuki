@@ -1,7 +1,7 @@
 use thunderdome::{Arena, Index};
 
-use crate::InstId;
 use crate::Tac;
+use crate::{BBId, BasicBlock, InstId};
 
 use super::{ImplicitLinkedList, ImplicitLinkedListItem};
 
@@ -33,27 +33,46 @@ impl ImplicitLinkedListItem for Tac {
     }
 }
 
-impl<T> ImplicitLinkedList for Arena<T>
+impl<T, Key> ImplicitLinkedList<Key> for Arena<T>
 where
-    T: ImplicitLinkedListItem<Key = Index>,
+    T: ImplicitLinkedListItem<Key = Key>,
+    Key: Copy + Into<Index> + From<Index> + Eq,
 {
-    type Key = Index;
-
     type Item = T;
 
-    fn _get_item(&self, key: Self::Key) -> &Self::Item {
-        &self[key]
+    fn get_item(&self, key: Key) -> &Self::Item {
+        &self[key.into()]
     }
 
-    fn _get_item_mut(&mut self, key: Self::Key) -> &mut Self::Item {
-        &mut self[key]
+    fn get_item_mut(&mut self, key: Key) -> &mut Self::Item {
+        &mut self[key.into()]
     }
 
-    fn _insert_item(&mut self, item: Self::Item) -> Self::Key {
-        self.insert(item)
+    fn insert_item(&mut self, item: Self::Item) -> Key {
+        self.insert(item).into()
     }
 
-    fn _remove_item(&mut self, idx: Self::Key) -> Self::Item {
-        self.remove(idx).unwrap()
+    fn remove_item(&mut self, idx: Key) -> Self::Item {
+        self.remove(idx.into()).unwrap()
+    }
+}
+
+impl ImplicitLinkedListItem for BasicBlock {
+    type Key = BBId;
+
+    fn next(&self) -> Option<Self::Key> {
+        self.next
+    }
+
+    fn set_next(&mut self, key: Option<Self::Key>) {
+        self.next = key
+    }
+
+    fn prev(&self) -> Option<Self::Key> {
+        self.prev
+    }
+
+    fn set_prev(&mut self, key: Option<Self::Key>) {
+        self.prev = key
     }
 }

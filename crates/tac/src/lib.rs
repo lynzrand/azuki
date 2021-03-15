@@ -61,15 +61,13 @@ pub struct TacFunc {
     // The followings are allocating spaces for data types
     /// An arena to allocate instructions
     instructions_arena: Arena<Tac>,
-    /// An arena to allocate branch instructions
-    branch_inst_arena: Arena<Branch>,
     /// An arena to allocate basic block info
     basic_block_arena: Arena<BasicBlock>,
 
+    pub first_block: Option<BBId>,
+
     /// Basic blocks inside this function
     pub basic_blocks_graph: DiGraphMap<BBId, ()>,
-    /// The sequence of basic blocks
-    pub bb_seq: Vec<BBId>,
 }
 
 impl TacFunc {
@@ -85,10 +83,9 @@ impl TacFunc {
             name,
             ty,
             instructions_arena: Arena::new(),
-            branch_inst_arena: Arena::new(),
             basic_block_arena: Arena::new(),
             basic_blocks_graph: DiGraphMap::new(),
-            bb_seq: vec![],
+            first_block: None,
         }
     }
 
@@ -97,7 +94,7 @@ impl TacFunc {
     }
 
     pub fn starting_block(&self) -> Option<BBId> {
-        self.bb_seq.first().cloned()
+        self.first_block
     }
 }
 
@@ -287,6 +284,25 @@ impl TacFunc {
         )
     }
 
+    /// Set the given block as the first block in function.
+    /// Returns the previous first block.
+    pub fn bb_set_first(&mut self, bb: BBId) -> Option<BBId> {
+        debug_assert!(self.bb_exists(bb));
+        self.first_block.replace(bb)
+    }
+
+    pub fn bb_set_before(&mut self, before: BBId, bb: BBId) {
+        self.basic_block_arena.attach_before(before, bb);
+    }
+
+    pub fn bb_set_after(&mut self, after: BBId, bb: BBId) {
+        self.basic_block_arena.attach_after(after, bb);
+    }
+
+    pub fn bb_detach(&mut self, bb: BBId) {
+        self.basic_block_arena.detach(bb);
+    }
+
     #[inline]
     pub fn all_bb_unordered(&self) -> impl Iterator<Item = (BBId, &BasicBlock)> {
         self.basic_block_arena
@@ -370,6 +386,10 @@ impl TacFunc {
 
         branches
     }
+
+    pub fn bb_iter(&self) -> impl Iterator<Item = (BBId, &BasicBlock)> {
+        self.basic_block_arena.items_iter(self.first_block, None)
+    }
 }
 
 /// A single basic block, represented as an indirect doubly linked list of instructions.
@@ -379,6 +399,11 @@ pub struct BasicBlock {
     pub head: Option<InstId>,
     /// Linked list tail
     pub tail: Option<InstId>,
+
+    /// Linked list head
+    pub prev: Option<BBId>,
+    /// Linked list tail
+    pub next: Option<BBId>,
 
     /// The branch instruction at the end of this basic block
     pub jumps: Vec<Branch>,

@@ -32,7 +32,7 @@ impl<'a> FuncEditor<'a> {
     ///
     /// PLEASE DEFINITELY REMEMBER TO INITIALIZE BEFORE PUTTING ANYTHING INSIDE
     pub fn new(func: &'a mut TacFunc) -> FuncEditor<'a> {
-        let current_bb = func.bb_seq.first().cloned();
+        let current_bb = func.first_block;
         let starting_idx = current_bb.and_then(|b| func.bb_get(b).head);
 
         FuncEditor {
@@ -81,11 +81,9 @@ impl<'a> FuncEditor<'a> {
         Some(self.func.tac_get_mut(self.current_idx?))
     }
 
-    /// Add an free-standing empty basic block into the function.
+    /// Add an empty basic block into the function.
     pub fn new_bb(&mut self) -> BBId {
-        let bb = self.func.bb_new();
-        self.func.bb_seq.push(bb);
-        bb
+        self.func.bb_new()
     }
 
     /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)

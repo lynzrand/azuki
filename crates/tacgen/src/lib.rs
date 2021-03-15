@@ -117,6 +117,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.scope_builder.borrow_mut().add_scope();
         let initial = self.builder.new_bb();
         self.builder.set_current_bb(initial);
+        self.builder.func.bb_set_first(initial);
 
         let return_ty = self.visit_ty(&func.ret_ty)?;
         let mut params_ty = vec![];
@@ -318,9 +319,12 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.mark_filled(cur_bb);
 
         self.builder.set_current_bb(cond_bb);
+        self.builder.func.bb_set_after(cur_bb, cond_bb);
+
         let (cond, _cond_ty) = self.visit_expr(&stmt.cond)?;
 
         let loop_bb = self.builder.new_bb();
+        self.builder.func.bb_set_after(loop_bb, cond_bb);
         let next_bb = self.builder.new_bb();
 
         self.break_targets.push(BreakTarget {
@@ -359,7 +363,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder
             .add_branch(Branch::Jump(empty_jump_target(next_bb)), cond_bb)
             .unwrap();
-
+        self.builder.func.bb_set_after(loop_end_bb, next_bb);
         self.builder.set_current_bb(next_bb);
 
         Ok(())
@@ -374,6 +378,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         // Create if block
         let if_bb = self.builder.new_bb();
+        self.builder.func.bb_set_after(last_bb, if_bb);
 
         // if -> if_bb
         self.builder
@@ -396,6 +401,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         let next_bb = match &stmt.else_block {
             other @ IfElseBlock::Block(..) | other @ IfElseBlock::If(..) => {
                 let else_bb = self.builder.new_bb();
+                self.builder.func.bb_set_after(if_end_bb, else_bb);
 
                 // if
                 //  \--> else_bb
@@ -420,10 +426,13 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
                 self.builder.mark_filled(else_end_bb);
                 self.builder.mark_sealed(else_end_bb);
+                self.builder.func.bb_set_after(else_end_bb, next_bb);
                 next_bb
             }
             azuki_syntax::ast::IfElseBlock::None => {
                 let next_bb = self.builder.new_bb();
+                self.builder.func.bb_set_after(if_end_bb, next_bb);
+
                 // if
                 //  \--> next_bb
                 self.builder
@@ -495,6 +504,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb);
+        self.builder.func.bb_set_after(curr_bb, next_bb);
 
         Ok(())
     }
@@ -511,6 +521,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb);
+        self.builder.func.bb_set_after(cur_bb, next_bb);
 
         Ok(())
     }
@@ -527,6 +538,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb);
+        self.builder.func.bb_set_after(cur_bb, next_bb);
 
         Ok(())
     }

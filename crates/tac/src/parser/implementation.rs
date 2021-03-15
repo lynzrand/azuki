@@ -31,6 +31,7 @@ struct VariableNamingCtx<'f> {
     func: FuncEditor<'f>,
     local_vars: BTreeMap<usize, InstId>,
     bb_id_map: BTreeMap<u32, BBId>,
+    last_bb: Option<BBId>,
 }
 
 impl<'f> VariableNamingCtx<'f> {
@@ -39,6 +40,7 @@ impl<'f> VariableNamingCtx<'f> {
             func: FuncEditor::new(func),
             local_vars: BTreeMap::new(),
             bb_id_map: BTreeMap::new(),
+            last_bb: None,
         }
     }
 
@@ -502,6 +504,15 @@ where
                 let bb_id = ctx.declared_bb(id);
                 // ctx.func.func.bb_seq.push(bb_id);
                 ctx.func.set_current_bb(bb_id);
+                match ctx.last_bb {
+                    Some(last_bb) => {
+                        ctx.func.func.bb_set_after(last_bb, bb_id);
+                    }
+                    None => {
+                        ctx.func.func.bb_set_first(bb_id);
+                    }
+                }
+                ctx.last_bb = Some(bb_id);
             }
             many(attempt(
                 instruction(ctx)
