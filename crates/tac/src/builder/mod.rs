@@ -4,7 +4,6 @@ use std::ops::{Deref, DerefMut};
 
 use bit_set::BitSet;
 pub use func_editor::*;
-use petgraph::graph::EdgeIndex;
 
 use crate::*;
 
@@ -47,6 +46,9 @@ pub struct FuncBuilder<'a, TVar> {
 
     /// Incomplete phi commands (params in our case).
     incomplete_phi: BTreeMap<BBId, Vec<(TVar, Index)>>,
+
+    /// Basic blocks predecessors
+    pub block_pred: BTreeMap<BBId, SmallBBIdVec>,
 }
 
 impl<'a, TVar> FuncBuilder<'a, TVar>
@@ -62,6 +64,7 @@ where
             filled_bbs: BitSet::new(),
             variable_map: BTreeMap::new(),
             incomplete_phi: BTreeMap::new(),
+            block_pred: BTreeMap::new(),
         }
     }
 
@@ -253,6 +256,40 @@ where
         // replace usage of this phi
         self.editor.func.tac_get_mut(phi_op).inst.kind = replace_value;
     }
+
+    /// Add a branching instruction to the given basic block's jump instruction list.
+    pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
+        for target in inst.target_iter() {
+            let entry = self
+                .block_pred
+                .entry(target)
+                .or_insert_with(SmallBBIdVec::new);
+            entry.push(bb_id);
+        }
+
+        let bb = self.func.bb_get_mut(bb_id);
+
+        bb.jumps.push(inst);
+
+        Ok(())
+    }
+
+    /// Returns an iterator of all predecessors of a basic block.
+    ///
+    /// The return type is to make the borrow checker happy.
+    pub fn pred_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
+        self.block_pred.get(&bb_id).cloned().unwrap_or_default()
+    }
+
+    /// Returns an iterator of all successors of a basic block.
+    pub fn succ_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
+        self.func
+            .bb_get(bb_id)
+            .jumps
+            .iter()
+            .flat_map(|b| b.target_iter())
+            .collect()
+    }
 }
 
 impl<'a, TVar> Deref for FuncBuilder<'a, TVar> {
@@ -270,4 +307,3 @@ impl<'a, TVar> DerefMut for FuncBuilder<'a, TVar> {
 }
 
 type SmallBBIdVec = tinyvec::TinyVec<[BBId; 7]>;
-type SmallEdgeVec = tinyvec::TinyVec<[EdgeIndex; 7]>;

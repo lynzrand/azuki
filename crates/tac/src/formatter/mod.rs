@@ -1,10 +1,9 @@
 //! Serialization and de-serialization for TAC code.
 
 use indexmap::IndexSet;
-use petgraph::visit;
 use std::{fmt::Display, writeln};
 use ty::FuncTy;
-use util::{BiasedRevPostOrderDfs, ListFormatter};
+use util::ListFormatter;
 
 use crate::*;
 

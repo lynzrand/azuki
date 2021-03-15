@@ -7,11 +7,10 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-azuki-tac = {path = "../tac"}
-petgraph = "0.5"
+azuki-tac = { path = "../tac" }
 smol_str = "0.1"
 
 [dev-dependencies]
-azuki-syntax = {path = "../syntax"}
-azuki-tac = {path = "../tac"}
-azuki-tacgen = {path = "../tacgen"}
+azuki-syntax = { path = "../syntax" }
+azuki-tac = { path = "../tac" }
+azuki-tacgen = { path = "../tacgen" }

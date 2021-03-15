@@ -23,7 +23,7 @@ use smol_str::SmolStr;
 use std::{cell::RefCell, collections::BTreeMap, fmt::Display, ops::Neg};
 
 use crate::{
-    builder::FuncEditor, BBId, BinaryInst, BinaryOp, FunctionCall, Inst, InstId, InstKind,
+    builder::FuncEditor, BBId, BinaryInst, BinaryOp, Branch, FunctionCall, Inst, InstId, InstKind,
     NumericTy, Program, TacFunc, Ty, TyKind, Value,
 };
 
@@ -430,21 +430,19 @@ where
 
             let bb_id = ctx.declared_bb(id);
 
-            let curr_bb = ctx.func.current_bb_id();
             if let Some((_, _, val)) = cond {
                 ctx.func
-                    .add_branch(
-                        crate::Branch::CondJump {
-                            cond: val,
-                            target: bb_id,
-                        },
-                        curr_bb,
-                    )
-                    .unwrap();
+                    .current_bb_mut()
+                    .jumps
+                    .push(crate::Branch::CondJump {
+                        cond: val,
+                        target: bb_id,
+                    });
             } else {
                 ctx.func
-                    .add_branch(crate::Branch::Jump(bb_id), curr_bb)
-                    .unwrap();
+                    .current_bb_mut()
+                    .jumps
+                    .push(crate::Branch::Jump(bb_id));
             }
         })
 }
@@ -464,11 +462,8 @@ where
 {
     (string("return"), optional(attempt((spaces1(), value(ctx))))).map(move |(_, val)| {
         let mut ctx = ctx.borrow_mut();
-        let curr_bb_id = ctx.func.current_bb_id();
         let val = val.map(|(_, v)| v);
-        ctx.func
-            .add_branch(crate::Branch::Return(val), curr_bb_id)
-            .unwrap();
+        ctx.func.current_bb_mut().jumps.push(Branch::Return(val));
     })
 }
 

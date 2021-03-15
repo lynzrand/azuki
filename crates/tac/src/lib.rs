@@ -20,16 +20,12 @@ pub mod parser;
 pub mod ty;
 pub mod util;
 
-use std::{
-    collections::{BTreeMap, HashMap},
-    ops::Index as IndexOp,
-};
+use std::collections::{BTreeMap, HashMap};
 
 use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
 
 use linkedlist::{ImplicitLinkedList, ImplicitLinkedListItem};
-use petgraph::{graph::DiGraph, graph::NodeIndex, graphmap::DiGraphMap};
 use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 
@@ -65,9 +61,6 @@ pub struct TacFunc {
     basic_block_arena: Arena<BasicBlock>,
 
     pub first_block: Option<BBId>,
-
-    /// Basic blocks inside this function
-    pub basic_blocks_graph: DiGraphMap<BBId, ()>,
 }
 
 impl TacFunc {
@@ -84,7 +77,6 @@ impl TacFunc {
             ty,
             instructions_arena: Arena::new(),
             basic_block_arena: Arena::new(),
-            basic_blocks_graph: DiGraphMap::new(),
             first_block: None,
         }
     }

@@ -1,14 +1,9 @@
 use std::collections::BTreeMap;
 
-use petgraph::visit::EdgeRef;
-use tinyvec::TinyVec;
-
 use crate::{
     err::{Error, TacResult},
-    BBId, BasicBlock, Branch, Inst, InstId, InstKind, Tac, TacFunc, Ty,
+    BBId, BasicBlock,  Inst, InstId, InstKind, Tac, TacFunc, Ty,
 };
-
-use super::{SmallBBIdVec, SmallEdgeVec};
 
 /// An editor attached to the given function for linear editing purposes.
 pub struct FuncEditor<'a> {
@@ -192,64 +187,6 @@ impl<'a> FuncEditor<'a> {
             self.func.inst_prepend_in_bb(idx, self.current_bb_id);
         }
         self.current_idx = Some(idx);
-    }
-
-    /// Add a branching instruction to the given basic block's jump instruction list.
-    pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
-        for target in inst.target_iter() {
-            self.func.basic_blocks_graph.add_edge(bb_id, target, ());
-        }
-
-        let bb = self.func.bb_get_mut(bb_id);
-
-        bb.jumps.push(inst);
-
-        Ok(())
-    }
-
-    /// Modifies the branching instructions of a basic block. Recalculates successors of this
-    /// basic block after the modification completes.
-    pub fn modify_branch<F: FnOnce(&mut Vec<Branch>)>(
-        &mut self,
-        bb_id: BBId,
-        f: F,
-    ) -> TacResult<()> {
-        for target in self.succ_of_bb(bb_id) {
-            self.func.basic_blocks_graph.remove_edge(bb_id, target);
-        }
-
-        let bb = self.func.bb_get_mut(bb_id);
-
-        f(&mut bb.jumps);
-
-        for target in bb
-            .jumps
-            .iter()
-            .flat_map(|x| x.target_iter())
-            .collect::<TinyVec<[_; 16]>>()
-        {
-            self.func.basic_blocks_graph.add_edge(bb_id, target, ());
-        }
-
-        Ok(())
-    }
-
-    /// Returns an iterator of all predecessors of a basic block.
-    ///
-    /// The return type is to make the borrow checker happy.
-    pub fn pred_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
-        self.func
-            .basic_blocks_graph
-            .neighbors_directed(bb_id, petgraph::Direction::Incoming)
-            .collect()
-    }
-
-    /// Returns an iterator of all successors of a basic block.
-    pub fn succ_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
-        self.func
-            .basic_blocks_graph
-            .neighbors_directed(bb_id, petgraph::Direction::Outgoing)
-            .collect()
     }
 
     pub fn insert_phi(&mut self, bb_id: BBId, ty: Ty) -> Result<InstId, Error> {
