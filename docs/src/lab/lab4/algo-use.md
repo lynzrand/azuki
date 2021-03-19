@@ -43,6 +43,41 @@
 
 [^inst]: 当然了，因为在 SSA 代码中每一个 “变量” 都是唯一一条指令的运算结果，我们的中间代码库在实现的时候就没有给 “变量” 设计独立的标号，而是直接使用指令的编号作为对应 SSA “变量” 的编号。或者可以这么说——**在 SSA 中，我们根本不区分指令和变量**。
 
+### 例子
+
+对于如下的 C 代码：
+
+```c
+int a = 0;
+int b = a + 1;
+a = b + 1;
+```
+
+我们调用变量读写方法的顺序大致如下（省去了基本块参数和函数调用层级，只表示各个指令调用的时机和顺序）：
+
+```c
+{
+    // int a = 0;
+    declareVar(a, int); // 声明变量 a
+    a_1 = /* 生成常数 0 的指令 */;
+    writeVar(a, a_1);   // 我们写入了 a
+}
+{
+    // int b = a + 1;
+    declareVar(b, int); // 声明变量 b
+    a_1 = readVar(a);   // 我们读取了 a
+    b_1 = /* 生成相加的指令 */;
+    writeVar(b, b_1);   // 我们写入了 b
+}
+{
+    // a = b + 1;
+    b_1 = readVar(b);   // 我们读取了 b
+    a_2 = /* 生成相加的指令 */;
+    writeVar(a, a_2);   // 我们写入了 a
+}
+
+```
+
 ## 控制流的翻译
 
 我们还有最后一个接口方法要介绍。`addBranch(from, to)` 告诉算法，存在一条从基本块 `from` 指向基本块 `to` 的跳转。
@@ -70,7 +105,7 @@ if /* cond */ {
 我们调用相应方法的顺序大概是这样的（省去了生成指令和创建基本块的过程）：
 
 ```c
-/* 返回值 */ visitIfCondition(/* 参数啥的 */) {
+visitIfCondition(/* 参数啥的 */) {
     // 生成 cond 的指令
     markFilled(bb_start);
     markSealed(bb_start);
@@ -110,7 +145,7 @@ while /* cond, bb_cond */ {
 我们调用相应方法的顺序大概是这样的（同上）：
 
 ```c
-/* 返回值 */ visitWhileLoop(/* 参数啥的 */) {
+visitWhileLoop(/* 参数啥的 */) {
     markFilled(bb_start);
     markSealed(bb_start);
 
