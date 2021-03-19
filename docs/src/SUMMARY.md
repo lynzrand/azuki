@@ -10,6 +10,8 @@
   - [实现指导]()
 - [Lab4 代码生成](lab/lab4.md)
   - [实现指导](lab/lab4-guide.md)
+    - [为什么要用 SSA 中间代码](lab/lab4/ssa-design.md)
+    - [如何使用中间代码生成算法](lab/lab4/algo-use.md)
   - [Lab4-EX](lab/lab4-ex.md)
 - [Lab5 代码优化](lab/lab5.md)
   - [实现指导]()
