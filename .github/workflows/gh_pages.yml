@@ -17,7 +17,7 @@ jobs:
           mdbook-version: latest
       
       - name: Document rust code
-        run: cargo doc --workspace
+        run: cargo doc --workspace --document-private-items 
 
       - run: mdbook build
         working-directory: ./docs
