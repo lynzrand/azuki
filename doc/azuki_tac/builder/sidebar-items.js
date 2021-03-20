@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["FuncBuilder","A function builder that loosely resembles building SSA functions using the algorithm described in Simple and Efficient Construction of Static Single Assignment Form by Matthias Braun et al."],["FuncEditor","An editor attached to the given function for linear editing purposes."]]});

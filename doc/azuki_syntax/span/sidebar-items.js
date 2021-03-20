@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["DUMMY_SPAN",""]],"struct":[["Span","A Span is the information of a piece of source code inside a file."]]});

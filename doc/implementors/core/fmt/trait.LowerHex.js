@@ -1,0 +1,7 @@
+(function() {var implementors = {};
+implementors["bytes"] = [{"text":"impl LowerHex for Bytes","synthetic":false,"types":[]},{"text":"impl LowerHex for BytesMut","synthetic":false,"types":[]}];
+implementors["num_bigint"] = [{"text":"impl LowerHex for BigInt","synthetic":false,"types":[]},{"text":"impl LowerHex for BigUint","synthetic":false,"types":[]}];
+implementors["num_complex"] = [{"text":"impl&lt;T&gt; LowerHex for Complex&lt;T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: LowerHex + Num + PartialOrd + Clone,&nbsp;</span>","synthetic":false,"types":[]}];
+implementors["num_rational"] = [{"text":"impl&lt;T:&nbsp;LowerHex + Clone + Integer&gt; LowerHex for Ratio&lt;T&gt;","synthetic":false,"types":[]}];
+implementors["tinyvec"] = [{"text":"impl&lt;A:&nbsp;Array&gt; LowerHex for ArrayVec&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A::Item: LowerHex,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;'s, T&gt; LowerHex for SliceVec&lt;'s, T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: LowerHex,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;A:&nbsp;Array&gt; LowerHex for TinyVec&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A::Item: LowerHex,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

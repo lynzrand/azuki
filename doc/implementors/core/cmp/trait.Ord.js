@@ -1,0 +1,21 @@
+(function() {var implementors = {};
+implementors["azuki_tac"] = [{"text":"impl Ord for BBId","synthetic":false,"types":[]}];
+implementors["beef"] = [{"text":"impl&lt;T:&nbsp;?Sized, U&gt; Ord for Cow&lt;'_, T, U&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Ord + Beef,<br>&nbsp;&nbsp;&nbsp;&nbsp;U: Capacity,&nbsp;</span>","synthetic":false,"types":[]}];
+implementors["bit_set"] = [{"text":"impl&lt;B:&nbsp;BitBlock&gt; Ord for BitSet&lt;B&gt;","synthetic":false,"types":[]}];
+implementors["bit_vec"] = [{"text":"impl&lt;B:&nbsp;BitBlock&gt; Ord for BitVec&lt;B&gt;","synthetic":false,"types":[]}];
+implementors["bytes"] = [{"text":"impl Ord for Bytes","synthetic":false,"types":[]},{"text":"impl Ord for BytesMut","synthetic":false,"types":[]}];
+implementors["clap"] = [{"text":"impl&lt;'help&gt; Ord for Arg&lt;'help&gt;","synthetic":false,"types":[]}];
+implementors["combine"] = [{"text":"impl Ord for SourcePosition","synthetic":false,"types":[]},{"text":"impl&lt;P:&nbsp;Ord&gt; Ord for Span&lt;P&gt;","synthetic":false,"types":[]},{"text":"impl&lt;S:&nbsp;Ord, U:&nbsp;Ord&gt; Ord for Stream&lt;S, U&gt;","synthetic":false,"types":[]},{"text":"impl&lt;S:&nbsp;Ord&gt; Ord for PartialStream&lt;S&gt;","synthetic":false,"types":[]},{"text":"impl&lt;S:&nbsp;Ord&gt; Ord for CompleteStream&lt;S&gt;","synthetic":false,"types":[]},{"text":"impl&lt;S:&nbsp;Ord&gt; Ord for MaybePartialStream&lt;S&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'a, T:&nbsp;Ord&gt; Ord for SliceStream&lt;'a, T&gt;","synthetic":false,"types":[]},{"text":"impl&lt;T:&nbsp;?Sized&gt; Ord for PointerOffset&lt;T&gt;","synthetic":false,"types":[]}];
+implementors["fixedbitset"] = [{"text":"impl Ord for FixedBitSet","synthetic":false,"types":[]}];
+implementors["num_bigint"] = [{"text":"impl Ord for Sign","synthetic":false,"types":[]},{"text":"impl Ord for BigInt","synthetic":false,"types":[]},{"text":"impl Ord for BigUint","synthetic":false,"types":[]}];
+implementors["num_rational"] = [{"text":"impl&lt;T:&nbsp;Clone + Integer&gt; Ord for Ratio&lt;T&gt;","synthetic":false,"types":[]}];
+implementors["petgraph"] = [{"text":"impl Ord for Time","synthetic":false,"types":[]},{"text":"impl&lt;Ix:&nbsp;Ord&gt; Ord for NodeIndex&lt;Ix&gt;","synthetic":false,"types":[]},{"text":"impl&lt;Ix:&nbsp;Ord&gt; Ord for EdgeIndex&lt;Ix&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'b, T&gt; Ord for Ptr&lt;'b, T&gt;","synthetic":false,"types":[]},{"text":"impl Ord for Direction","synthetic":false,"types":[]}];
+implementors["proc_macro2"] = [{"text":"impl Ord for Ident","synthetic":false,"types":[]}];
+implementors["regex_syntax"] = [{"text":"impl Ord for Span","synthetic":false,"types":[]},{"text":"impl Ord for Position","synthetic":false,"types":[]},{"text":"impl Ord for Literal","synthetic":false,"types":[]},{"text":"impl Ord for ClassUnicodeRange","synthetic":false,"types":[]},{"text":"impl Ord for ClassBytesRange","synthetic":false,"types":[]},{"text":"impl Ord for Utf8Sequence","synthetic":false,"types":[]},{"text":"impl Ord for Utf8Range","synthetic":false,"types":[]}];
+implementors["smol_str"] = [{"text":"impl Ord for SmolStr","synthetic":false,"types":[]}];
+implementors["syn"] = [{"text":"impl Ord for Lifetime","synthetic":false,"types":[]}];
+implementors["thunderdome"] = [{"text":"impl Ord for Index","synthetic":false,"types":[]}];
+implementors["tinyvec"] = [{"text":"impl&lt;A:&nbsp;Array&gt; Ord for ArrayVec&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A::Item: Ord,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;'s, T&gt; Ord for SliceVec&lt;'s, T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Ord,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;A:&nbsp;Array&gt; Ord for TinyVec&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A::Item: Ord,&nbsp;</span>","synthetic":false,"types":[]}];
+implementors["vec1"] = [{"text":"impl&lt;T:&nbsp;Ord&gt; Ord for Vec1&lt;T&gt;","synthetic":false,"types":[]}];
+implementors["vec_map"] = [{"text":"impl&lt;V:&nbsp;Ord&gt; Ord for VecMap&lt;V&gt;","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

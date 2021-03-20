@@ -1,0 +1,6 @@
+(function() {var implementors = {};
+implementors["num_bigint"] = [{"text":"impl Octal for BigInt","synthetic":false,"types":[]},{"text":"impl Octal for BigUint","synthetic":false,"types":[]}];
+implementors["num_complex"] = [{"text":"impl&lt;T&gt; Octal for Complex&lt;T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Octal + Num + PartialOrd + Clone,&nbsp;</span>","synthetic":false,"types":[]}];
+implementors["num_rational"] = [{"text":"impl&lt;T:&nbsp;Octal + Clone + Integer&gt; Octal for Ratio&lt;T&gt;","synthetic":false,"types":[]}];
+implementors["tinyvec"] = [{"text":"impl&lt;A:&nbsp;Array&gt; Octal for ArrayVec&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A::Item: Octal,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;'s, T&gt; Octal for SliceVec&lt;'s, T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Octal,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;A:&nbsp;Array&gt; Octal for TinyVec&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A::Item: Octal,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

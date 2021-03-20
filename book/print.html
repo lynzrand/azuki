@@ -1,0 +1,980 @@
+<!DOCTYPE HTML>
+<html lang="zh_cn" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Compilers Experiment</title>
+        
+        <meta name="robots" content="noindex" />
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="preface.html">前言</a></li><li class="chapter-item expanded "><a href="lab/lab1.html"><strong aria-hidden="true">1.</strong> Lab1 词法分析</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="lab/lab1-guide.html"><strong aria-hidden="true">1.1.</strong> 实现指导</a></li></ol></li><li class="chapter-item expanded "><a href="lab/lab2.html"><strong aria-hidden="true">2.</strong> Lab2 语法分析</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="lab/lab2-guide.html"><strong aria-hidden="true">2.1.</strong> 实现指导</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="lab/lab2/parser-in-java.html"><strong aria-hidden="true">2.1.1.</strong> 写一个分析器类的要点</a></li><li class="chapter-item expanded "><a href="lab/lab2/opg-in-recursive-descent.html"><strong aria-hidden="true">2.1.2.</strong> 在递归下降中实现算符优先分析</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="lab/lab3.html"><strong aria-hidden="true">3.</strong> Lab3 语义分析</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">3.1.</strong> 实现指导</div></li></ol></li><li class="chapter-item expanded "><a href="lab/lab4.html"><strong aria-hidden="true">4.</strong> Lab4 代码生成</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="lab/lab4-guide.html"><strong aria-hidden="true">4.1.</strong> 实现指导</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="lab/lab4/ssa-design.html"><strong aria-hidden="true">4.1.1.</strong> 为什么要用 SSA 中间代码</a></li><li class="chapter-item expanded "><a href="lab/lab4/algo-use.html"><strong aria-hidden="true">4.1.2.</strong> 如何使用中间代码生成算法</a></li></ol></li><li class="chapter-item expanded "><a href="lab/lab4-ex.html"><strong aria-hidden="true">4.2.</strong> Lab4-EX</a></li></ol></li><li class="chapter-item expanded "><a href="lab/lab5.html"><strong aria-hidden="true">5.</strong> Lab5 代码优化</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">5.1.</strong> 实现指导</div></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.</strong> 拓展阅读</div></li><li class="chapter-item expanded affix "><div>附录</div></li><li class="chapter-item expanded affix "><a href="tac/tac-definition.html">C0 语法定义</a></li><li class="chapter-item expanded affix "><div>TAC 指令集参考</div></li><li class="chapter-item expanded affix "><div>TAC 语法定义</div></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Compilers Experiment</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="前言"><a class="header" href="#前言">前言</a></h1>
+<p>编译不简单，祝好运。</p>
+<h1 id="lab1-词法分析"><a class="header" href="#lab1-词法分析">Lab1: 词法分析</a></h1>
+<p>难度：简单</p>
+<p>嗨！</p>
+<p>第一个实验终于要开始了。这次实验的内容——鉴于你们也没学别的——是词法分析。词法分析本身不难，基本就是匹配正则表达式，用自动机也好用手写也好都不麻烦。预祝实验顺利！</p>
+<p><a href="lab/lab1-guide.html">实验指导</a></p>
+<h2 id="实验要求"><a class="header" href="#实验要求">实验要求</a></h2>
+<p><strong>你的程序在读入一个 c0 源文件之后，应能输出词法分析之后得到的单词 (Token) 序列。</strong> 你需要丢弃所有表示空白符（如空格、回车）的单词，并将其他单词使用默认格式化每行一个按顺序输出。</p>
+<p>你有两周时间完成这个实验。</p>
+<h2 id="评分标准"><a class="header" href="#评分标准">评分标准</a></h2>
+<ul>
+<li><strong>100% 正确性</strong>：你的代码应能通过 OJ 的检验</li>
+</ul>
+<h2 id="样例"><a class="header" href="#样例">样例</a></h2>
+<p>输入：</p>
+<pre><code class="language-rust noplayground">fn foo(x: int) -&gt; int {
+    return 42 + x * 21;
+}
+</code></pre>
+<p>输出：</p>
+<pre><code>Fn
+Ident &quot;foo&quot;
+LParen
+Ident &quot;x&quot;
+Colon
+Ident &quot;int&quot;
+RParen
+Arrow
+Ident &quot;int&quot;
+LBrace
+Return
+IntLiteral &quot;42&quot;
+Plus
+Ident &quot;x&quot;
+IntLiteral &quot;8&quot;
+Semicolon
+RBrace
+</code></pre>
+<h1 id="lab1-实现指导"><a class="header" href="#lab1-实现指导">LAB1 实现指导</a></h1>
+<p>这次我们实现的是编译的第一步——词法分析。</p>
+<p>词法分析的作用是将输入的字节流/字符流转换成单词（Token）序列，本质上就是使用一组正则表达式不断地匹配输入流，并在每次匹配出结果之后输出当前结果、返回开始状态，准备匹配下一个。</p>
+<blockquote>
+<p><del>嗯……我其实挺想用允许自动化工具的，可是那样这个实验不就没意义了吗！</del></p>
+</blockquote>
+<h2 id="自动机"><a class="header" href="#自动机">自动机</a></h2>
+<p>举个例子！比如咱们现在有一个语法，其中只有四种单词，长下面这样 <em>（顺便一提，这种风格的 EBNF 你们之后还会见到很多次……）</em>：</p>
+<pre><code class="language-plaintext">Ident  -&gt; [Aa] [Aa01]*  // 标识符
+Number -&gt; [01]+         // 数字
+Add    -&gt; '+'           // 加号
+WS     -&gt; ' '+          // 空白（之后会被丢弃）
+</code></pre>
+<p>那么我们可以构造这样一个自动机：</p>
+<p><img src="lab/../res/azuki-guidebook-lex-basic.png" alt="简单的自动机" /></p>
+<p>其中的虚线代表我们不读入这个字符，只获取它的值。这种操作一般称作为 <code>unread</code>（读入之后再放回去）或者 <code>peek</code>/<code>lookahead</code>（偷看输入的下一个值）。</p>
+<p>看起来没啥问题。你可以自己模拟运行一下，看看这个自动机是不是将每个合法的句子都转换成了对应的单词序列。</p>
+<p>那么如果我们再加一种单词，关键字 <code>KW -&gt; 'AA'</code> 呢？自然，我们可以先把 <code>0 -A-&gt; X -A-&gt; Y --&gt; /KW/</code> 这条规则加到 NFA 里面，然后简化成 DFA，最终大概长这样：</p>
+<p><img src="lab/../res/azuki-guidebook-lex-extra.png" alt="复杂的自动机" /></p>
+<p>——作为自动化工具生成的结果没啥问题，但是关键字多一些的话手工实现就比较难了。所以，在手工实现的时候我们一般采取下面这种方法：</p>
+<p>注意到关键字 <code>AA</code> 是一个合法的标识符，那么我们完全可以在识别完标识符之后再去判断它等不等于 <code>AA</code>。于是，我们可以这么设计自动机：</p>
+<p><img src="lab/../res/azuki-guidebook-lex-extra-simp.png" alt="不那么复杂的自动机" /></p>
+<p>是不是看起来好多了？</p>
+<p>实际上，这种操作是广泛存在的——绝大多数编程语言的关键字都被设计成了合法的标识符，以此来降低词法分析的设计难度（以及自动机的状态数）。类似地，很多语言还会尽可能将不同单词的起始字符设计成互不重合的（也就是让自动机比起 “网” 长得更像一个 “树”），这样也可以尽量减少词法分析的难度。</p>
+<blockquote>
+<p>你问例外？Java 最近新加了个关键字叫 <code>non-sealed</code>，设计者估计脑子有泡……</p>
+</blockquote>
+<h2 id="上手编写"><a class="header" href="#上手编写">上手编写</a></h2>
+<p>说了这么多，来上手写一个吧！</p>
+<p>对于输入流，我们可以采用一个实现了 <code>Peekable</code> 的迭代器（Java 用户可以用我们提供的 <code>PeekableCharIter</code>，Rust 用户可以用标准库的 <code>std::iter::Peekable</code>）。下面我们用 <code>peek()</code> 代表预读下一个字符，<code>next()</code> 代表前进一个字符。</p>
+<p>先创建相应的数据结构：</p>
+<pre><code class="language-java">class Lexer {
+    /** 输入数据 */
+    PeekableCharIter iter;
+    /** 构造单词内容的地方 */
+    StringBuilder sb;
+    
+    /** 移到下一个字符 */
+    void next() {
+        char ch = iter.next();
+        sb.add(ch);
+    }
+
+    /** 错误处理，当然我们没有 */
+    void error() {
+        throw new RuntimeException();
+    }
+
+    /** 获取当前单词字符串 */
+    String take() {
+        String s = sb.toString();
+        sb.clear();
+        return s;
+    }
+
+    /** 我们的单词产生函数 */
+    Token nextToken() {
+        char ch = iter.peek();
+        // TODO: 写一个状态机
+    }
+}
+</code></pre>
+<p>如果你喜欢原教旨主义状态机，请自便——下面我们编写的是一个更加简化的实现。</p>
+<p>比如说我们要解析 <code>Ident -&gt; [Aa] [Aa01]*</code> 这个单词，我们大概就要在 <code>nextToken</code> 里这么写：</p>
+<pre><code class="language-java">Token nextToken() {
+    // ...
+    if (ch == 'a' || ch == 'A') {
+        // 吃掉这个字符
+        next();
+        // 剩下的事情我们放到这里做
+        return lexIdentRest();
+    } else {
+        // 其他情况
+        error();
+    }
+}
+
+/** 解析一个标识符 */
+Token lexIdentRest() {
+    // 下一个字符依然可以构成标识符
+    if (&quot;Aa01&quot;.indexOf(iter.peek()) != -1) {
+        next();
+    }
+    // 取出我们识别到的单词
+    String token = take();
+
+    // 判断是不是关键字，返回单词，大概这样
+    if (token == &quot;AA&quot;) {
+        return new Token(TokenKind.AA, token);
+    } else {
+        return new Token(TokenKind.Ident, token);
+    }
+}
+</code></pre>
+<p>不难对吧，那我们多加几种情况：</p>
+<pre><code class="language-java">Token nextToken() {
+    // ...
+    else if (ch == '0' || ch == '1') {
+        // Number
+        next();
+        return lexNumberRest();
+    } else if (ch == '+') {
+        // Add
+        next();
+        return new Token(TokenKind.Add, take());
+    } else if (ch == ' ') {
+        // WS
+        while (iter.peek() == ' ') next();
+        return new Token(TokenKind.WS, take());
+    } else if (ch == -1) {
+        // 文件结尾 (EOF)
+        return new Token(TokenKind.EOF, null);
+    } else {
+        // 其他情况
+        error();
+    }
+}
+
+Token lexNumberRest() {
+    // 当依然能构成数字的时候继续
+    while (iter.peek() == '0' || iter.peek() == '1') next();
+    return new Token(TokenKind.Number, take());
+}
+</code></pre>
+<p>这样一个简单的词法分析器就写完了，好耶！</p>
+<p>仿照这个示例，你就能把实验要求的词法分析器写出来了。</p>
+<p>等等，似乎忘了什么……对了，我们还要跳过空白符！</p>
+<pre><code class="language-java">/** 这个是对外的接口 */
+Token next() {
+    Token token;
+    do {
+        token = nextToken();
+    } while (token.kind != TokenKind.WS);
+    return token;
+}
+</code></pre>
+<p>这下完整了。</p>
+<blockquote>
+<p>……什么，你想知道参考实现里的词法分析器是怎么写的？</p>
+<p>当然是自动生成的啦！欸嘿 (*/ω＼*)</p>
+</blockquote>
+<h2 id="输出"><a class="header" href="#输出">输出</a></h2>
+<p>挨个 <code>println</code> 不就好了？</p>
+<h2 id="关于命令行输入"><a class="header" href="#关于命令行输入">关于命令行输入</a></h2>
+<p>鉴于你编写的这个程序会贯穿整个实验，为了降低切换不同功能以及开启 Debug 模式的方便程度，咱强烈建议你添加某种命令行参数解析器。Java 用户可以试试 <code>Argparse4J</code>，Rust 用户可以尝试 <code>Clap</code>。</p>
+<p>之后，你可以考虑把不同的功能（比如词法分析和语法分析）指派给不同的标志参数（比如 <code>--lex</code> 和 <code>--parse</code>），于是就可以用类似 <code>myProgram --lex input.c0</code> 的方式调用了。</p>
+<h1 id="lab2-语法分析"><a class="header" href="#lab2-语法分析">Lab2: 语法分析</a></h1>
+<p>难度：简单</p>
+<p>（探头）</p>
+<p>在这次实验里，我们要将上一个实验生成的单词序列转换成语法树。这一部分也不难，在手动实现的情况下常用的是自顶向下的方法。更具体的内容，请看实验指导。</p>
+<h2 id="实验要求-1"><a class="header" href="#实验要求-1">实验要求</a></h2>
+<p><strong>你的程序在读入一个 c0 源文件之后，应能输出语法分析得到的抽象语法树。</strong></p>
+<p>你有两周时间完成这个实验。</p>
+<h2 id="评分标准-1"><a class="header" href="#评分标准-1">评分标准</a></h2>
+<ul>
+<li><strong>100% 正确性</strong>：你的代码应能通过 OJ 的检验</li>
+</ul>
+<h1 id="实现指导"><a class="header" href="#实现指导">实现指导</a></h1>
+<blockquote>
+<p>阅读本章实验指导前，我们默认你已经完成了之前的实验，并且掌握了以下知识：</p>
+<ul>
+<li>递归下降分析法（书上）</li>
+<li>算符优先分析法（书上）</li>
+</ul>
+</blockquote>
+<h2 id="目录"><a class="header" href="#目录">目录</a></h2>
+<ul>
+<li><a href="lab/lab2/parser-in-java.html">写一个分析器类的一点要点</a></li>
+<li><a href="lab/lab2/opg-in-recursive-descent.html">在递归下降里实现算符优先分析</a></li>
+</ul>
+<h1 id="写一个阳间的递归下降分析器"><a class="header" href="#写一个阳间的递归下降分析器">写一个阳间的递归下降分析器</a></h1>
+<p>递归下降分析器怎么写，书上说的已经非常清楚了，这里只提几点在现代面向对象语言里写的时候需要注意的点。</p>
+<h2 id="分析器基础类型设计"><a class="header" href="#分析器基础类型设计">分析器基础类型设计</a></h2>
+<pre><code class="language-java">public final class Parser {
+    // 在这里手动实现一个 peekable
+    private Lexer lexer;
+    private Token peeked = null;
+
+    /** 下一个单词 */
+    private Token next() {
+        if (peeked != null) {
+            Token token = peeked;
+            peeked = null
+            return token;
+        } else {
+            return lexer.next();
+        }
+    }
+
+    /** 预读下一个单词 */
+    private Token peek() {
+        if (peeked == null) {
+            peeked = lexer.next();
+        }
+        return peeked;
+    }
+}
+</code></pre>
+<p>另外，加一点辅助函数会更舒适一点：</p>
+<pre><code class="language-java">/** 如果类型相符，则吃掉下一个单词 */
+private Token eatIf(TokenKind kind) {
+    if (peek().kind == kind) {
+        return next();
+    } else {
+        return null;
+    }
+}
+
+/** 如果类型相符，则吃掉下一个单词，否则抛出异常 */
+private Token eatOrThrow(TokenKind kind) {
+    if (peek().kind == kind) {
+        return next();
+    } else {
+        return new RuntimeException(&quot;Wrong token kind&quot;);
+    }
+}
+</code></pre>
+<h1 id="在递归下降里实现算符优先分析法是不是搞错了什么"><a class="header" href="#在递归下降里实现算符优先分析法是不是搞错了什么">在递归下降里实现算符优先分析法是不是搞错了什么</a></h1>
+<blockquote>
+<p>不，你没有——因为它太常用了所以一群人研究了一大堆方法出来</p>
+</blockquote>
+<h2 id="基础但是够用优先级爬升法"><a class="header" href="#基础但是够用优先级爬升法">基础但是够用——优先级爬升法</a></h2>
+<p>你还记得自顶向下分析不能处理什么情况吗？——对，左递归。</p>
+<p>但是！在分析表达式的时候，绝大多数运算符都是左结合的——比如，<code>a+b+c</code> 会被分析成 <code>(a+b)+c</code> 而不是 <code>a+(b+c)</code>——这样分析的时候就需要处理左递归了。此外，运算符之间有优先级关系层级很多，也不方便递归下降分析，怎么办？</p>
+<p>你可能想到了算符优先分析法 (OPG)。但是回忆一下，它是一个自底向上的算法，而且需要一个栈来存放中间结果，跟递归下降分析合不来。幸运的是，在 1979 年，Martin Richards 和 Colin Whitby-Strevens 提出了一种适合嵌入递归下降中的算符优先分析法，称为 <strong>“优先级爬升法”</strong> (Precedence Climbing)。</p>
+<p>先放一下伪代码吧：</p>
+<pre><code class="language-py"># 解析一个表达式
+def parse_expression():
+    # 分析一个项
+    term = parse_term()
+    # 传入这一项和最低的优先级
+    return climb(term, 0)
+
+# 进行一次优先级爬升
+# lhs 是当前算式的左手边
+# pred 是当前可以解析的最小优先级
+def climb(lhs, min_pred):
+    # 查看下一个单词
+    lookahead = peek_token()
+    # 当下一个单词是二元运算符，且优先级不小于当前优先级时
+    while is_binary_op(lookahead) &amp;&amp; pred(lookahead) &gt;= min_pred:
+        # 记录这个运算符并前进一个单词
+        op = lookahead
+        next()
+        # rhs 是当前算式的右手边。分析一个项
+        rhs = parse_term()
+        # 向前看一个单词
+        lookahead = peek_token()
+
+        # 当下一个单词是左结合的二元运算符，且优先级大于当前优先级
+        # 或者是右结合的二元运算符，且优先级大于等于当前优先级时
+        while is_binary_op(lookahead) &amp;&amp; (
+            (is_left_assoc(lookahead) &amp;&amp; pred(lookahead) &gt; min_pred) ||
+            (is_right_assoc(lookahead) &amp;&amp; pred(lookahead) &gt;= min_pred)):
+            # 解析一个更优先的表达式
+            rhs = climb(rhs, pred(lookahead))
+            # 向前看一个单词
+            lookahead = peek_token()
+        
+        # 组合当前的表达式
+        lhs = combine(lhs, op, rhs)
+
+    # 最后 lhs 就是我们需要的表达式
+    return lhs    
+</code></pre>
+<p>这个算法的前提条件是 <strong>你要确定分析的所有带优先级的运算符都是二元中缀运算符</strong>（绝大部分情况都是这样的），同时你有一个可以分析运算项（比如带括号的表达式或者变量）的函数。</p>
+<p>直接把伪代码翻译到你编写的语言里就好了。</p>
+<p>如果你对原理感兴趣的话，可以思考一下把左递归文法 <code>E -&gt; E '+' T | T; T -&gt; T '*' F | F</code> 转换成 EBNF <code>E -&gt; T ('+' T)*; T -&gt; F ('*' F)*</code> 之后，分析 <code>F * F</code> 怎么省掉 <code>E -&gt; T</code> 那一步。</p>
+<!-- 
+之后的思路很自然。比如说，我们有一个表达式，`a+b*c-d`，然后我们知道优先级上 `+` = `-`，`*` > `+`。
+
+首先我们可以分析表达式最开始的一项 `a` 作为表达式的左手边。然后，我们就会读到加号 `+` 和另一项 `b` 我们保存这三个值。
+
+在这个时候，我们就会遇到一个问题：`b` 到底是 `a` `+` 的右手边，还是另一个表达式的左手边？为了解决这个问题，我们需要读取再下一个符号，`*`。由于 `*` > `+`，`b` 就成为了新表达式的左手边——然后我们就回到了一开始。 -->
+<h2 id="还能更给力一点吗pratt-分析法"><a class="header" href="#还能更给力一点吗pratt-分析法">还能更给力一点吗？——Pratt 分析法</a></h2>
+<blockquote>
+<p>在这个实验里你们应该用不到 Pratt 分析法。</p>
+<p>推荐阅读: </p>
+<ul>
+<li><a href="https://www.oilshell.org/blog/2017/03/31.html">关于 Pratt 分析法的文章索引</a></li>
+<li><a href="http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/">Pratt parsers: Expression parsing made easy</a></li>
+<li><a href="https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html">Simple but Powerful Pratt Parsing</a></li>
+</ul>
+</blockquote>
+<p>优先级爬升分析法已经够用了。大概。除非……你想让前置负号的优先级比加法还低，或者你想解析一点三元条件表达式，这些事情就在优先级爬升法的能力范围之外了。这个时候，我们就要请出 <strong>Pratt 分析法</strong>——优先级爬升分析法的一般情况。</p>
+<p>TODO: 待补完</p>
+<h1 id="lab3-语义分析"><a class="header" href="#lab3-语义分析">Lab3: 语义分析</a></h1>
+<p>难度：简单</p>
+<h2 id="实验要求-2"><a class="header" href="#实验要求-2">实验要求</a></h2>
+<p><strong>你的程序在读入一个 c0 源文件之后，应能输出每个作用域的变量表。</strong></p>
+<p>你有一周时间完成这个实验。</p>
+<h2 id="评分标准-2"><a class="header" href="#评分标准-2">评分标准</a></h2>
+<ul>
+<li><strong>100% 正确性</strong>：你的代码应能通过 OJ 的检验</li>
+</ul>
+<h1 id="lab4-代码生成"><a class="header" href="#lab4-代码生成">Lab4: 代码生成</a></h1>
+<p>难度：中</p>
+<h2 id="实验要求-3"><a class="header" href="#实验要求-3">实验要求</a></h2>
+<p><strong>你的程序在读入一个 c0 源文件之后，应能输出代表这段代码的中间代码。</strong> </p>
+<p>你应当使用我们封装好的 SSA 代码生成库生成这段中间代码。如果你希望自己编写相关的函数，请提前联系助教，说明你不参加本次实验，并参与 <a href="lab/lab4-ex.html">Lab4-EX</a>。如果你在完成本次实验之后又完成了 Lab4-EX, 最终成绩中只会记录 Lab4-EX 的成绩。</p>
+<p>你有两周时间完成这个实验。</p>
+<h2 id="评分标准-3"><a class="header" href="#评分标准-3">评分标准</a></h2>
+<ul>
+<li><strong>100% 正确性</strong>：你的代码应能通过 OJ 的检验</li>
+</ul>
+<h1 id="lab4-实现指导"><a class="header" href="#lab4-实现指导">Lab4 实现指导</a></h1>
+<blockquote>
+<p>阅读本章实验指导前，我们默认你已经完成了之前的实验，并且掌握了以下知识：</p>
+<ul>
+<li>四元式中间代码</li>
+<li>基本块</li>
+</ul>
+</blockquote>
+<h2 id="目录-1"><a class="header" href="#目录-1">目录</a></h2>
+<ul>
+<li><a href="lab/lab4/ssa-design.html">为什么要采用 SSA 格式的中间代码?</a></li>
+<li><a href="lab/lab4/algo-use.html">如何使用我们提供的 SSA 格式生成算法</a></li>
+</ul>
+<h1 id="关于为什么要用-ssa-格式"><a class="header" href="#关于为什么要用-ssa-格式">关于为什么要用 SSA 格式</a></h1>
+<blockquote>
+<p>简而言之，方便优化。</p>
+</blockquote>
+<hr />
+<p>你可能发现了，我们介绍这个项目的中间代码时提到，中间代码是 SSA（静态单赋值）格式，而不是一般的四元式。SSA 是什么呢？我们先粘一段维基百科：</p>
+<blockquote>
+<p><strong>在编译器的设计中，静态单赋值形式（static single assignment form，通常简写为 SSA form 或是 SSA）是中间表示（IR，intermediate representation) 的特性，每个变量仅被赋值一次。</strong> 在原始的IR中，已存在的变量可被分割成许多不同的版本，在许多教科书当中通常会将旧的变量名称加上一个下标而成为新的变量名称，以此标明每个变量及其不同版本。</p>
+</blockquote>
+<p>我们为什么要用这种奇怪的表示方法呢？</p>
+<p>我们举个例子啊——比如有这么一段普通四元式中间代码：</p>
+<pre><code class="language-c">c = 1 + 2   // (1)
+c = a + b   // (2)
+d = c       // &lt;-- 这里
+</code></pre>
+<p>那么你的编译器分析到标注的地方时，它用的是 <code>(1)</code> 还是 <code>(2)</code> 处的 <code>c</code> 呢？</p>
+<p>你可能会说，很明显 <code>(2)</code> 处 <code>c</code> 被重新赋值了，所以答案是 <code>(2)</code> 处。对，那么很自然地，我们可以更进一步，把重新赋值的变量给改个名字，比如把 <code>(1)</code> 处的变量叫 <code>c_1</code>、<code>(2)</code> 处的叫 <code>c_2</code>。于是，我们的代码就变成了这样：</p>
+<pre><code class="language-c">c_1 = 1 + 2
+c_2 = a + b
+d   = c_2    // &lt;-- 很明确这里用的是 c_2
+</code></pre>
+<p>这个时候我们得到的基本就是 SSA 格式的代码了。</p>
+<p>从定义就可以看出来，SSA 格式的代码里，每个变量被且仅被赋值过了一次。通过这个操作，我们避免了在分析中间代码的时候寻找变量最后一次赋值的位置，从而也降低了代码优化的难度和运算量（在做 lab5 的时候应该可以清楚地体会到）。只不过目前的格式还有一点问题，他不能表示下面这样的代码：</p>
+<pre><code class="language-c">int r;
+if (a &gt; 10) {
+    r = a;
+} else {
+    r = b;
+}
+// 这里的 r 怎么表示？
+</code></pre>
+<p>为了解决这个问题，我们引入一个新的四元式指令—— Phi (Φ)。使用 Phi 指令，我们可以根据控制流的不同来给变量分配不同的值，就像下面这样（<code>bb___</code> 表示对应编号的基本块）：</p>
+<pre><code class="language-c">bb0:
+    if a &gt; 10 goto bb1
+    else goto bb2 
+bb1:
+    r1 = a
+    goto bb3
+bb2:
+    r2 = b
+    goto bb3
+bb3:
+    // 如果控制流来自 bb1 则使用 r1 的值
+    // 如果控制流来自 bb2 则使用 r2 的值
+    r = Phi[(bb1, r1), (bb2, r2)]
+</code></pre>
+<p>有了 Phi 指令，我们就可以用 SSA 格式的中间代码表示任意的控制流了。</p>
+<h2 id="一些例子"><a class="header" href="#一些例子">一些例子</a></h2>
+<p>下面举一些 C 式的控制流以及它的其中一种含义相同的 SSA 中间代码：</p>
+<h3 id="单侧-if-控制流"><a class="header" href="#单侧-if-控制流">单侧 if 控制流</a></h3>
+<pre><code class="language-c">int i = 3;
+if (a &gt; 0) {
+    i = 6;
+}
+// i
+</code></pre>
+<pre><code class="language-c">bb0:
+    i_1 = 3
+    if a &gt; 0 goto bb1
+    else goto bb2
+bb1:
+    i_2 = 6;
+    goto bb2
+bb2:
+    i = Phi[(bb0, i_1), (bb1, i_2)]
+</code></pre>
+<h3 id="while-循环"><a class="header" href="#while-循环">while 循环</a></h3>
+<pre><code class="language-c">int i = 0;
+while (i &lt; 10) {
+    i = i + 1;
+}
+// i
+</code></pre>
+<pre><code class="language-c">bb0:
+    i_0 = 0
+    goto bb1
+bb1:
+    if i &lt; 10 goto bb2
+    else goto bb3
+bb2:
+    i_1 = Phi[(bb0, i_0), (bb1, i_2)]
+    i_2 = i_1 + 1
+    goto bb1
+bb3:
+    i = Phi[(bb0, i_0), (bb1, i_2)]
+</code></pre>
+<blockquote>
+<p>关于这个例子里 <code>i_1</code> 为什么能得到还没声明过的 <code>i_2</code> 的值，在 <a href="lab/lab4/(algo-use.html">如何使用 SSA 生成算法</a> 里面我们会简要讲解一下。</p>
+</blockquote>
+<h1 id="如何使用-ssa-生成算法"><a class="header" href="#如何使用-ssa-生成算法">如何使用 SSA 生成算法</a></h1>
+<blockquote>
+<p>本文中的算法和内容主要来自 Matthias Braun, Sebastian Buchwald, Sebastian Hack 等人在 2013 年发表的论文 <a href="https://pp.ipd.kit.edu/uploads/publikationen/braun13cc.pdf"><em>Simple and Efficient Construction of Static Single Assignment Form</em></a>。如果你对算法的原理或者内核感兴趣，可以阅读这篇论文。当然了，SSA 代码的生成算法不止这一种。在本文结尾的扩展阅读中，你可以找到其他常用的生成算法。</p>
+</blockquote>
+<hr />
+<p>生成 SSA 的算法有很多种。有的算法需要你先生成整个函数的中间表示才能工作，而有的需要在分析函数的过程中工作。<a href="https://pp.ipd.kit.edu/uploads/publikationen/braun13cc.pdf">本文使用的算法</a>属于后者，需要你在 <strong>顺序遍历语法树</strong> 的同时调用相应的方法进行生成。下面我们来介绍一下这个算法如何使用。</p>
+<p>我们提供的中间代码库中有一个名叫 <code>FunctionBuilder</code> 的类，这个类封装了 SSA 中间代码的生成算法，也是我们讲解的主体。</p>
+<!-- 
+它提供了这些对外接口：
+
+- `declareVariable`
+- `readVariable`
+- `writeVariable`
+- `markFilled`
+- `markSealed`
+- `addBranch` -->
+<h2 id="基本块的分类"><a class="header" href="#基本块的分类">基本块的分类</a></h2>
+<p>为了让我们的生成算法能够正常工作，我们需要给基本块添加两个属性：<code>filled</code> 和 <code>sealed</code>。</p>
+<p><strong><code>filled</code>（已填满）表示我们已经生成了这个基本块中的所有指令。</strong> 换句话说，一个被标记为 <code>filled</code> 的基本块中只能再填入对实际运算没有影响的 <code>Phi</code> 指令了。</p>
+<p><strong><code>sealed</code>（已密封）表示我们已经遍历过了这个基本块的所有直接前驱。</strong> 换句话说，之后添加的基本块都不会直接跳转到已经被标记为 <code>sealed</code> 的基本块。通过 <code>sealed</code> 属性，我们可以保证 Phi 指令的来源不会发生变化。由于我们是顺序遍历的语法树，只有在遍历完一个基本块之后我们才会开始访问它的后继，所以所有标记为的 <code>sealed</code> 的基本块一定都已经被标记成了 <code>filled</code><sup class="footnote-reference"><a href="#filled">1</a></sup>。</p>
+<p>在算法的对外接口中，我们有 <code>markFilled(bb)</code> 和 <code>markSealed(bb)</code> 两个方法用来给基本块添加相应的标记。我们之后还会谈到它们。</p>
+<div class="footnote-definition" id="filled"><sup class="footnote-definition-label">1</sup>
+<p>在某些情况下，除了当前正在使用的基本块。不同人对 <code>sealed</code> 标记的用法可能不一样。如果你选择只要能够确定所有前驱就加 <code>sealed</code> 的话，这句话有可能不适用于当前基本块；如果你选择在标记为 <code>filled</code> 之后再标记为 <code>sealed</code> 的话，这句话就适用于当前基本块。策略选择的不同不会影响生成的代码。</p>
+</div>
+<h2 id="变量的声明与使用"><a class="header" href="#变量的声明与使用">变量的声明与使用</a></h2>
+<p>要生成 SSA 代码，我们需要给在不同位置读取和写入的变量标记合适的编号，以及在合适的地方插入 <code>Phi</code> 指令。不过在此之前，我们需要先给每个原始的变量标记唯一的编号，方便算法使用。一般来说，用一个计数器给所有出现的变量顺序编号就足够了。<sup class="footnote-reference"><a href="#var_counting">2</a></sup></p>
+<p>在算法的接口中，我们提供了 <code>declareVar</code>、<code>readVar</code>、<code>writeVar</code> 三个方法来管理变量的声明和使用。</p>
+<p><code>declareVar(var, type)</code> 告诉算法，编号为 <code>var</code> 的变量具有 <code>type</code> 的类型。这个方法主要是为了之后生成指令的时候可以确定变量的类型。</p>
+<p><code>writeVar(var, inst, bb)</code> 告诉算法，在基本块 <code>bb</code> 中，指令 <code>inst</code> 的运算结果<sup class="footnote-reference"><a href="#inst">3</a></sup>是给变量 <code>var</code> 的一次写入。</p>
+<p><code>readVar(var, bb)</code> 表示我们在基本块 <code>bb</code> 内读取了变量 <code>var</code>。这个方法会根据当前已知的变量定义来确定我们读取的变量对应的是哪一个指令的。如果变量有多个来源，我们就会插入一条 Phi 指令来解决这个冲突。这个方法返回对应的指令编号。</p>
+<div class="footnote-definition" id="var_counting"><sup class="footnote-definition-label">2</sup>
+<p>我们强烈不建议在这里使用变量名作为编号，因为变量会经常重名。</p>
+</div>
+<div class="footnote-definition" id="inst"><sup class="footnote-definition-label">3</sup>
+<p>当然了，因为在 SSA 代码中每一个 “变量” 都是唯一一条指令的运算结果，我们的中间代码库在实现的时候就没有给 “变量” 设计独立的标号，而是直接使用指令的编号作为对应 SSA “变量” 的编号。或者可以这么说——<strong>在 SSA 中，我们根本不区分指令和变量</strong>。</p>
+</div>
+<h3 id="例子"><a class="header" href="#例子">例子</a></h3>
+<p>对于如下的 C 代码：</p>
+<pre><code class="language-c">int a = 0;
+int b = a + 1;
+a = b + 1;
+</code></pre>
+<p>我们调用变量读写方法的顺序大致如下（省去了基本块参数和函数调用层级，只表示各个指令调用的时机和顺序）：</p>
+<pre><code class="language-c">{
+    // int a = 0;
+    declareVar(a, int); // 声明变量 a
+    a_1 = /* 生成常数 0 的指令 */;
+    writeVar(a, a_1);   // 我们写入了 a
+}
+{
+    // int b = a + 1;
+    declareVar(b, int); // 声明变量 b
+    a_1 = readVar(a);   // 我们读取了 a
+    b_1 = /* 生成相加的指令 */;
+    writeVar(b, b_1);   // 我们写入了 b
+}
+{
+    // a = b + 1;
+    b_1 = readVar(b);   // 我们读取了 b
+    a_2 = /* 生成相加的指令 */;
+    writeVar(a, a_2);   // 我们写入了 a
+}
+
+</code></pre>
+<h2 id="控制流的翻译"><a class="header" href="#控制流的翻译">控制流的翻译</a></h2>
+<p>我们还有最后一个接口方法要介绍。<code>addBranch(from, to)</code> 告诉算法，存在一条从基本块 <code>from</code> 指向基本块 <code>to</code> 的跳转。</p>
+<p>控制流的翻译方式实际上非常直接，我们只需要在合适的时间调用相应的方法就可以了。下面是一些例子：</p>
+<h3 id="if-控制流"><a class="header" href="#if-控制流">If 控制流</a></h3>
+<p>对于一个如下的 if 控制流，</p>
+<pre><code class="language-c">// bb_start
+if /* cond */ {
+    // bb_if
+    /* if_body */
+    // bb_if_end
+} else {
+    // bb_else
+    /* else_body */
+    // bb_else_end
+}
+// bb_next
+</code></pre>
+<p>我们调用相应方法的顺序大概是这样的（省去了生成指令和创建基本块的过程）：</p>
+<pre><code class="language-c">visitIfCondition(/* 参数啥的 */) {
+    // 生成 cond 的指令
+    markFilled(bb_start);
+    markSealed(bb_start);
+
+    // 生成 bb_start 跳转到 bb_if 的指令
+    addBranch(bb_start, bb_if);
+    // 生成 if_body，以 bb_if_end 结尾
+    // 生成 bb_if_end 跳转到 bb_next 的指令
+    markFilled(bb_if_end);
+    markSealed(bb_if_end);
+    addBranch(bb_if_end, bb_next);
+
+    // 生成 bb_start 跳转到 bb_else 的指令
+    addBranch(bb_start, bb_else);
+    // 生成 else_body，以 bb_else_end 结尾
+    // 生成 bb_else_end 跳转到 bb_next 的指令
+    markFilled(bb_else_end);
+    markSealed(bb_else_end);
+    addBranch(bb_else_end, bb_next);
+}
+</code></pre>
+<h3 id="while-控制流"><a class="header" href="#while-控制流">While 控制流</a></h3>
+<p>对于一个如下的 While 控制流，</p>
+<pre><code class="language-c">// bb_start
+while /* cond, bb_cond */ {
+    // bb_while
+    /* while_body */
+    // bb_while_end
+}
+// bb_next
+</code></pre>
+<p>我们调用相应方法的顺序大概是这样的（同上）：</p>
+<pre><code class="language-c">visitWhileLoop(/* 参数啥的 */) {
+    markFilled(bb_start);
+    markSealed(bb_start);
+
+    // 生成 cond 所在的基本块和指令
+    markFilled(cond);
+    // 生成 bb_cond 跳转到 bb_while 的指令
+    addBranch(bb_cond, bb_while);
+    // 生成 bb_cond 跳转到 bb_next 的指令
+    addBranch(bb_cond, bb_next);
+
+    // 生成 while_body，以 bb_while_end 结尾
+    // 生成 bb_while_end 跳转到 bb_next 的指令
+    markFilled(bb_while_end);
+    markSealed(bb_while_end);
+    addBranch(bb_while_end, bb_cond);
+
+    // 注意：直到现在，bb_cond 的所有前驱才都遍历完毕
+    markSealed(bb_cond);
+}
+</code></pre>
+<h2 id="一点内部原理"><a class="header" href="#一点内部原理">一点内部原理</a></h2>
+<blockquote>
+<p>这里讲的只是算法的大概思路，具体细节请看<a href="https://pp.ipd.kit.edu/uploads/publikationen/braun13cc.pdf">论文</a>。</p>
+</blockquote>
+<p>思考一下我们获取一个变量当前的值来源对应的指令编号时需要知道什么信息。</p>
+<p>如果在同一个基本块之内的话，我们需要块内上一次赋值指令的编号；如果不在同一个基本块之内的话，我们需要知道这个基本块所有直接前驱里这个变量的定义。前者只要顺序遍历、跟踪写入指令的话很简单，后者在已知基本块的所有前驱的情况下也不难（挨个前驱调用这个算法，然后用一条 Phi 指令拼起来就好）。那么在前驱还不明确的情况下呢？——只要等到前驱都确定完了之后再来计算就可以了。</p>
+<p>对，核心思想就是上面这么一点。我们可以把它跟算法提供的接口来进行一下对比：</p>
+<ul>
+<li>跟踪每次赋值指令的编号由 <code>writeVar</code> 负责</li>
+<li>确定基本块的前驱由 <code>addBranch</code> 负责</li>
+<li>获取指令编号由 <code>readVar</code> 负责</li>
+<li>在前驱都确定完成之后调用算法由 <code>markSealed</code> 负责</li>
+</ul>
+<p>再加上起辅助作用的 <code>declareVar</code> 和 <code>markFilled</code>，嗯，这个算法就是这么简单。</p>
+<blockquote>
+<p>- 既然算法这么简单，那为什么要封装好而不是让我们自己写呢？</p>
+<p>- 那是因为这个算法内部还有一些优化部分要处理，自己写还是麻烦了点。（真那么想自己写你去写 <a href="lab/lab4/../lab4-ex.html">Lab4EX</a> 啊！）</p>
+</blockquote>
+<h2 id="扩展阅读"><a class="header" href="#扩展阅读">扩展阅读</a></h2>
+<ul>
+<li>Ron Cytron 等人在 1989 年发布的 SSA 生成算法（书上一般会讲这个）：<a href="https://dl.acm.org/doi/pdf/10.1145/75277.75280?casa_token=jGJzayvh9fwAAAAA:-Y04UXeF00riSGWoHYViXiJ4FUAlpIYtRl9x67b0SC0qIQv7TTwxLfF4_dH0_lTdEQuGe96KtC9h">cytron89</a></li>
+<li>本文中使用的算法: <a href="https://pp.ipd.kit.edu/uploads/publikationen/braun13cc.pdf">braun13</a></li>
+<li>GCC 和 LLVM 使用的算法: <a href="https://www.airs.com/dnovillo/Papers/mem-ssa.pdf">MemorySSA</a></li>
+</ul>
+<h1 id="lab4-ex-代码生成加强版"><a class="header" href="#lab4-ex-代码生成加强版">Lab4-EX: 代码生成加强版</a></h1>
+<p>难度：难</p>
+<p>你决定自己实现一次 SSA 代码生成算法！我希望你在进行本实验前仔细了解过 SSA 代码的特性和它产生的原因。如果你读过任意一种 SSA 代码生成算法的介绍的话就更好了。</p>
+<h2 id="实验要求-4"><a class="header" href="#实验要求-4">实验要求</a></h2>
+<p><strong>你的程序在读入一个 c0 源文件之后，应能通过运行你自己编写的算法输出 SSA 中间代码。</strong> 我们不对此处输出的中间代码的运行速度等方面进行要求。</p>
+<p>你需要在课程结束前完成本实验。</p>
+<h2 id="评分规则"><a class="header" href="#评分规则">评分规则</a></h2>
+<ul>
+<li><strong>50% 正确性</strong>：你的代码应能通过 OJ 上的自动评测。</li>
+<li><strong>50% 实验报告</strong>：你需要写一篇实验报告总结你的此次实验。你的实验报告应当包含以下内容：
+<ul>
+<li>你对 “在现代编译器中为什么常采用 SSA 代码” 的理解；</li>
+<li>你使用的代码生成算法，以及它的特点；</li>
+<li>大致讲解一下你的代码中算法各部分的功能，精确到函数级别即可。你也可以在代码中留下相应的注释，并在此处说明。</li>
+</ul>
+</li>
+<li>助教会检查你最后一次提交的代码，并进行查重。</li>
+</ul>
+<h1 id="lab5-代码优化"><a class="header" href="#lab5-代码优化">Lab5: 代码优化</a></h1>
+<p>难度：较难</p>
+<h2 id="实验要求-5"><a class="header" href="#实验要求-5">实验要求</a></h2>
+<p><strong>你的程序在读入一个 c0 源文件之后，应能针对代码执行一定的优化，减少执行的指令数量。</strong></p>
+<p>你有两周时间完成这个实验。</p>
+<h2 id="评分标准-4"><a class="header" href="#评分标准-4">评分标准</a></h2>
+<ul>
+<li>你的代码将在 OJ 上运行，并记录执行过的指令的加权总数量。
+<ul>
+<li>每一次条件跳转将被记录为 <strong>3</strong> 条指令；</li>
+<li>每一次非条件跳转将被记录为 <strong>2</strong> 条指令；</li>
+<li>在以上两条的基础上，<strong>不计入</strong>跳转目标的基本块为当前基本块的后继的指令；</li>
+<li>每一次未执行的跳转将被记录为 <strong>1</strong> 条指令；</li>
+<li>每一次有 n 个参数的函数调用将被记录为 <strong>(n + 1) * 2</strong> 条指令；</li>
+<li>其他指令的数量不变。</li>
+</ul>
+</li>
+<li>你每一个测试点的最终得分是 <strong>参考实现的指令数量 / 你的指令数量 * 测试点基础分</strong>。</li>
+</ul>
+<h1 id="三地址码-tac-定义"><a class="header" href="#三地址码-tac-定义">三地址码 (TAC) 定义</a></h1>
+<h2 id="概述"><a class="header" href="#概述">概述</a></h2>
+<p>TAC 是一种</p>
+<h2 id="文法"><a class="header" href="#文法">文法</a></h2>
+<pre><code class="language-c++">grammar AzukiTac;
+
+WS: [ \t]+ -&gt; skip;
+
+// Basic parts
+fragment Digit: [0-9];
+fragment Letter: [a-zA-Z];
+fragment HexDigit: Digit | [a-fA-F];
+fragment AlphaNum: Digit | Letter;
+fragment IdentChar: AlphaNum | '_' | '$';
+
+Number: Digit+;
+Ident: IdentChar+;
+HexNumber: HexDigit+;
+
+Variable: '%' Number;
+GlobalVariable: '@' Ident;
+NumberLiteral: '#' (('+' | '-')? Number | '0x' HexNumber);
+BasicBlock: 'bb' Number;
+DiscardVariable: '%_';
+
+// types
+IntegerType: 'i' Number;
+BooleanType: 'b' Number;
+UnitType: 'unit';
+
+// keywords
+FN: 'fn';
+GLOBAL: 'global';
+
+// Operators
+ADD: 'add';
+SUB: 'sub';
+MUL: 'mul';
+DIV: 'div';
+
+GT: 'gt';
+GE: 'ge';
+LT: 'lt';
+LE: 'le';
+EQ: 'eq';
+NE: 'ne';
+
+PHI: 'phi';
+BRANCH: 'br';
+IF: 'if';
+UNREACHABLE: 'unreachable';
+RETURN: 'return';
+CALL: 'call';
+
+// misc
+LINEFEED: '\n';
+
+// Grammar components
+literal: NumberLiteral;
+value: Variable | GlobalVariable | NumberLiteral;
+
+int_ty: IntegerType;
+bool_ty: BooleanType;
+unit_ty: UnitType;
+ptr_ty: '*' ty;
+func_ty: FN function_param '-&gt;' ty;
+ty: int_ty | bool_ty | unit_ty | ptr_ty | func_ty;
+
+// instructions
+binary_op: ADD | SUB | MUL | DIV | GT | GE | LT | LE | EQ | NE;
+binary_inst: value binary_op value;
+
+fn_param_list: (value (',' value)*)?;
+fn_call_inst: CALL GlobalVariable '(' fn_param_list ')';
+
+phi_source: '(' Variable ',' BasicBlock ')';
+phi_inst: PHI '[' (phi_source (',' phi_source)*)? ']';
+
+val_inst: value;
+
+variable: Variable;
+inst_lhs: ty variable | DiscardVariable;
+inst_rhs: binary_inst | phi_inst | val_inst | fn_call_inst;
+inst: inst_lhs '=' ty inst_rhs LINEFEED;
+
+unreachable_inst: UNREACHABLE;
+uncond_branch_inst: BRANCH BasicBlock;
+cond_branch_inst: BRANCH BasicBlock IF value;
+return_inst: RETURN value;
+jump_insts:
+	(
+		unreachable_inst LINEFEED
+		| return_inst LINEFEED
+		| (( uncond_branch_inst | cond_branch_inst) LINEFEED)+
+	);
+
+// basic block
+basic_block_id: BasicBlock ':';
+basic_block: basic_block_id LINEFEED inst* jump_insts;
+
+// function
+function_param: '(' (ty (',' ty)*)? ')';
+function:
+	FN GlobalVariable function_param '-&gt;' ty '{' LINEFEED basic_block+ '}' LINEFEED;
+
+// program
+global_var: GLOBAL GlobalVariable '=' literal LINEFEED;
+program: (global_var | function)*;
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>

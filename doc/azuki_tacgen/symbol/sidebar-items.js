@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["NumberingCounter",""],["Scope",""],["ScopeBuilder",""],["StringInterner","A struct for storing strings and reducing space usage."],["Variable","A single variable"]]});

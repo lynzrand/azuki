@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["Inspector","Trait for collecting data about the code running."]]});

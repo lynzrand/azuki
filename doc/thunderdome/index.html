@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `thunderdome` crate."><meta name="keywords" content="rust, rustlang, rust-lang, thunderdome"><title>thunderdome - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script id="default-settings"></script><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../thunderdome/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><p class="location">Crate thunderdome</p><div class="block version"><p>Version 0.4.1</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all thunderdome's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li></ul></div><p class="location"></p><script>window.sidebarCurrent = {name: "thunderdome", ty: "mod", relpath: "../"};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/thunderdome/lib.rs.html#1-87" title="goto source code">[src]</a></span><span class="in-band">Crate <a class="mod" href="">thunderdome</a></span></h1><div class="docblock"><p><a href="https://github.com/LPGhatguy/thunderdome/actions"><img src="https://github.com/LPGhatguy/thunderdome/workflows/CI/badge.svg" alt="GitHub CI Status" /></a>
+<a href="https://crates.io/crates/thunderdome"><img src="https://img.shields.io/crates/v/thunderdome.svg" alt="thunderdome on crates.io" /></a>
+<a href="https://docs.rs/thunderdome"><img src="https://img.shields.io/badge/docs-docs.rs-orange.svg" alt="thunderdome docs" /></a></p>
+<p>Thunderdome is a ~gladitorial~ generational arena inspired by
+<a href="https://crates.io/crates/generational-arena">generational-arena</a>,
+<a href="https://crates.io/crates/slotmap">slotmap</a>, and
+<a href="https://crates.io/crates/slab">slab</a>. It provides constant time insertion,
+lookup, and removal via small (8 byte) keys returned from <code>Arena</code>.</p>
+<p>Thunderdome's key type, <code>Index</code>, is still 8 bytes when put inside of an
+<code>Option&lt;T&gt;</code> thanks to Rust's <code>NonZero*</code> types.</p>
+<h2 id="basic-examples" class="section-header"><a href="#basic-examples">Basic Examples</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">arena</span> <span class="op">=</span> <span class="ident">Arena</span>::<span class="ident">new</span>();
+
+<span class="kw">let</span> <span class="ident">foo</span> <span class="op">=</span> <span class="ident">arena</span>.<span class="ident">insert</span>(<span class="string">&quot;Foo&quot;</span>);
+<span class="kw">let</span> <span class="ident">bar</span> <span class="op">=</span> <span class="ident">arena</span>.<span class="ident">insert</span>(<span class="string">&quot;Bar&quot;</span>);
+
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">arena</span>[<span class="ident">foo</span>], <span class="string">&quot;Foo&quot;</span>);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">arena</span>[<span class="ident">bar</span>], <span class="string">&quot;Bar&quot;</span>);
+
+<span class="ident">arena</span>[<span class="ident">bar</span>] <span class="op">=</span> <span class="string">&quot;Replaced&quot;</span>;
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">arena</span>[<span class="ident">bar</span>], <span class="string">&quot;Replaced&quot;</span>);
+
+<span class="kw">let</span> <span class="ident">foo_value</span> <span class="op">=</span> <span class="ident">arena</span>.<span class="ident">remove</span>(<span class="ident">foo</span>);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">foo_value</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;Foo&quot;</span>));
+
+<span class="comment">// The slot previously used by foo will be reused for baz</span>
+<span class="kw">let</span> <span class="ident">baz</span> <span class="op">=</span> <span class="ident">arena</span>.<span class="ident">insert</span>(<span class="string">&quot;Baz&quot;</span>);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">arena</span>[<span class="ident">baz</span>], <span class="string">&quot;Baz&quot;</span>);
+
+<span class="comment">// foo is no longer a valid key</span>
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">arena</span>.<span class="ident">get</span>(<span class="ident">foo</span>), <span class="prelude-val">None</span>);</pre></div>
+<h2 id="comparison-with-similar-crates" class="section-header"><a href="#comparison-with-similar-crates">Comparison With Similar Crates</a></h2><table><thead><tr><th>Feature</th><th>Thunderdome</th><th>generational-arena</th><th>slotmap</th><th>slab</th></tr></thead><tbody>
+<tr><td>Generational Indices¹</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td><code>size_of::&lt;Index&gt;()</code></td><td>8</td><td>16</td><td>8</td><td>8</td></tr>
+<tr><td><code>size_of::&lt;Option&lt;Index&gt;&gt;()</code></td><td>8</td><td>24</td><td>8</td><td>16</td></tr>
+<tr><td>Max Elements</td><td>2³²</td><td>2⁶⁴</td><td>2³²</td><td>2⁶⁴</td></tr>
+<tr><td>Non-<code>Copy</code> Values</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>no_std</code> Support</td><td>No</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>Serde Support</td><td>No</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+</tbody></table>
+<ul>
+<li>Sizes calculated on rustc <code>1.44.0-x86_64-pc-windows-msvc</code></li>
+<li>See <a href="https://github.com/LPGhatguy/thunderdome/blob/main/comparison/Cargo.toml">the Thunderdome comparison
+Cargo.toml</a>
+for versions of each library tested.</li>
+</ul>
+<ol>
+<li>Generational indices help solve the <a href="https://en.wikipedia.org/wiki/ABA_problem">ABA
+Problem</a>, which can cause dangling
+keys to mistakenly access newly-inserted data.</li>
+</ol>
+<h2 id="minimum-supported-rust-version-msrv" class="section-header"><a href="#minimum-supported-rust-version-msrv">Minimum Supported Rust Version (MSRV)</a></h2>
+<p>Thunderdome supports Rust 1.34.1 and newer. Until Thunderdome reaches 1.0,
+changes to the MSRV will require major version bumps. After 1.0, MSRV changes
+will only require minor version bumps, but will need significant justification.</p>
+</div><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<table><tr class="module-item"><td><a class="struct" href="struct.Arena.html" title="thunderdome::Arena struct">Arena</a></td><td class="docblock-short"><p>Container that can have elements inserted into it and removed from it.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Drain.html" title="thunderdome::Drain struct">Drain</a></td><td class="docblock-short"><p>See <a href="../thunderdome/struct.Arena.html#method.drain" title="Arena::drain"><code>Arena::drain</code></a>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Index.html" title="thunderdome::Index struct">Index</a></td><td class="docblock-short"><p>Index type for <a href="../thunderdome/struct.Arena.html" title="Arena"><code>Arena</code></a> that has a generation attached to it.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.IntoIter.html" title="thunderdome::IntoIter struct">IntoIter</a></td><td class="docblock-short"><p>Iterator typed used when an Arena is turned <a href="https://doc.rust-lang.org/nightly/core/iter/traits/collect/trait.IntoIterator.html" title="IntoIterator"><code>IntoIterator</code></a>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Iter.html" title="thunderdome::Iter struct">Iter</a></td><td class="docblock-short"><p>See <a href="../thunderdome/struct.Arena.html#method.iter"><code>Arena::iter</code></a>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.IterMut.html" title="thunderdome::IterMut struct">IterMut</a></td><td class="docblock-short"><p>See <a href="../thunderdome/struct.Arena.html#method.iter_mut"><code>Arena::iter_mut</code></a>.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "thunderdome";</script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

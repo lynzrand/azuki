@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Arena","Container that can have elements inserted into it and removed from it."],["Drain","See [`Arena::drain`]."],["Index","Index type for [`Arena`] that has a generation attached to it."],["IntoIter","Iterator typed used when an Arena is turned [`IntoIterator`]."],["Iter","See `Arena::iter`."],["IterMut","See `Arena::iter_mut`."]]});

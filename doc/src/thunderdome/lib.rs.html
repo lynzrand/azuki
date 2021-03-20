@@ -1,0 +1,180 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/github.com-1ecc6299db9ec823/thunderdome-0.4.1/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../thunderdome/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1"> 1</span>
+<span id="2"> 2</span>
+<span id="3"> 3</span>
+<span id="4"> 4</span>
+<span id="5"> 5</span>
+<span id="6"> 6</span>
+<span id="7"> 7</span>
+<span id="8"> 8</span>
+<span id="9"> 9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+</pre><div class="example-wrap"><pre class="rust ">
+<span class="doccomment">/*!
+[![GitHub CI Status](https://github.com/LPGhatguy/thunderdome/workflows/CI/badge.svg)](https://github.com/LPGhatguy/thunderdome/actions)
+[![thunderdome on crates.io](https://img.shields.io/crates/v/thunderdome.svg)](https://crates.io/crates/thunderdome)
+[![thunderdome docs](https://img.shields.io/badge/docs-docs.rs-orange.svg)](https://docs.rs/thunderdome)
+
+Thunderdome is a ~gladitorial~ generational arena inspired by
+[generational-arena](https://crates.io/crates/generational-arena),
+[slotmap](https://crates.io/crates/slotmap), and
+[slab](https://crates.io/crates/slab). It provides constant time insertion,
+lookup, and removal via small (8 byte) keys returned from `Arena`.
+
+Thunderdome&#39;s key type, `Index`, is still 8 bytes when put inside of an
+`Option&lt;T&gt;` thanks to Rust&#39;s `NonZero*` types.
+
+## Basic Examples
+
+```rust
+# use thunderdome::{Arena, Index};
+let mut arena = Arena::new();
+
+let foo = arena.insert(&quot;Foo&quot;);
+let bar = arena.insert(&quot;Bar&quot;);
+
+assert_eq!(arena[foo], &quot;Foo&quot;);
+assert_eq!(arena[bar], &quot;Bar&quot;);
+
+arena[bar] = &quot;Replaced&quot;;
+assert_eq!(arena[bar], &quot;Replaced&quot;);
+
+let foo_value = arena.remove(foo);
+assert_eq!(foo_value, Some(&quot;Foo&quot;));
+
+// The slot previously used by foo will be reused for baz
+let baz = arena.insert(&quot;Baz&quot;);
+assert_eq!(arena[baz], &quot;Baz&quot;);
+
+// foo is no longer a valid key
+assert_eq!(arena.get(foo), None);
+```
+
+## Comparison With Similar Crates
+
+| Feature                      | Thunderdome | generational-arena | slotmap | slab |
+|------------------------------|-------------|--------------------|---------|------|
+| Generational Indices¹        | Yes         | Yes                | Yes     | No   |
+| `size_of::&lt;Index&gt;()`         | 8           | 16                 | 8       | 8    |
+| `size_of::&lt;Option&lt;Index&gt;&gt;()` | 8           | 24                 | 8       | 16   |
+| Max Elements                 | 2³²         | 2⁶⁴                | 2³²     | 2⁶⁴  |
+| Non-`Copy` Values            | Yes         | Yes                | Yes     | Yes  |
+| `no_std` Support             | No          | Yes                | Yes     | No   |
+| Serde Support                | No          | Yes                | Yes     | No   |
+
+* Sizes calculated on rustc `1.44.0-x86_64-pc-windows-msvc`
+* See [the Thunderdome comparison
+  Cargo.toml](https://github.com/LPGhatguy/thunderdome/blob/main/comparison/Cargo.toml)
+  for versions of each library tested.
+
+1. Generational indices help solve the [ABA
+   Problem](https://en.wikipedia.org/wiki/ABA_problem), which can cause dangling
+   keys to mistakenly access newly-inserted data.
+
+## Minimum Supported Rust Version (MSRV)
+
+Thunderdome supports Rust 1.34.1 and newer. Until Thunderdome reaches 1.0,
+changes to the MSRV will require major version bumps. After 1.0, MSRV changes
+will only require minor version bumps, but will need significant justification.
+*/</span>
+
+<span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">missing_docs</span>)]</span>
+<span class="comment">// This crate is sensitive to integer overflow and wrapping behavior. As such,</span>
+<span class="comment">// we should usually use methods like `checked_add` and `checked_sub` instead</span>
+<span class="comment">// of the `Add` or `Sub` operators.</span>
+<span class="attribute">#![<span class="ident">deny</span>(<span class="ident">clippy</span>::<span class="ident">integer_arithmetic</span>)]</span>
+
+<span class="kw">mod</span> <span class="ident">arena</span>;
+<span class="kw">mod</span> <span class="ident">drain</span>;
+<span class="kw">mod</span> <span class="ident">free_pointer</span>;
+<span class="kw">mod</span> <span class="ident">generation</span>;
+<span class="kw">mod</span> <span class="ident">into_iter</span>;
+<span class="kw">mod</span> <span class="ident">iter</span>;
+<span class="kw">mod</span> <span class="ident">iter_mut</span>;
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">arena</span>::{<span class="ident">Arena</span>, <span class="ident">Index</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">drain</span>::<span class="ident">Drain</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">into_iter</span>::<span class="ident">IntoIter</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">iter</span>::<span class="ident">Iter</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">iter_mut</span>::<span class="ident">IterMut</span>;
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "thunderdome";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

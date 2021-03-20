@@ -1,0 +1,380 @@
+<!DOCTYPE HTML>
+<html lang="zh_cn" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>实现指导 - Compilers Experiment</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../preface.html">前言</a></li><li class="chapter-item expanded "><a href="../lab/lab1.html"><strong aria-hidden="true">1.</strong> Lab1 词法分析</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lab/lab1-guide.html" class="active"><strong aria-hidden="true">1.1.</strong> 实现指导</a></li></ol></li><li class="chapter-item expanded "><a href="../lab/lab2.html"><strong aria-hidden="true">2.</strong> Lab2 语法分析</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lab/lab2-guide.html"><strong aria-hidden="true">2.1.</strong> 实现指导</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lab/lab2/parser-in-java.html"><strong aria-hidden="true">2.1.1.</strong> 写一个分析器类的要点</a></li><li class="chapter-item expanded "><a href="../lab/lab2/opg-in-recursive-descent.html"><strong aria-hidden="true">2.1.2.</strong> 在递归下降中实现算符优先分析</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../lab/lab3.html"><strong aria-hidden="true">3.</strong> Lab3 语义分析</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">3.1.</strong> 实现指导</div></li></ol></li><li class="chapter-item expanded "><a href="../lab/lab4.html"><strong aria-hidden="true">4.</strong> Lab4 代码生成</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lab/lab4-guide.html"><strong aria-hidden="true">4.1.</strong> 实现指导</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lab/lab4/ssa-design.html"><strong aria-hidden="true">4.1.1.</strong> 为什么要用 SSA 中间代码</a></li><li class="chapter-item expanded "><a href="../lab/lab4/algo-use.html"><strong aria-hidden="true">4.1.2.</strong> 如何使用中间代码生成算法</a></li></ol></li><li class="chapter-item expanded "><a href="../lab/lab4-ex.html"><strong aria-hidden="true">4.2.</strong> Lab4-EX</a></li></ol></li><li class="chapter-item expanded "><a href="../lab/lab5.html"><strong aria-hidden="true">5.</strong> Lab5 代码优化</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">5.1.</strong> 实现指导</div></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.</strong> 拓展阅读</div></li><li class="chapter-item expanded affix "><div>附录</div></li><li class="chapter-item expanded affix "><a href="../tac/tac-definition.html">C0 语法定义</a></li><li class="chapter-item expanded affix "><div>TAC 指令集参考</div></li><li class="chapter-item expanded affix "><div>TAC 语法定义</div></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Compilers Experiment</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="lab1-实现指导"><a class="header" href="#lab1-实现指导">LAB1 实现指导</a></h1>
+<p>这次我们实现的是编译的第一步——词法分析。</p>
+<p>词法分析的作用是将输入的字节流/字符流转换成单词（Token）序列，本质上就是使用一组正则表达式不断地匹配输入流，并在每次匹配出结果之后输出当前结果、返回开始状态，准备匹配下一个。</p>
+<blockquote>
+<p><del>嗯……我其实挺想用允许自动化工具的，可是那样这个实验不就没意义了吗！</del></p>
+</blockquote>
+<h2 id="自动机"><a class="header" href="#自动机">自动机</a></h2>
+<p>举个例子！比如咱们现在有一个语法，其中只有四种单词，长下面这样 <em>（顺便一提，这种风格的 EBNF 你们之后还会见到很多次……）</em>：</p>
+<pre><code class="language-plaintext">Ident  -&gt; [Aa] [Aa01]*  // 标识符
+Number -&gt; [01]+         // 数字
+Add    -&gt; '+'           // 加号
+WS     -&gt; ' '+          // 空白（之后会被丢弃）
+</code></pre>
+<p>那么我们可以构造这样一个自动机：</p>
+<p><img src="../res/azuki-guidebook-lex-basic.png" alt="简单的自动机" /></p>
+<p>其中的虚线代表我们不读入这个字符，只获取它的值。这种操作一般称作为 <code>unread</code>（读入之后再放回去）或者 <code>peek</code>/<code>lookahead</code>（偷看输入的下一个值）。</p>
+<p>看起来没啥问题。你可以自己模拟运行一下，看看这个自动机是不是将每个合法的句子都转换成了对应的单词序列。</p>
+<p>那么如果我们再加一种单词，关键字 <code>KW -&gt; 'AA'</code> 呢？自然，我们可以先把 <code>0 -A-&gt; X -A-&gt; Y --&gt; /KW/</code> 这条规则加到 NFA 里面，然后简化成 DFA，最终大概长这样：</p>
+<p><img src="../res/azuki-guidebook-lex-extra.png" alt="复杂的自动机" /></p>
+<p>——作为自动化工具生成的结果没啥问题，但是关键字多一些的话手工实现就比较难了。所以，在手工实现的时候我们一般采取下面这种方法：</p>
+<p>注意到关键字 <code>AA</code> 是一个合法的标识符，那么我们完全可以在识别完标识符之后再去判断它等不等于 <code>AA</code>。于是，我们可以这么设计自动机：</p>
+<p><img src="../res/azuki-guidebook-lex-extra-simp.png" alt="不那么复杂的自动机" /></p>
+<p>是不是看起来好多了？</p>
+<p>实际上，这种操作是广泛存在的——绝大多数编程语言的关键字都被设计成了合法的标识符，以此来降低词法分析的设计难度（以及自动机的状态数）。类似地，很多语言还会尽可能将不同单词的起始字符设计成互不重合的（也就是让自动机比起 “网” 长得更像一个 “树”），这样也可以尽量减少词法分析的难度。</p>
+<blockquote>
+<p>你问例外？Java 最近新加了个关键字叫 <code>non-sealed</code>，设计者估计脑子有泡……</p>
+</blockquote>
+<h2 id="上手编写"><a class="header" href="#上手编写">上手编写</a></h2>
+<p>说了这么多，来上手写一个吧！</p>
+<p>对于输入流，我们可以采用一个实现了 <code>Peekable</code> 的迭代器（Java 用户可以用我们提供的 <code>PeekableCharIter</code>，Rust 用户可以用标准库的 <code>std::iter::Peekable</code>）。下面我们用 <code>peek()</code> 代表预读下一个字符，<code>next()</code> 代表前进一个字符。</p>
+<p>先创建相应的数据结构：</p>
+<pre><code class="language-java">class Lexer {
+    /** 输入数据 */
+    PeekableCharIter iter;
+    /** 构造单词内容的地方 */
+    StringBuilder sb;
+    
+    /** 移到下一个字符 */
+    void next() {
+        char ch = iter.next();
+        sb.add(ch);
+    }
+
+    /** 错误处理，当然我们没有 */
+    void error() {
+        throw new RuntimeException();
+    }
+
+    /** 获取当前单词字符串 */
+    String take() {
+        String s = sb.toString();
+        sb.clear();
+        return s;
+    }
+
+    /** 我们的单词产生函数 */
+    Token nextToken() {
+        char ch = iter.peek();
+        // TODO: 写一个状态机
+    }
+}
+</code></pre>
+<p>如果你喜欢原教旨主义状态机，请自便——下面我们编写的是一个更加简化的实现。</p>
+<p>比如说我们要解析 <code>Ident -&gt; [Aa] [Aa01]*</code> 这个单词，我们大概就要在 <code>nextToken</code> 里这么写：</p>
+<pre><code class="language-java">Token nextToken() {
+    // ...
+    if (ch == 'a' || ch == 'A') {
+        // 吃掉这个字符
+        next();
+        // 剩下的事情我们放到这里做
+        return lexIdentRest();
+    } else {
+        // 其他情况
+        error();
+    }
+}
+
+/** 解析一个标识符 */
+Token lexIdentRest() {
+    // 下一个字符依然可以构成标识符
+    if (&quot;Aa01&quot;.indexOf(iter.peek()) != -1) {
+        next();
+    }
+    // 取出我们识别到的单词
+    String token = take();
+
+    // 判断是不是关键字，返回单词，大概这样
+    if (token == &quot;AA&quot;) {
+        return new Token(TokenKind.AA, token);
+    } else {
+        return new Token(TokenKind.Ident, token);
+    }
+}
+</code></pre>
+<p>不难对吧，那我们多加几种情况：</p>
+<pre><code class="language-java">Token nextToken() {
+    // ...
+    else if (ch == '0' || ch == '1') {
+        // Number
+        next();
+        return lexNumberRest();
+    } else if (ch == '+') {
+        // Add
+        next();
+        return new Token(TokenKind.Add, take());
+    } else if (ch == ' ') {
+        // WS
+        while (iter.peek() == ' ') next();
+        return new Token(TokenKind.WS, take());
+    } else if (ch == -1) {
+        // 文件结尾 (EOF)
+        return new Token(TokenKind.EOF, null);
+    } else {
+        // 其他情况
+        error();
+    }
+}
+
+Token lexNumberRest() {
+    // 当依然能构成数字的时候继续
+    while (iter.peek() == '0' || iter.peek() == '1') next();
+    return new Token(TokenKind.Number, take());
+}
+</code></pre>
+<p>这样一个简单的词法分析器就写完了，好耶！</p>
+<p>仿照这个示例，你就能把实验要求的词法分析器写出来了。</p>
+<p>等等，似乎忘了什么……对了，我们还要跳过空白符！</p>
+<pre><code class="language-java">/** 这个是对外的接口 */
+Token next() {
+    Token token;
+    do {
+        token = nextToken();
+    } while (token.kind != TokenKind.WS);
+    return token;
+}
+</code></pre>
+<p>这下完整了。</p>
+<blockquote>
+<p>……什么，你想知道参考实现里的词法分析器是怎么写的？</p>
+<p>当然是自动生成的啦！欸嘿 (*/ω＼*)</p>
+</blockquote>
+<h2 id="输出"><a class="header" href="#输出">输出</a></h2>
+<p>挨个 <code>println</code> 不就好了？</p>
+<h2 id="关于命令行输入"><a class="header" href="#关于命令行输入">关于命令行输入</a></h2>
+<p>鉴于你编写的这个程序会贯穿整个实验，为了降低切换不同功能以及开启 Debug 模式的方便程度，咱强烈建议你添加某种命令行参数解析器。Java 用户可以试试 <code>Argparse4J</code>，Rust 用户可以尝试 <code>Clap</code>。</p>
+<p>之后，你可以考虑把不同的功能（比如词法分析和语法分析）指派给不同的标志参数（比如 <code>--lex</code> 和 <code>--parse</code>），于是就可以用类似 <code>myProgram --lex input.c0</code> 的方式调用了。</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../lab/lab1.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../lab/lab2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../lab/lab1.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../lab/lab2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>
