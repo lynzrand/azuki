@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["FuncEditor","An editor attached to the given function for linear editing purposes."]]});

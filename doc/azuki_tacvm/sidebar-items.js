@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["inspector",""],["value",""]],"struct":[["Frame",""],["Vm",""]]});
+initSidebarItems({"enum":[["CurrInst",""],["JumpAction",""]],"mod":[["inspector",""],["value",""]],"struct":[["Frame",""],["Vm",""]]});

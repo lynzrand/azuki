@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Token",""]],"mod":[["formatter",""]]});
+initSidebarItems({"enum":[["Token",""]],"fn":[["parse_char_literal",""],["parse_string_literal",""]],"mod":[["formatter",""]]});
