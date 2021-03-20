@@ -8,3 +8,4 @@
 ## 目录
 
 - [为什么要采用 SSA 格式的中间代码?](lab4/ssa-design.md)
+- [如何使用我们提供的 SSA 格式生成算法](lab4/algo-use.md)

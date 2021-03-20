@@ -1,11 +1,13 @@
 # Summary
 
-[前言]()
+[前言](preface.md)
 
 - [Lab1 词法分析](lab/lab1.md)
   - [实现指导](lab/lab1-guide.md)
 - [Lab2 语法分析](lab/lab2.md)
   - [实现指导](lab/lab2-guide.md)
+    - [写一个分析器类的要点](lab/lab2/parser-in-java.md)
+    - [在递归下降中实现算符优先分析](lab/lab2/opg-in-recursive-descent.md)
 - [Lab3 语义分析](lab/lab3.md)
   - [实现指导]()
 - [Lab4 代码生成](lab/lab4.md)
