@@ -25,7 +25,8 @@ use std::collections::{BTreeMap, HashMap};
 use enum_as_inner::EnumAsInner;
 use err::{Error, TacResult};
 
-use linkedlist::{ImplicitLinkedList, ImplicitLinkedListItem};
+pub use linkedlist::*;
+
 use smol_str::SmolStr;
 use thunderdome::{Arena, Index};
 
@@ -243,6 +244,21 @@ impl TacFunc {
         self.instructions_arena
             .iter()
             .map(|(idx, inst)| (idx, inst.bb, &inst.inst))
+    }
+
+    pub fn inst_of_bb_iter(&self, bb: BBId) -> impl Iterator<Item = (InstId, &Inst)> {
+        let bb = self.bb_get(bb);
+        self.inst_iter(bb.head, bb.tail)
+    }
+
+    pub fn inst_iter(
+        &self,
+        start: Option<InstId>,
+        end: Option<InstId>,
+    ) -> impl Iterator<Item = (InstId, &Inst)> {
+        self.instructions_arena
+            .items_iter(start, end)
+            .map(|(idx, tac)| (idx, &tac.inst))
     }
 }
 
