@@ -174,7 +174,7 @@ impl<'src> Vm<'src> {
                 sources.get(&last_bb).and_then(|&val| last.eval(val.into()))
             }
             azuki_tac::InstKind::Param(i) => last.params.get(*i).cloned(),
-            azuki_tac::InstKind::Dead => None,
+            // azuki_tac::InstKind::Dead => None,
         };
 
         let last = self.stack.last_mut().unwrap();
@@ -203,32 +203,29 @@ impl<'src> Vm<'src> {
         let last = self.stack.last_mut().unwrap();
 
         last.last_bb = last.bb;
-        let mut action = JumpAction::Error;
-        for inst in &last.func.bb_get(last.bb).branch {
-            self.inspectors
-                .iter_mut()
-                .for_each(|i| i.borrow_mut().before_branch(inst, last));
+        let inst = &last.func.bb_get(last.bb).branch;
+        self.inspectors
+            .iter_mut()
+            .for_each(|i| i.borrow_mut().before_branch(inst, last));
 
-            match inst {
-                azuki_tac::Branch::Return(v) => {
-                    action = JumpAction::Return(*v);
-                    break;
-                }
-                azuki_tac::Branch::Jump(target) => {
-                    action = JumpAction::Goto(*target);
-                    break;
-                }
-                azuki_tac::Branch::CondJump {
-                    cond,
-                    if_true: target,
-                } => {
-                    if last.eval(*cond).map_or(false, |x| x != 0) {
-                        action = JumpAction::Goto(*target);
-                        break;
-                    }
+        let mut action = match inst {
+            azuki_tac::Branch::Return(v) => JumpAction::Return(*v),
+            azuki_tac::Branch::Jump(target) => JumpAction::Goto(*target),
+            azuki_tac::Branch::CondJump {
+                cond,
+                if_true,
+                if_false,
+            } => {
+                if last.eval(*cond).map_or(false, |x| x != 0) {
+                    JumpAction::Goto(*if_true)
+                } else {
+                    JumpAction::Goto(*if_false)
                 }
             }
-        }
+            azuki_tac::Branch::Unreachable => {
+                panic!("Met unreachable branch")
+            }
+        };
         match action {
             JumpAction::Goto(bb) => last.move_to(bb),
             JumpAction::Return(v) => {
