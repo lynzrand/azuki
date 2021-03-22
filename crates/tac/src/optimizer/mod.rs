@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use crate::{Program, TacFunc};
 use anymap::AnyMap;
@@ -88,7 +88,7 @@ pub struct OptimizeEnvironment {
 
 pub struct Pipeline {
     env: OptimizeEnvironment,
-    passes: Vec<Box<dyn Pass>>,
+    passes: HashMap<String, Box<dyn Pass>>,
 }
 
 impl Default for Pipeline {
@@ -103,25 +103,36 @@ impl Pipeline {
             env: OptimizeEnvironment {
                 data: AnyMap::new(),
             },
-            passes: vec![],
+            passes: HashMap::new(),
         }
     }
 
     pub fn add_pass<P: Pass + 'static>(&mut self, pass: P) {
-        self.passes.push(Box::new(pass))
+        self.passes.insert(pass.name().into_owned(), Box::new(pass));
     }
 
-    pub fn add_func_optimizer<F: FunctionOptimizer + 'static>(&mut self, opt: F) {
-        self.passes.push(Box::new(FunctionOptimizerPass(opt)))
+    pub fn add_func_optimizer<F: FunctionOptimizer + 'static>(&mut self, pass: F) {
+        self.passes.insert(
+            pass.name().into_owned(),
+            Box::new(FunctionOptimizerPass(pass)),
+        );
     }
 
     pub fn add_pass_boxed(&mut self, pass: Box<dyn Pass>) {
-        self.passes.push(pass)
+        self.passes.insert(pass.name().into_owned(), pass);
     }
 
-    pub fn optimize(mut self, program: &mut Program) {
-        for pass in &mut self.passes {
-            pass.optimize_program(&mut self.env, program)
+    pub fn list_passes(&self) -> impl Iterator<Item = &str> {
+        self.passes.keys().map(|k| k.as_str())
+    }
+
+    pub fn run_pass(&mut self, program: &mut Program, pass: impl AsRef<str>) -> bool {
+        let pass = self.passes.get_mut(pass.as_ref());
+        if let Some(pass) = pass {
+            pass.optimize_program(&mut self.env, program);
+            true
+        } else {
+            false
         }
     }
 }
