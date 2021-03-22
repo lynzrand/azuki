@@ -26,10 +26,8 @@ impl FunctionOptimizer for DeadCodeEliminator {
             }
         }
         for (_, bb) in func.all_bb_unordered() {
-            for br in &bb.jumps {
-                if let Branch::Return(Some(Value::Dest(idx))) = br {
-                    self.find_roots.include_node(*idx);
-                }
+            if let Branch::Return(Some(Value::Dest(idx))) = &bb.branch {
+                self.find_roots.include_node(*idx);
             }
         }
 

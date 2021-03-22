@@ -1,7 +1,7 @@
 pub enum OptionIter<T> {
     None,
     One(T),
-    // Two(T, T),
+    Two(T, T),
     // Iter(I),
 }
 
@@ -16,6 +16,10 @@ where
         match this {
             OptionIter::None => None,
             OptionIter::One(i) => Some(i),
+            OptionIter::Two(i, j) => {
+                *self = OptionIter::One(j);
+                Some(i)
+            }
         }
     }
 }

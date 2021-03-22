@@ -160,9 +160,6 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                 }
                 write!(f, "]")?;
             }
-            InstKind::Dead => {
-                write!(f, "dead_value")?;
-            }
         }
         Ok(())
     }
@@ -180,9 +177,22 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
             Branch::Jump(target) => {
                 write!(f, "br bb{}", target.unique_num())?;
             }
-            Branch::CondJump { cond, target } => {
-                write!(f, "br bb{} if ", target.unique_num())?;
+            Branch::CondJump {
+                cond,
+                if_true,
+                if_false,
+            } => {
+                write!(f, "if ")?;
                 cond.fmt_ctx(f, ctx)?;
+                write!(
+                    f,
+                    " br bb{} else bb{}",
+                    if_true.unique_num(),
+                    if_false.unique_num()
+                )?;
+            }
+            Branch::Unreachable => {
+                write!(f, "unreachable")?;
             }
         }
         Ok(())
@@ -223,14 +233,9 @@ impl std::fmt::Display for TacFunc {
                     }
                 }
             }
-            for target in &v.jumps {
-                write!(f, "\t")?;
-                target.fmt_ctx(f, &mut ctx)?;
-                writeln!(f)?;
-            }
-            if v.jumps.is_empty() {
-                writeln!(f, "\tunreachable")?;
-            }
+            write!(f, "\t")?;
+            v.branch.fmt_ctx(f, &mut ctx)?;
+            writeln!(f)?;
         }
         writeln!(f, "}}")?;
         Ok(())

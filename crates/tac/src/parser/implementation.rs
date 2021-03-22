@@ -50,7 +50,7 @@ impl<'f> VariableNamingCtx<'f> {
         } else {
             // insert placeholder instruction
             let var = self.func.func.inst_new(Inst {
-                kind: InstKind::Dead,
+                kind: InstKind::empty_phi(),
                 ty: Ty::unit(),
             });
             self.local_vars.insert(var_id, var);
@@ -410,77 +410,78 @@ where
         })
 }
 
-fn branch_or_branch_if_jump_instruction<'a, Input>(
+fn branch_if_jump_instruction<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-) -> impl Parser<Input, Output = ()> + 'a
+) -> impl Parser<Input, Output = Branch> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
     (
+        string("if").skip(spaces1()),
+        value(ctx),
         string("br").skip(spaces1()),
         bb_id(),
-        optional(attempt((
-            spaces1(),
-            string("if").skip(spaces1()),
-            value(ctx),
-        ))),
+        string("else").skip(spaces1()),
+        bb_id(),
     )
-        .map(move |(_, id, cond)| {
+        .map(move |(_, cond, _, if_true, _, if_false)| {
             let mut ctx = ctx.borrow_mut();
 
-            let bb_id = ctx.declared_bb(id);
+            let if_true = ctx.declared_bb(if_true);
+            let if_false = ctx.declared_bb(if_false);
 
-            if let Some((_, _, val)) = cond {
-                ctx.func
-                    .current_bb_mut()
-                    .jumps
-                    .push(crate::Branch::CondJump {
-                        cond: val,
-                        target: bb_id,
-                    });
-            } else {
-                ctx.func
-                    .current_bb_mut()
-                    .jumps
-                    .push(crate::Branch::Jump(bb_id));
+            Branch::CondJump {
+                cond,
+                if_true,
+                if_false,
             }
         })
 }
 
-fn unreachable_jump_instruction<Input>() -> impl Parser<Input, Output = ()>
+fn branch_jump_instruction<'a, Input>(
+    ctx: &'a RefCell<VariableNamingCtx<'a>>,
+) -> impl Parser<Input, Output = Branch> + 'a
+where
+    Input: Stream<Token = char> + 'a,
+{
+    (string("br").skip(spaces1()), bb_id()).map(move |(_, target)| {
+        let mut ctx = ctx.borrow_mut();
+        let target = ctx.declared_bb(target);
+        Branch::Jump(target)
+    })
+}
+
+fn unreachable_jump_instruction<Input>() -> impl Parser<Input, Output = Branch>
 where
     Input: Stream<Token = char>,
 {
-    string("unreachable").map(|_| ())
+    string("unreachable").map(|_| Branch::Unreachable)
 }
 
 fn return_jump_instruction<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-) -> impl Parser<Input, Output = ()> + 'a
+) -> impl Parser<Input, Output = Branch> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
     (string("return"), optional(attempt((spaces1(), value(ctx))))).map(move |(_, val)| {
         let mut ctx = ctx.borrow_mut();
         let val = val.map(|(_, v)| v);
-        ctx.func.current_bb_mut().jumps.push(Branch::Return(val));
+        Branch::Return(val)
     })
 }
 
 fn jump_instructions<'a, Input>(
     ctx: &'a RefCell<VariableNamingCtx<'a>>,
-) -> impl Parser<Input, Output = ()> + 'a
+) -> impl Parser<Input, Output = Branch> + 'a
 where
     Input: Stream<Token = char> + 'a,
 {
     choice((
         attempt(unreachable_jump_instruction().skip(nl1())),
         attempt(return_jump_instruction(ctx).skip(nl1())),
-        many1(attempt(
-            branch_or_branch_if_jump_instruction(ctx)
-                .map(|_| ())
-                .skip(nl1()),
-        )),
+        attempt(branch_jump_instruction(ctx).skip(nl1())),
+        attempt(branch_if_jump_instruction(ctx).skip(nl1())),
     ))
 }
 
@@ -494,9 +495,10 @@ where
     (bb_id().skip(spaces0()), string(":").skip(nl1()))
         .message("When parsing BB label")
         .then(move |(id, _)| {
+            let bb_id;
             {
                 let mut ctx = ctx.borrow_mut();
-                let bb_id = ctx.declared_bb(id);
+                bb_id = ctx.declared_bb(id);
                 // ctx.func.func.bb_seq.push(bb_id);
                 ctx.func.set_current_bb(bb_id);
                 match ctx.last_bb {
@@ -516,7 +518,11 @@ where
             ))
             .map(|_: ()| ())
             .and(attempt(
-                jump_instructions(ctx).message("When parsing jump instructions"),
+                jump_instructions(ctx)
+                    .message("When parsing jump instructions")
+                    .map(move |branch| {
+                        ctx.borrow_mut().func.func.bb_get_mut(bb_id).branch = branch;
+                    }),
             ))
         })
         .map(|_| ())

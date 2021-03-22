@@ -331,14 +331,14 @@ impl TacFunc {
         let orig_tail = first_bb.tail.take();
 
         let jumps = transfer_branches
-            .then(|| std::mem::replace(&mut first_bb.jumps, vec![]))
-            .unwrap_or_else(Vec::new);
+            .then(|| std::mem::replace(&mut first_bb.branch, Branch::Unreachable))
+            .unwrap_or(Branch::Unreachable);
         let new_bb_id = self.bb_new();
 
         let new_bb = self.bb_get_mut(new_bb_id);
         new_bb.tail = orig_tail;
         new_bb.head = after_head;
-        new_bb.jumps = jumps;
+        new_bb.branch = jumps;
 
         {
             // fix bb pointers
@@ -360,13 +360,13 @@ impl TacFunc {
     /// - Remove all jump instruction inside `front`
     /// - Move all instrcution inside `back` into `front`
     /// - Detach `back`
-    pub fn bb_connect(&mut self, front: BBId, back: BBId) -> Vec<Branch> {
+    pub fn bb_connect(&mut self, front: BBId, back: BBId) -> Branch {
         debug_assert_ne!(front, back, "Cannot connect a basic block to itself");
 
         let (front_bb, back_bb) = self.bb_get2_mut(front, back);
 
-        let back_jump = std::mem::take(&mut back_bb.jumps);
-        let branches = std::mem::replace(&mut front_bb.jumps, back_jump);
+        let back_jump = std::mem::take(&mut back_bb.branch);
+        let branches = std::mem::replace(&mut front_bb.branch, back_jump);
 
         let front_tail = front_bb.tail;
         let back_head = back_bb.head;
@@ -414,7 +414,7 @@ pub struct BasicBlock {
     pub next: Option<BBId>,
 
     /// The branch instruction at the end of this basic block
-    pub jumps: Vec<Branch>,
+    pub branch: Branch,
 }
 
 /// Represents a single TAC instruction inside an indirect doubly linked list of instructions.
@@ -476,17 +476,22 @@ pub struct Inst {
 pub enum InstKind {
     /// A binary operaton, e.g. plus, divide
     Binary(BinaryInst),
+
     /// A call to another function.
     FunctionCall(FunctionCall),
 
     /// An assignment from another instruction or constant
     Assign(Value),
-    /// A phi instruction
+
+    /// A phi instruction.
+    ///
+    /// # Note
+    ///
+    /// A Phi instruction with _no operands_ can sometimes be used as a dead value
     Phi(BTreeMap<BBId, InstId>),
+
     /// A function parameter
     Param(usize),
-    /// An unreachable value
-    Dead,
 }
 
 impl InstKind {
@@ -498,22 +503,32 @@ impl InstKind {
             }
             InstKind::Assign(v) => VarIter::One(*v),
             InstKind::Phi(source) => {
-                VarIter::Iter(Box::new(source.iter().map(|(_, &val)| val.into()))
-                    as Box<dyn Iterator<Item = _>>)
+                if source.len() == 0 {
+                    VarIter::None
+                } else {
+                    VarIter::Iter(Box::new(source.iter().map(|(_, &val)| val.into()))
+                        as Box<dyn Iterator<Item = _>>)
+                }
             }
             InstKind::Param(_) => VarIter::None,
-            InstKind::Dead => VarIter::None,
         }
     }
 
     pub fn param_op_iter(&self) -> impl Iterator<Item = InstId> + '_ {
         self.params_iter().filter_map(|x| x.get_inst())
     }
+
+    pub fn empty_phi() -> Self {
+        InstKind::Phi(BTreeMap::new())
+    }
 }
 
 /// Represents a branch instruction.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Branch {
+    /// Unreachable or undefined branch.
+    Unreachable,
+
     /// Returns the given value.
     Return(Option<Value>),
 
@@ -523,23 +538,29 @@ pub enum Branch {
     /// Conditional jump to the given target.
     ///
     /// `cond` must be a boolean or integer.
-    CondJump { cond: Value, target: BBId },
+    CondJump {
+        cond: Value,
+        if_true: BBId,
+        if_false: BBId,
+    },
 }
 
-// impl Default for Branch {
-//     fn default() -> Self {
-//         Self::Unreachable
-//     }
-// }
+impl Default for Branch {
+    fn default() -> Self {
+        Self::Unreachable
+    }
+}
 
 impl Branch {
     pub fn target_iter(&self) -> impl Iterator<Item = BBId> + '_ {
         match self {
             Branch::Return(_) => util::OptionIter::<BBId>::None,
             Branch::Jump(t) => util::OptionIter::One(*t),
-            Branch::CondJump { target, .. } => util::OptionIter::One(*target),
+            Branch::CondJump {
+                if_true, if_false, ..
+            } => util::OptionIter::Two(*if_true, *if_false),
             // Branch::TableJump { target, .. } => util::VarIter::Iter(target.iter().map(|t| t.bb)),
-            // Branch::Unreachable => util::VarIter::None,
+            Branch::Unreachable => util::OptionIter::None,
         }
     }
 }

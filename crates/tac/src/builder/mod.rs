@@ -247,7 +247,8 @@ where
         }
 
         let replace_value = match same {
-            None => InstKind::Dead,
+            // an empty phi is a dead value
+            None => InstKind::empty_phi(),
             Some(same) => InstKind::Assign(same.into()),
         };
         // remove traces of this phi
@@ -257,21 +258,9 @@ where
         self.editor.func.tac_get_mut(phi_op).inst.kind = replace_value;
     }
 
-    /// Add a branching instruction to the given basic block's jump instruction list.
-    pub fn add_branch(&mut self, inst: Branch, bb_id: BBId) -> TacResult<()> {
-        for target in inst.target_iter() {
-            let entry = self
-                .block_pred
-                .entry(target)
-                .or_insert_with(SmallBBIdVec::new);
-            entry.push(bb_id);
-        }
-
-        let bb = self.func.bb_get_mut(bb_id);
-
-        bb.jumps.push(inst);
-
-        Ok(())
+    pub fn add_branch(&mut self, from: BBId, to: BBId) {
+        let entry = self.block_pred.entry(to).or_insert_with(SmallBBIdVec::new);
+        entry.push(from);
     }
 
     /// Returns an iterator of all predecessors of a basic block.
@@ -282,13 +271,8 @@ where
     }
 
     /// Returns an iterator of all successors of a basic block.
-    pub fn succ_of_bb(&self, bb_id: BBId) -> SmallBBIdVec {
-        self.func
-            .bb_get(bb_id)
-            .jumps
-            .iter()
-            .flat_map(|b| b.target_iter())
-            .collect()
+    pub fn succ_of_bb(&self, bb_id: BBId) -> impl Iterator<Item = BBId> + '_ {
+        self.func.bb_get(bb_id).branch.target_iter()
     }
 }
 

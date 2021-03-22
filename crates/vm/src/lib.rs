@@ -204,7 +204,7 @@ impl<'src> Vm<'src> {
 
         last.last_bb = last.bb;
         let mut action = JumpAction::Error;
-        for inst in &last.func.bb_get(last.bb).jumps {
+        for inst in &last.func.bb_get(last.bb).branch {
             self.inspectors
                 .iter_mut()
                 .for_each(|i| i.borrow_mut().before_branch(inst, last));
@@ -218,7 +218,10 @@ impl<'src> Vm<'src> {
                     action = JumpAction::Goto(*target);
                     break;
                 }
-                azuki_tac::Branch::CondJump { cond, target } => {
+                azuki_tac::Branch::CondJump {
+                    cond,
+                    if_true: target,
+                } => {
                     if last.eval(*cond).map_or(false, |x| x != 0) {
                         action = JumpAction::Goto(*target);
                         break;
