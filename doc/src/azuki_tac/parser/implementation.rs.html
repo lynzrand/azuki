@@ -590,6 +590,12 @@
 <span id="587">587</span>
 <span id="588">588</span>
 <span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#![<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parser&quot;</span>)]</span>
 <span class="doccomment">//! Module for parsing the text representation of Azuki TAC into real code.</span>
@@ -643,7 +649,7 @@
         } <span class="kw">else</span> {
             <span class="comment">// insert placeholder instruction</span>
             <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">inst_new</span>(<span class="ident">Inst</span> {
-                <span class="ident">kind</span>: <span class="ident">InstKind</span>::<span class="ident">Dead</span>,
+                <span class="ident">kind</span>: <span class="ident">InstKind</span>::<span class="ident">empty_phi</span>(),
                 <span class="ident">ty</span>: <span class="ident">Ty</span>::<span class="ident">unit</span>(),
             });
             <span class="self">self</span>.<span class="ident">local_vars</span>.<span class="ident">insert</span>(<span class="ident">var_id</span>, <span class="ident">var</span>);
@@ -1003,77 +1009,78 @@
         })
 }
 
-<span class="kw">fn</span> <span class="ident">branch_or_branch_if_jump_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
+<span class="kw">fn</span> <span class="ident">branch_if_jump_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
     <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
 <span class="kw">where</span>
     <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
 {
     (
+        <span class="ident">string</span>(<span class="string">&quot;if&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
+        <span class="ident">value</span>(<span class="ident">ctx</span>),
         <span class="ident">string</span>(<span class="string">&quot;br&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
         <span class="ident">bb_id</span>(),
-        <span class="ident">optional</span>(<span class="ident">attempt</span>((
-            <span class="ident">spaces1</span>(),
-            <span class="ident">string</span>(<span class="string">&quot;if&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-            <span class="ident">value</span>(<span class="ident">ctx</span>),
-        ))),
+        <span class="ident">string</span>(<span class="string">&quot;else&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
+        <span class="ident">bb_id</span>(),
     )
-        .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="kw">_</span>, <span class="ident">id</span>, <span class="ident">cond</span>)<span class="op">|</span> {
+        .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="kw">_</span>, <span class="ident">cond</span>, <span class="kw">_</span>, <span class="ident">if_true</span>, <span class="kw">_</span>, <span class="ident">if_false</span>)<span class="op">|</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
 
-            <span class="kw">let</span> <span class="ident">bb_id</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">id</span>);
+            <span class="kw">let</span> <span class="ident">if_true</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">if_true</span>);
+            <span class="kw">let</span> <span class="ident">if_false</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">if_false</span>);
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">val</span>)) <span class="op">=</span> <span class="ident">cond</span> {
-                <span class="ident">ctx</span>.<span class="ident">func</span>
-                    .<span class="ident">current_bb_mut</span>()
-                    .<span class="ident">jumps</span>
-                    .<span class="ident">push</span>(<span class="kw">crate</span>::<span class="ident">Branch</span>::<span class="ident">CondJump</span> {
-                        <span class="ident">cond</span>: <span class="ident">val</span>,
-                        <span class="ident">target</span>: <span class="ident">bb_id</span>,
-                    });
-            } <span class="kw">else</span> {
-                <span class="ident">ctx</span>.<span class="ident">func</span>
-                    .<span class="ident">current_bb_mut</span>()
-                    .<span class="ident">jumps</span>
-                    .<span class="ident">push</span>(<span class="kw">crate</span>::<span class="ident">Branch</span>::<span class="ident">Jump</span>(<span class="ident">bb_id</span>));
+            <span class="ident">Branch</span>::<span class="ident">CondJump</span> {
+                <span class="ident">cond</span>,
+                <span class="ident">if_true</span>,
+                <span class="ident">if_false</span>,
             }
         })
 }
 
-<span class="kw">fn</span> <span class="ident">unreachable_jump_instruction</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span>
+<span class="kw">fn</span> <span class="ident">branch_jump_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
+    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
+<span class="kw">where</span>
+    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
+{
+    (<span class="ident">string</span>(<span class="string">&quot;br&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()), <span class="ident">bb_id</span>()).<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="kw">_</span>, <span class="ident">target</span>)<span class="op">|</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
+        <span class="kw">let</span> <span class="ident">target</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">target</span>);
+        <span class="ident">Branch</span>::<span class="ident">Jump</span>(<span class="ident">target</span>)
+    })
+}
+
+<span class="kw">fn</span> <span class="ident">unreachable_jump_instruction</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
 {
-    <span class="ident">string</span>(<span class="string">&quot;unreachable&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+    <span class="ident">string</span>(<span class="string">&quot;unreachable&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Branch</span>::<span class="ident">Unreachable</span>)
 }
 
 <span class="kw">fn</span> <span class="ident">return_jump_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
     <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
 <span class="kw">where</span>
     <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
 {
     (<span class="ident">string</span>(<span class="string">&quot;return&quot;</span>), <span class="ident">optional</span>(<span class="ident">attempt</span>((<span class="ident">spaces1</span>(), <span class="ident">value</span>(<span class="ident">ctx</span>))))).<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="kw">_</span>, <span class="ident">val</span>)<span class="op">|</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
         <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>);
-        <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">current_bb_mut</span>().<span class="ident">jumps</span>.<span class="ident">push</span>(<span class="ident">Branch</span>::<span class="ident">Return</span>(<span class="ident">val</span>));
+        <span class="ident">Branch</span>::<span class="ident">Return</span>(<span class="ident">val</span>)
     })
 }
 
 <span class="kw">fn</span> <span class="ident">jump_instructions</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
     <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
 <span class="kw">where</span>
     <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
 {
     <span class="ident">choice</span>((
         <span class="ident">attempt</span>(<span class="ident">unreachable_jump_instruction</span>().<span class="ident">skip</span>(<span class="ident">nl1</span>())),
         <span class="ident">attempt</span>(<span class="ident">return_jump_instruction</span>(<span class="ident">ctx</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>())),
-        <span class="ident">many1</span>(<span class="ident">attempt</span>(
-            <span class="ident">branch_or_branch_if_jump_instruction</span>(<span class="ident">ctx</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
-                .<span class="ident">skip</span>(<span class="ident">nl1</span>()),
-        )),
+        <span class="ident">attempt</span>(<span class="ident">branch_jump_instruction</span>(<span class="ident">ctx</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>())),
+        <span class="ident">attempt</span>(<span class="ident">branch_if_jump_instruction</span>(<span class="ident">ctx</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>())),
     ))
 }
 
@@ -1087,9 +1094,10 @@
     (<span class="ident">bb_id</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()), <span class="ident">string</span>(<span class="string">&quot;:&quot;</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>()))
         .<span class="ident">message</span>(<span class="string">&quot;When parsing BB label&quot;</span>)
         .<span class="ident">then</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">id</span>, <span class="kw">_</span>)<span class="op">|</span> {
+            <span class="kw">let</span> <span class="ident">bb_id</span>;
             {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
-                <span class="kw">let</span> <span class="ident">bb_id</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">id</span>);
+                <span class="ident">bb_id</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">id</span>);
                 <span class="comment">// ctx.func.func.bb_seq.push(bb_id);</span>
                 <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">set_current_bb</span>(<span class="ident">bb_id</span>);
                 <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">last_bb</span> {
@@ -1109,7 +1117,11 @@
             ))
             .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span>: ()<span class="op">|</span> ())
             .<span class="ident">and</span>(<span class="ident">attempt</span>(
-                <span class="ident">jump_instructions</span>(<span class="ident">ctx</span>).<span class="ident">message</span>(<span class="string">&quot;When parsing jump instructions&quot;</span>),
+                <span class="ident">jump_instructions</span>(<span class="ident">ctx</span>)
+                    .<span class="ident">message</span>(<span class="string">&quot;When parsing jump instructions&quot;</span>)
+                    .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">branch</span><span class="op">|</span> {
+                        <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>().<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">bb_get_mut</span>(<span class="ident">bb_id</span>).<span class="ident">branch</span> <span class="op">=</span> <span class="ident">branch</span>;
+                    }),
             ))
         })
         .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())

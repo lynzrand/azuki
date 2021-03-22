@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["assert_type_eq",""],["compile",""],["empty_jump_target",""]],"mod":[["err",""],["symbol",""]],"struct":[["BreakTarget",""],["FuncCompiler",""]]});
+initSidebarItems({"fn":[["assert_type_eq",""],["compile",""]],"mod":[["err",""],["symbol",""]],"struct":[["BreakTarget",""],["FuncCompiler",""]]});

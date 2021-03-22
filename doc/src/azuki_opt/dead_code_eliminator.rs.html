@@ -69,8 +69,6 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashSet</span>;
 
@@ -100,10 +98,8 @@
             }
         }
         <span class="kw">for</span> (<span class="kw">_</span>, <span class="ident">bb</span>) <span class="kw">in</span> <span class="ident">func</span>.<span class="ident">all_bb_unordered</span>() {
-            <span class="kw">for</span> <span class="ident">br</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">bb</span>.<span class="ident">jumps</span> {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Branch</span>::<span class="ident">Return</span>(<span class="prelude-val">Some</span>(<span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="ident">idx</span>))) <span class="op">=</span> <span class="ident">br</span> {
-                    <span class="self">self</span>.<span class="ident">find_roots</span>.<span class="ident">include_node</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
-                }
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Branch</span>::<span class="ident">Return</span>(<span class="prelude-val">Some</span>(<span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="ident">idx</span>))) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">bb</span>.<span class="ident">branch</span> {
+                <span class="self">self</span>.<span class="ident">find_roots</span>.<span class="ident">include_node</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
             }
         }
 
