@@ -599,6 +599,16 @@ impl Value {
             _ => None,
         }
     }
+
+    /// Returns `true` if the value is [`Dest`].
+    pub fn is_dest(&self) -> bool {
+        matches!(self, Self::Dest(..))
+    }
+
+    /// Returns `true` if the value is [`Imm`].
+    pub fn is_imm(&self) -> bool {
+        matches!(self, Self::Imm(..))
+    }
 }
 
 impl From<InstId> for Value {

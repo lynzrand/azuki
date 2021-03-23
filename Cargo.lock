@@ -41,6 +41,7 @@ version = "0.1.0"
 dependencies = [
  "anymap",
  "azuki-tac",
+ "bit-set",
  "petgraph",
 ]
 

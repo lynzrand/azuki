@@ -1,6 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
-use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, Branch, InstId, Value};
+use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, BBId, Branch, InstId, Value};
 use petgraph::{graphmap::DiGraphMap, visit};
 use visit::{FilterNode, Walker};
 
