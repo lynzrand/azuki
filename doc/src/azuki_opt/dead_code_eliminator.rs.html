@@ -70,9 +70,9 @@
 <span id="67">67</span>
 <span id="68">68</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashSet</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">HashSet</span>};
 
-<span class="kw">use</span> <span class="ident">azuki_tac</span>::{<span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">optimizer</span>::<span class="ident">FunctionOptimizer</span>, <span class="ident">Branch</span>, <span class="ident">InstId</span>, <span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">azuki_tac</span>::{<span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">optimizer</span>::<span class="ident">FunctionOptimizer</span>, <span class="ident">BBId</span>, <span class="ident">Branch</span>, <span class="ident">InstId</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">petgraph</span>::{<span class="ident">graphmap</span>::<span class="ident">DiGraphMap</span>, <span class="ident">visit</span>};
 <span class="kw">use</span> <span class="ident">visit</span>::{<span class="ident">FilterNode</span>, <span class="ident">Walker</span>};
 

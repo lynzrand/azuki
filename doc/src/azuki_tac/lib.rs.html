@@ -611,6 +611,16 @@
 <span id="608">608</span>
 <span id="609">609</span>
 <span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! TAC (Three-Address Code) is the intermediate representation for Azuki programs.</span>
 <span class="doccomment">//! This code type is similar to [Cranelift IR][cranelift] and [LLVM IR][llvm].</span>
@@ -1212,6 +1222,16 @@
             <span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="ident">o</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">o</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
         }
+    }
+
+    <span class="doccomment">/// Returns `true` if the value is [`Dest`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_dest</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="self">Self</span>::<span class="ident">Dest</span>(..))
+    }
+
+    <span class="doccomment">/// Returns `true` if the value is [`Imm`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_imm</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="self">Self</span>::<span class="ident">Imm</span>(..))
     }
 }
 

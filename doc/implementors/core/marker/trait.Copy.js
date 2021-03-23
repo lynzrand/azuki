@@ -1,5 +1,6 @@
 (function() {var implementors = {};
 implementors["atty"] = [{"text":"impl Copy for Stream","synthetic":false,"types":[]}];
+implementors["azuki_opt"] = [{"text":"impl Copy for Comparison","synthetic":false,"types":[]}];
 implementors["azuki_syntax"] = [{"text":"impl Copy for Span","synthetic":false,"types":[]},{"text":"impl Copy for UnaryOp","synthetic":false,"types":[]},{"text":"impl Copy for BinaryOp","synthetic":false,"types":[]}];
 implementors["azuki_tac"] = [{"text":"impl Copy for BBId","synthetic":false,"types":[]},{"text":"impl Copy for Value","synthetic":false,"types":[]}];
 implementors["clap"] = [{"text":"impl Copy for AppSettings","synthetic":false,"types":[]},{"text":"impl Copy for ArgSettings","synthetic":false,"types":[]},{"text":"impl Copy for ValueHint","synthetic":false,"types":[]},{"text":"impl Copy for ErrorKind","synthetic":false,"types":[]}];

@@ -1,5 +1,6 @@
 (function() {var implementors = {};
 implementors["azuki"] = [{"text":"impl Eq for Action","synthetic":false,"types":[]}];
+implementors["azuki_opt"] = [{"text":"impl Eq for Comparison","synthetic":false,"types":[]}];
 implementors["azuki_syntax"] = [{"text":"impl Eq for Span","synthetic":false,"types":[]}];
 implementors["azuki_tac"] = [{"text":"impl Eq for BBId","synthetic":false,"types":[]},{"text":"impl Eq for Ty","synthetic":false,"types":[]},{"text":"impl Eq for NumericTy","synthetic":false,"types":[]},{"text":"impl Eq for TyKind","synthetic":false,"types":[]},{"text":"impl Eq for FuncTy","synthetic":false,"types":[]},{"text":"impl Eq for Tac","synthetic":false,"types":[]},{"text":"impl Eq for BinaryInst","synthetic":false,"types":[]},{"text":"impl Eq for FunctionCall","synthetic":false,"types":[]},{"text":"impl Eq for Inst","synthetic":false,"types":[]},{"text":"impl Eq for InstKind","synthetic":false,"types":[]},{"text":"impl Eq for Branch","synthetic":false,"types":[]},{"text":"impl Eq for BinaryOp","synthetic":false,"types":[]},{"text":"impl Eq for Value","synthetic":false,"types":[]}];
 implementors["beef"] = [{"text":"impl&lt;T:&nbsp;?Sized, U&gt; Eq for Cow&lt;'_, T, U&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Eq + Beef,<br>&nbsp;&nbsp;&nbsp;&nbsp;U: Capacity,&nbsp;</span>","synthetic":false,"types":[]}];
