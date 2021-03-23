@@ -1,5 +1,6 @@
 use std::io::{stdout, Write};
 
+use azuki_opt::dead_code_eliminator::DeadCodeEliminator;
 use azuki_syntax::{lexer::lexer, parse};
 use azuki_tac::optimizer::sanity_checker::SanityChecker;
 use azuki_tacvm::Vm;
@@ -58,8 +59,11 @@ fn main() {
     let mut pipeline = azuki_tac::optimizer::Pipeline::new();
 
     pipeline.add_func_optimizer(SanityChecker::default());
+    pipeline.add_func_optimizer(DeadCodeEliminator::new());
 
-    pipeline.optimize(&mut program);
+    for optimization in &opt.optimization {
+        pipeline.run_pass(&mut program, optimization);
+    }
 
     if opt.action == Action::Compile {
         program.functions.iter().for_each(|(_, function)| {

@@ -113,6 +113,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         let initial = self.builder.new_bb();
         self.builder.set_current_bb(initial);
         self.builder.func.bb_set_first(initial);
+        self.builder.mark_sealed(initial);
 
         let return_ty = self.visit_ty(&func.ret_ty)?;
         let mut params_ty = vec![];
@@ -130,7 +131,6 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         self.visit_block_stmt(&func.body)?;
 
-        self.builder.mark_sealed(self.builder.current_bb_id());
         self.builder.mark_filled(self.builder.current_bb_id());
 
         self.scope_builder.borrow_mut().pop_scope().unwrap();
@@ -309,7 +309,6 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.add_branch(cur_bb, cond_bb);
         self.builder.func.bb_get_mut(cur_bb).branch = Branch::Jump(cond_bb);
 
-        self.builder.mark_sealed(cur_bb);
         self.builder.mark_filled(cur_bb);
 
         self.builder.set_current_bb(cond_bb);
@@ -337,6 +336,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         };
         self.builder.add_branch(cond_bb, loop_bb);
         self.builder.add_branch(cond_bb, next_bb);
+        self.builder.mark_sealed(loop_bb);
 
         self.builder.set_current_bb(loop_bb);
         self.visit_block_stmt(&stmt.body)?;
@@ -345,15 +345,14 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.func.bb_get_mut(loop_end_bb).branch = Branch::Jump(cond_bb);
         self.builder.add_branch(loop_end_bb, cond_bb);
 
-        self.builder.mark_sealed(loop_end_bb);
         self.builder.mark_filled(loop_end_bb);
         self.builder.mark_sealed(cond_bb);
 
         self.break_targets.pop();
 
-        self.builder.add_branch(cond_bb, next_bb);
         self.builder.func.bb_set_after(loop_end_bb, next_bb);
         self.builder.set_current_bb(next_bb);
+        self.builder.mark_sealed(next_bb);
 
         Ok(())
     }
@@ -363,7 +362,6 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         let last_bb = self.builder.current_bb_id();
 
         self.builder.mark_filled(last_bb);
-        self.builder.mark_sealed(last_bb);
 
         // Create if block
         let if_bb = self.builder.new_bb();
@@ -371,6 +369,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         // if -> if_bb
         self.builder.add_branch(last_bb, if_bb);
+        self.builder.mark_sealed(if_bb);
 
         self.builder.set_current_bb(if_bb);
         self.visit_block_stmt(&stmt.if_block)?;
@@ -387,6 +386,7 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
                 // if
                 //  \--> else_bb
                 self.builder.add_branch(last_bb, else_bb);
+                self.builder.mark_sealed(else_bb);
                 self.builder.func.bb_get_mut(last_bb).branch = Branch::CondJump {
                     cond: expr_val.0,
                     if_true: if_bb,
@@ -404,10 +404,10 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
                 let next_bb = self.builder.new_bb();
 
+                self.builder.func.bb_get_mut(else_end_bb).branch = Branch::Jump(next_bb);
                 self.builder.add_branch(else_end_bb, next_bb);
 
                 self.builder.mark_filled(else_end_bb);
-                self.builder.mark_sealed(else_end_bb);
                 self.builder.func.bb_set_after(else_end_bb, next_bb);
                 next_bb
             }
@@ -428,11 +428,11 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         };
 
         // if_end_bb -> next_bb
+        self.builder.func.bb_get_mut(if_end_bb).branch = Branch::Jump(next_bb);
         self.builder.add_branch(if_end_bb, next_bb);
-
         self.builder.mark_filled(if_end_bb);
-        self.builder.mark_sealed(if_end_bb);
 
+        self.builder.mark_sealed(next_bb);
         self.builder.set_current_bb(next_bb);
         Ok(())
     }
@@ -481,10 +481,10 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.func.bb_get_mut(curr_bb).branch = Branch::Return(val.map(|x| x.0));
 
         self.builder.mark_filled(self.builder.current_bb_id());
-        self.builder.mark_sealed(self.builder.current_bb_id());
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb);
+        self.builder.mark_sealed(next_bb);
         self.builder.func.bb_set_after(curr_bb, next_bb);
 
         Ok(())
@@ -497,11 +497,11 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.func.bb_get_mut(cur_bb).branch = Branch::Jump(break_target);
         self.builder.add_branch(cur_bb, break_target);
 
-        self.builder.mark_sealed(cur_bb);
         self.builder.mark_filled(cur_bb);
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb);
+        self.builder.mark_sealed(next_bb);
         self.builder.func.bb_set_after(cur_bb, next_bb);
 
         Ok(())
@@ -514,11 +514,11 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
         self.builder.func.bb_get_mut(cur_bb).branch = Branch::Jump(continue_target);
         self.builder.add_branch(cur_bb, continue_target);
 
-        self.builder.mark_sealed(cur_bb);
         self.builder.mark_filled(cur_bb);
 
         let next_bb = self.builder.new_bb();
         self.builder.set_current_bb(next_bb);
+        self.builder.mark_sealed(next_bb);
         self.builder.func.bb_set_after(cur_bb, next_bb);
 
         Ok(())

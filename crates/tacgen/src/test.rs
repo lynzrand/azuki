@@ -2,6 +2,7 @@
 
 use azuki_syntax::parse;
 use azuki_tac::parser::EasyParser;
+use azuki_tacvm::Vm;
 
 #[test]
 fn test_basic_func_generation() {
@@ -20,17 +21,6 @@ fn test_basic_func_generation() {
     let result = crate::compile(&program).unwrap();
     eprintln!("{}", result.functions["fib"]);
 
-    let res = result.functions["fib"].to_string();
-
-    let stream = azuki_tac::parser::parse_stream::position::Stream::new(res.as_str());
-    let parsed = azuki_tac::parser::parse_func().easy_parse(stream);
-    match parsed {
-        Ok(r) => {
-            eprintln!("{}", r.0);
-        }
-        Err(e) => {
-            eprintln!("{}", e);
-            panic!("failed");
-        }
-    }
+    let mut vm = Vm::new(&result);
+    assert_eq!(vm.run_func("fib", vec![5]), Some(8));
 }

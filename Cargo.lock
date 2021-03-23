@@ -84,6 +84,7 @@ version = "0.1.0"
 dependencies = [
  "azuki-syntax",
  "azuki-tac",
+ "azuki-tacvm",
  "bit-set",
  "smol_str",
  "vec1",
