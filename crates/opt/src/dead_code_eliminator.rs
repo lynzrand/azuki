@@ -9,6 +9,21 @@ pub struct DeadCodeEliminator {
     find_roots: HashSet<InstId>,
 }
 
+impl DeadCodeEliminator {
+    pub fn new() -> DeadCodeEliminator {
+        DeadCodeEliminator {
+            graph: DiGraphMap::new(),
+            find_roots: HashSet::new(),
+        }
+    }
+}
+
+impl Default for DeadCodeEliminator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FunctionOptimizer for DeadCodeEliminator {
     fn name(&self) -> std::borrow::Cow<str> {
         "dead-code-eliminator".into()
@@ -48,7 +63,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
             .map(|(id, _)| id)
             .collect::<Vec<_>>();
         for bb in bbs {
-            editor.set_current_bb_start(bb);
+            editor.set_current_bb(bb);
             while editor.move_forward() {
                 if !retained.contains(&editor.current_idx().unwrap()) {
                     editor.remove_current();

@@ -565,7 +565,7 @@ impl Branch {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub enum BinaryOp {
     Add,
     Sub,

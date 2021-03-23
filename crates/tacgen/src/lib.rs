@@ -208,24 +208,26 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
 
         assert_type_eq(&lhst, &rhst)?;
 
+        let (op, ty) = match expr.op {
+            BinaryOp::Add => (tac::BinaryOp::Add, lhst.clone()),
+            BinaryOp::Sub => (tac::BinaryOp::Sub, lhst.clone()),
+            BinaryOp::Mul => (tac::BinaryOp::Mul, lhst.clone()),
+            BinaryOp::Div => (tac::BinaryOp::Div, lhst.clone()),
+            BinaryOp::Gt => (tac::BinaryOp::Gt, Ty::bool()),
+            BinaryOp::Lt => (tac::BinaryOp::Lt, Ty::bool()),
+            BinaryOp::Ge => (tac::BinaryOp::Ge, Ty::bool()),
+            BinaryOp::Le => (tac::BinaryOp::Le, Ty::bool()),
+            BinaryOp::Eq => (tac::BinaryOp::Eq, Ty::bool()),
+            BinaryOp::Neq => (tac::BinaryOp::Ne, Ty::bool()),
+        };
+
         let v = self.builder.insert_after_current_place(Inst {
             kind: InstKind::Binary(BinaryInst {
-                op: match expr.op {
-                    BinaryOp::Add => tac::BinaryOp::Add,
-                    BinaryOp::Sub => tac::BinaryOp::Sub,
-                    BinaryOp::Mul => tac::BinaryOp::Mul,
-                    BinaryOp::Div => tac::BinaryOp::Div,
-                    BinaryOp::Gt => tac::BinaryOp::Gt,
-                    BinaryOp::Lt => tac::BinaryOp::Lt,
-                    BinaryOp::Ge => tac::BinaryOp::Ge,
-                    BinaryOp::Le => tac::BinaryOp::Le,
-                    BinaryOp::Eq => tac::BinaryOp::Eq,
-                    BinaryOp::Neq => tac::BinaryOp::Ne,
-                },
+                op,
                 lhs: lhsv,
                 rhs: rhsv,
             }),
-            ty: lhst.clone(),
+            ty,
         });
 
         Ok((v.into(), lhst))

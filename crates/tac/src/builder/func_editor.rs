@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     err::{Error, TacResult},
-    BBId, BasicBlock,  Inst, InstId, InstKind, Tac, TacFunc, Ty,
+    BBId, BasicBlock, Inst, InstId, InstKind, Tac, TacFunc, Ty,
 };
 
 /// An editor attached to the given function for linear editing purposes.
@@ -17,8 +17,10 @@ pub struct FuncEditor<'a> {
     /// be inserted before or after this instruction, depending on the function
     /// we use.
     ///
-    /// **This value MUST refer to an instruction inside [`current_bb`](Self::current_bb).**
-    /// **If this value is [`None`](Option::None), `current_bb` MUST be empty.**
+    /// If this value is `Some(inst)`, inst MUST point to a valid instruction
+    /// inside [`current_bb`]. If this value is `None`, either it points at a
+    /// sentinel position that has `bb.head` as next and `bb.tail` as prev,
+    /// or the basic block is completely empty.
     current_idx: Option<InstId>,
 }
 
@@ -82,30 +84,36 @@ impl<'a> FuncEditor<'a> {
     }
 
     /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)
-    /// to the end of this basic block.
+    /// to the sentinel value that moves backward to the last instruction, and
+    /// forward to the first instruction.
     ///
     /// Returns whether the position was **unchanged**.
+    ///
+    /// # Note
+    ///
+    /// The reason why this function sets the position at a sentinel value
+    /// is to ensure one can use [`move_forward`] as the condition of a while
+    /// loop to visit all instructions in this function.
     pub fn set_current_bb(&mut self, bb_id: BBId) -> bool {
         debug_assert!(self.func.bb_exists(bb_id));
-        let bb = self.func.bb_get(bb_id);
-        let same_pos = bb_id == self.current_bb_id && bb.tail == self.current_idx;
+        let same_pos = bb_id == self.current_bb_id && None == self.current_idx;
         self.current_bb_id = bb_id;
-        self.current_idx = bb.tail;
+        self.current_idx = None;
         same_pos
     }
 
-    /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)
-    /// to the start of this basic block.
-    ///
-    /// Returns whether the position was **unchanged**.
-    pub fn set_current_bb_start(&mut self, bb_id: BBId) -> bool {
-        debug_assert!(self.func.bb_exists(bb_id));
-        let bb = self.func.bb_get(bb_id);
-        let same_pos = bb_id == self.current_bb_id && bb.head == self.current_idx;
-        self.current_bb_id = bb_id;
-        self.current_idx = bb.head;
-        same_pos
-    }
+    // /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)
+    // /// to the start of this basic block.
+    // ///
+    // /// Returns whether the position was **unchanged**.
+    // pub fn set_current_bb_start(&mut self, bb_id: BBId) -> bool {
+    //     debug_assert!(self.func.bb_exists(bb_id));
+    //     let bb = self.func.bb_get(bb_id);
+    //     let same_pos = bb_id == self.current_bb_id && bb.head == self.current_idx;
+    //     self.current_bb_id = bb_id;
+    //     self.current_idx = bb.head;
+    //     same_pos
+    // }
 
     /// Sets current basic block and instruction position at the position of the
     /// given instruction.
@@ -160,6 +168,9 @@ impl<'a> FuncEditor<'a> {
     /// Attach the free-standing instruction to the place after [`current_idx`],
     /// and advance one instruction forward.
     ///
+    /// If `current_idx` is `None`, the instruction will be **prepended** in the
+    /// basic block (since `None` refers to the sentinel position).
+    ///
     /// # Panics
     ///
     /// Panics when the instruction is not free-standing (`inst.prev` or
@@ -168,13 +179,16 @@ impl<'a> FuncEditor<'a> {
         if let Some(cur) = self.current_idx {
             self.func.inst_set_after(cur, idx);
         } else {
-            self.func.inst_append_in_bb(idx, self.current_bb_id);
+            self.func.inst_prepend_in_bb(idx, self.current_bb_id);
         }
         self.current_idx = Some(idx);
     }
 
     /// Attach the free-standing instruction to the place before [`current_idx`],
     /// and advance one instruction back.
+    ///
+    /// If `current_idx` is `None`, the instruction will be **appended** in the
+    /// basic block (since `None` refers to the sentinel position).
     ///
     /// # Panics
     ///
@@ -184,7 +198,7 @@ impl<'a> FuncEditor<'a> {
         if let Some(cur) = self.current_idx {
             self.func.inst_set_before(cur, idx);
         } else {
-            self.func.inst_prepend_in_bb(idx, self.current_bb_id);
+            self.func.inst_append_in_bb(idx, self.current_bb_id);
         }
         self.current_idx = Some(idx);
     }
@@ -199,40 +213,42 @@ impl<'a> FuncEditor<'a> {
         )
     }
 
-    /// Move one instruction forward. Returns whether the move was successful.
-    /// If this function returns `true`, [`current_idx`] and functions related
-    /// to it are guaranteed to return `Some` as long as .
+    /// Move one instruction forward. Returns whether [`current_idx`] is a valid
+    /// instruction value.
+    ///
+    /// If `current_idx` is `None`, this will move to the first instruction in
+    /// the basic block, if possible.
     pub fn move_forward(&mut self) -> bool {
         if let Some(inst) = self.current_tac() {
-            if inst.next.is_some() {
-                self.current_idx = inst.next;
-                true
-            } else {
-                false
-            }
+            let next = inst.next;
+            self.current_idx = next;
         } else {
-            false
+            let bb = self.current_bb();
+            self.current_idx = bb.head;
         }
+        self.current_idx.is_some()
     }
 
-    /// Move one instruction backward. Returns whether the move was successful.
-    /// If this function returns `true`, [`current_idx`] and functions related
-    /// to it are guaranteed to return `Some`.
+    /// Move one instruction backward. Returns whether [`current_idx`] is a valid
+    /// instruction value.
+    ///
+    /// If `current_idx` is `None`, this will move to the last instruction in
+    /// the basic block, if possible.
     pub fn move_backward(&mut self) -> bool {
         if let Some(inst) = self.current_tac() {
-            if inst.prev.is_some() {
-                self.current_idx = inst.prev;
-                true
-            } else {
-                false
-            }
+            let next = inst.prev;
+            self.current_idx = next;
         } else {
-            false
+            let bb = self.current_bb();
+            self.current_idx = bb.tail;
         }
+        self.current_idx.is_some()
     }
 
     pub fn remove_current(&mut self) -> Option<Inst> {
         if let Some(idx) = self.current_idx {
+            self.move_forward();
+            self.func.inst_detach(idx);
             Some(self.func.inst_remove(idx))
         } else {
             None
