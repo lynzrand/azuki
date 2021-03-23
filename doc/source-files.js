@@ -2,7 +2,7 @@ var N = null;var sourcesIndex = {};
 sourcesIndex["anymap"] = {"name":"","files":["any.rs","lib.rs","raw.rs"]};
 sourcesIndex["atty"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["azuki"] = {"name":"","files":["main.rs","opt.rs"]};
-sourcesIndex["azuki_opt"] = {"name":"","files":["const_propagation.rs","dead_code_eliminator.rs","lib.rs","loop_unroll.rs"]};
+sourcesIndex["azuki_opt"] = {"name":"","files":["const_folding.rs","dead_code_eliminator.rs","lib.rs","loop_unroll.rs"]};
 sourcesIndex["azuki_syntax"] = {"name":"","dirs":[{"name":"ast","files":["formatter.rs"]},{"name":"parser","files":["err.rs","mod.rs"]},{"name":"token","files":["formatter.rs"]}],"files":["ast.rs","lexer.rs","lib.rs","span.rs","token.rs","util.rs","visitor.rs"]};
 sourcesIndex["azuki_tac"] = {"name":"","dirs":[{"name":"builder","files":["func_editor.rs","mod.rs"]},{"name":"formatter","files":["mod.rs"]},{"name":"linkedlist","files":["implementation.rs"]},{"name":"optimizer","files":["mod.rs","sanity_checker.rs"]},{"name":"parser","files":["implementation.rs","mod.rs"]},{"name":"util","files":["format_list.rs","idx.rs","iterator.rs","mod.rs"]}],"files":["containers.rs","err.rs","lib.rs","linkedlist.rs","ty.rs"]};
 sourcesIndex["azuki_tac_filetest"] = {"name":"","files":["lib.rs"]};

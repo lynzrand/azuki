@@ -242,12 +242,28 @@
 <span id="239">239</span>
 <span id="240">240</span>
 <span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">err</span>::{<span class="ident">Error</span>, <span class="ident">TacResult</span>},
-    <span class="ident">BBId</span>, <span class="ident">BasicBlock</span>,  <span class="ident">Inst</span>, <span class="ident">InstId</span>, <span class="ident">InstKind</span>, <span class="ident">Tac</span>, <span class="ident">TacFunc</span>, <span class="ident">Ty</span>,
+    <span class="ident">BBId</span>, <span class="ident">BasicBlock</span>, <span class="ident">Inst</span>, <span class="ident">InstId</span>, <span class="ident">InstKind</span>, <span class="ident">Tac</span>, <span class="ident">TacFunc</span>, <span class="ident">Ty</span>,
 };
 
 <span class="doccomment">/// An editor attached to the given function for linear editing purposes.</span>
@@ -262,8 +278,10 @@
     <span class="doccomment">/// be inserted before or after this instruction, depending on the function</span>
     <span class="doccomment">/// we use.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// **This value MUST refer to an instruction inside [`current_bb`](Self::current_bb).**</span>
-    <span class="doccomment">/// **If this value is [`None`](Option::None), `current_bb` MUST be empty.**</span>
+    <span class="doccomment">/// If this value is `Some(inst)`, inst MUST point to a valid instruction</span>
+    <span class="doccomment">/// inside [`current_bb`]. If this value is `None`, either it points at a</span>
+    <span class="doccomment">/// sentinel position that has `bb.head` as next and `bb.tail` as prev,</span>
+    <span class="doccomment">/// or the basic block is completely empty.</span>
     <span class="ident">current_idx</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">InstId</span><span class="op">&gt;</span>,
 }
 
@@ -327,30 +345,36 @@
     }
 
     <span class="doccomment">/// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)</span>
-    <span class="doccomment">/// to the end of this basic block.</span>
+    <span class="doccomment">/// to the sentinel value that moves backward to the last instruction, and</span>
+    <span class="doccomment">/// forward to the first instruction.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns whether the position was **unchanged**.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Note</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The reason why this function sets the position at a sentinel value</span>
+    <span class="doccomment">/// is to ensure one can use [`move_forward`] as the condition of a while</span>
+    <span class="doccomment">/// loop to visit all instructions in this function.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_current_bb</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bb_id</span>: <span class="ident">BBId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">func</span>.<span class="ident">bb_exists</span>(<span class="ident">bb_id</span>));
-        <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">bb_get</span>(<span class="ident">bb_id</span>);
-        <span class="kw">let</span> <span class="ident">same_pos</span> <span class="op">=</span> <span class="ident">bb_id</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_bb_id</span> <span class="op">&amp;&amp;</span> <span class="ident">bb</span>.<span class="ident">tail</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_idx</span>;
+        <span class="kw">let</span> <span class="ident">same_pos</span> <span class="op">=</span> <span class="ident">bb_id</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_bb_id</span> <span class="op">&amp;&amp;</span> <span class="prelude-val">None</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_idx</span>;
         <span class="self">self</span>.<span class="ident">current_bb_id</span> <span class="op">=</span> <span class="ident">bb_id</span>;
-        <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">bb</span>.<span class="ident">tail</span>;
+        <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="ident">same_pos</span>
     }
 
-    <span class="doccomment">/// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)</span>
-    <span class="doccomment">/// to the start of this basic block.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns whether the position was **unchanged**.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_current_bb_start</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bb_id</span>: <span class="ident">BBId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">func</span>.<span class="ident">bb_exists</span>(<span class="ident">bb_id</span>));
-        <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">bb_get</span>(<span class="ident">bb_id</span>);
-        <span class="kw">let</span> <span class="ident">same_pos</span> <span class="op">=</span> <span class="ident">bb_id</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_bb_id</span> <span class="op">&amp;&amp;</span> <span class="ident">bb</span>.<span class="ident">head</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_idx</span>;
-        <span class="self">self</span>.<span class="ident">current_bb_id</span> <span class="op">=</span> <span class="ident">bb_id</span>;
-        <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">bb</span>.<span class="ident">head</span>;
-        <span class="ident">same_pos</span>
-    }
+    <span class="comment">// /// Set current basic block to `bb_id`. Also sets [`current_idx`](Self::current_idx)</span>
+    <span class="comment">// /// to the start of this basic block.</span>
+    <span class="comment">// ///</span>
+    <span class="comment">// /// Returns whether the position was **unchanged**.</span>
+    <span class="comment">// pub fn set_current_bb_start(&amp;mut self, bb_id: BBId) -&gt; bool {</span>
+    <span class="comment">//     debug_assert!(self.func.bb_exists(bb_id));</span>
+    <span class="comment">//     let bb = self.func.bb_get(bb_id);</span>
+    <span class="comment">//     let same_pos = bb_id == self.current_bb_id &amp;&amp; bb.head == self.current_idx;</span>
+    <span class="comment">//     self.current_bb_id = bb_id;</span>
+    <span class="comment">//     self.current_idx = bb.head;</span>
+    <span class="comment">//     same_pos</span>
+    <span class="comment">// }</span>
 
     <span class="doccomment">/// Sets current basic block and instruction position at the position of the</span>
     <span class="doccomment">/// given instruction.</span>
@@ -405,6 +429,9 @@
     <span class="doccomment">/// Attach the free-standing instruction to the place after [`current_idx`],</span>
     <span class="doccomment">/// and advance one instruction forward.</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// If `current_idx` is `None`, the instruction will be **prepended** in the</span>
+    <span class="doccomment">/// basic block (since `None` refers to the sentinel position).</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// # Panics</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Panics when the instruction is not free-standing (`inst.prev` or</span>
@@ -413,13 +440,16 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cur</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_idx</span> {
             <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_set_after</span>(<span class="ident">cur</span>, <span class="ident">idx</span>);
         } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_append_in_bb</span>(<span class="ident">idx</span>, <span class="self">self</span>.<span class="ident">current_bb_id</span>);
+            <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_prepend_in_bb</span>(<span class="ident">idx</span>, <span class="self">self</span>.<span class="ident">current_bb_id</span>);
         }
         <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>);
     }
 
     <span class="doccomment">/// Attach the free-standing instruction to the place before [`current_idx`],</span>
     <span class="doccomment">/// and advance one instruction back.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If `current_idx` is `None`, the instruction will be **appended** in the</span>
+    <span class="doccomment">/// basic block (since `None` refers to the sentinel position).</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Panics</span>
     <span class="doccomment">///</span>
@@ -429,7 +459,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cur</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_idx</span> {
             <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_set_before</span>(<span class="ident">cur</span>, <span class="ident">idx</span>);
         } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_prepend_in_bb</span>(<span class="ident">idx</span>, <span class="self">self</span>.<span class="ident">current_bb_id</span>);
+            <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_append_in_bb</span>(<span class="ident">idx</span>, <span class="self">self</span>.<span class="ident">current_bb_id</span>);
         }
         <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>);
     }
@@ -444,40 +474,42 @@
         )
     }
 
-    <span class="doccomment">/// Move one instruction forward. Returns whether the move was successful.</span>
-    <span class="doccomment">/// If this function returns `true`, [`current_idx`] and functions related</span>
-    <span class="doccomment">/// to it are guaranteed to return `Some` as long as .</span>
+    <span class="doccomment">/// Move one instruction forward. Returns whether [`current_idx`] is a valid</span>
+    <span class="doccomment">/// instruction value.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If `current_idx` is `None`, this will move to the first instruction in</span>
+    <span class="doccomment">/// the basic block, if possible.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">move_forward</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">inst</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_tac</span>() {
-            <span class="kw">if</span> <span class="ident">inst</span>.<span class="ident">next</span>.<span class="ident">is_some</span>() {
-                <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">next</span>;
-                <span class="bool-val">true</span>
-            } <span class="kw">else</span> {
-                <span class="bool-val">false</span>
-            }
+            <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">next</span>;
+            <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">next</span>;
         } <span class="kw">else</span> {
-            <span class="bool-val">false</span>
+            <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_bb</span>();
+            <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">bb</span>.<span class="ident">head</span>;
         }
+        <span class="self">self</span>.<span class="ident">current_idx</span>.<span class="ident">is_some</span>()
     }
 
-    <span class="doccomment">/// Move one instruction backward. Returns whether the move was successful.</span>
-    <span class="doccomment">/// If this function returns `true`, [`current_idx`] and functions related</span>
-    <span class="doccomment">/// to it are guaranteed to return `Some`.</span>
+    <span class="doccomment">/// Move one instruction backward. Returns whether [`current_idx`] is a valid</span>
+    <span class="doccomment">/// instruction value.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If `current_idx` is `None`, this will move to the last instruction in</span>
+    <span class="doccomment">/// the basic block, if possible.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">move_backward</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">inst</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_tac</span>() {
-            <span class="kw">if</span> <span class="ident">inst</span>.<span class="ident">prev</span>.<span class="ident">is_some</span>() {
-                <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">prev</span>;
-                <span class="bool-val">true</span>
-            } <span class="kw">else</span> {
-                <span class="bool-val">false</span>
-            }
+            <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">prev</span>;
+            <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">next</span>;
         } <span class="kw">else</span> {
-            <span class="bool-val">false</span>
+            <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_bb</span>();
+            <span class="self">self</span>.<span class="ident">current_idx</span> <span class="op">=</span> <span class="ident">bb</span>.<span class="ident">tail</span>;
         }
+        <span class="self">self</span>.<span class="ident">current_idx</span>.<span class="ident">is_some</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove_current</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Inst</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_idx</span> {
+            <span class="self">self</span>.<span class="ident">move_forward</span>();
+            <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_detach</span>(<span class="ident">idx</span>);
             <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">func</span>.<span class="ident">inst_remove</span>(<span class="ident">idx</span>))
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>

@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["const_propagation",""],["dead_code_eliminator",""],["loop_unroll","Performs loop unrolling to every loop with <=7 instructions per loop."]]});
+initSidebarItems({"mod":[["const_folding",""],["dead_code_eliminator",""],["loop_unroll","Performs loop unrolling to every loop with <=7 instructions per loop."]]});
