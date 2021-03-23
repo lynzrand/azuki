@@ -22,7 +22,7 @@ impl FunctionOptimizer for ConstFolding {
 
     fn optimize_func(
         &mut self,
-        env: &mut azuki_tac::optimizer::OptimizeEnvironment,
+        _env: &mut azuki_tac::optimizer::OptimizeEnvironment,
         func: &mut azuki_tac::TacFunc,
     ) {
         if func.first_block.is_none() {
@@ -38,9 +38,6 @@ impl FunctionOptimizer for ConstFolding {
                 let replaced = match &inst.kind {
                     azuki_tac::InstKind::Binary(b) => eval_binary_inst(b, &cursor.func),
                     azuki_tac::InstKind::Assign(t) => Some(eval_val(*t, &cursor.func)),
-                    azuki_tac::InstKind::Phi(phi) => {
-                        todo!("Check phi")
-                    }
                     _ => None,
                 };
                 if let Some(r) = replaced {
@@ -123,4 +120,18 @@ fn eval_binary(op: BinaryOp, lhs: i64, rhs: i64) -> Option<i64> {
         BinaryOp::Eq => (lhs == rhs) as i64,
         BinaryOp::Ne => (lhs != rhs) as i64,
     })
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_const_folding() {
+        let input = r"
+        fn return_three() -> i32 {
+        bb0:
+            %0 = i32 #1
+            %1 = i32 mul
+        }
+        ";
+    }
 }
