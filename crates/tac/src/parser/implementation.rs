@@ -8,6 +8,7 @@ use std::{
     borrow::{Borrow, Cow},
     collections::BTreeMap,
     fs::Permissions,
+    io::stderr,
     str::FromStr,
 };
 
@@ -19,7 +20,7 @@ use crate::{
 use lexpr::{
     datum::Ref as LRef,
     datum::{ListIter, Span},
-    Datum, Value as LexprVal,
+    Datum, Printer, Value as LexprVal,
 };
 use ParseErrorKind::*;
 
@@ -67,6 +68,7 @@ impl<'f> VariableNamingCtx<'f> {
 
 #[derive(Debug)]
 pub enum ParseErrorKind {
+    ExpressionErr(lexpr::parse::Error),
     ExpectFunctionDef,
     ExpectName(Cow<'static, str>),
     Expect(Cow<'static, str>),
@@ -77,6 +79,7 @@ pub enum Position {
     None,
     Span(lexpr::datum::Span),
     Position(lexpr::parse::Position),
+    Location(lexpr::parse::error::Location),
 }
 
 #[derive(Debug)]
@@ -117,6 +120,16 @@ impl ParseError {
 
     pub fn expect(reason: impl Into<Cow<'static, str>>) -> Self {
         Self::new(Expect(reason.into()))
+    }
+}
+
+impl From<lexpr::parse::Error> for ParseError {
+    fn from(e: lexpr::parse::Error) -> Self {
+        let loc = e.location().map_or(Position::None, Position::Location);
+        ParseError {
+            kind: ExpressionErr(e),
+            at: loc,
+        }
     }
 }
 
@@ -296,14 +309,23 @@ fn parse_call_rest(
 fn parse_phi_rest(val_iter: ListIter, ctx: &mut VariableNamingCtx) -> Result<InstKind, ParseError> {
     let phi = val_iter
         .map(|x| {
-            let (bb, id) = x
-                .as_pair()
+            let mut it = x
+                .list_iter()
                 .ok_or_else(|| ParseError::expect_span("phi item", x.span()))?;
+
+            let bb = it
+                .next()
+                .ok_or_else(|| ParseError::expect_pos("bb id", x.span().end()))?;
             let bb = parse_bb_id(bb, ctx)?;
+
+            let id = it
+                .next()
+                .ok_or_else(|| ParseError::expect_pos("inst id", x.span().end()))?;
             let id = parse_inst_id(id, ctx)?;
+
             Ok((bb, id))
         })
-        .collect::<Result<BTreeMap<_, _>, _>>()?;
+        .collect::<Result<BTreeMap<_, _>, ParseError>>()?;
 
     Ok(InstKind::Phi(phi))
 }
@@ -475,6 +497,12 @@ fn parse_bb(val: LRef<'_>, ctx: &mut VariableNamingCtx) -> Result<(), ParseError
     )?;
 
     ctx.func.current_bb_mut().branch = branch;
+    if let Some(last) = ctx.last_bb {
+        ctx.func.func.bb_set_after(last, id);
+    } else {
+        ctx.func.func.first_block = Some(id);
+    }
+    ctx.last_bb = Some(id);
     Ok(())
 }
 

@@ -35,7 +35,7 @@ impl Display for Ty {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Ty::Unit => {
-                write!(f, "unit")
+                write!(f, "()")
             }
             Ty::Func(func) => func.fmt(f),
             Ty::Ptr(tgt) => {
@@ -48,14 +48,14 @@ impl Display for Ty {
 
 impl Display for FuncTy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fn(")?;
+        write!(f, "(fn (")?;
         for (idx, param) in self.params.iter().enumerate() {
             if idx != 0 {
-                write!(f, ", ")?;
+                write!(f, " ")?;
             }
             param.fmt(f)?;
         }
-        write!(f, ") -> {}", &self.return_type)
+        write!(f, ") {})", &self.return_type)
     }
 }
 
@@ -109,7 +109,7 @@ impl FormatContext<&mut TacFormatCtx> for Value {
                 write!(f, "{}", ctx.var_id(*i))
             }
             Value::Imm(imm) => {
-                write!(f, "#{}", imm)
+                write!(f, "{}", imm)
             }
         }
     }
@@ -121,8 +121,7 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
         f: &mut std::fmt::Formatter<'_>,
         ctx: (VarId, &mut TacFormatCtx),
     ) -> std::fmt::Result {
-        write!(f, "{} = ", ctx.0)?;
-        write!(f, "{} ", self.inst.ty)?;
+        write!(f, "({} {} ", ctx.0, self.inst.ty)?;
         match &self.inst.kind {
             InstKind::Binary(i) => {
                 write!(f, "{} ", i.op)?;
@@ -131,10 +130,10 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                 i.rhs.fmt_ctx(f, ctx.1)?;
             }
             InstKind::FunctionCall(call) => {
-                write!(f, "call @{} (", &call.name)?;
+                write!(f, "call {} (", &call.name)?;
                 for (idx, param) in call.params.iter().enumerate() {
                     if idx != 0 {
-                        write!(f, ", ")?;
+                        write!(f, " ")?;
                     }
                     param.fmt_ctx(f, ctx.1)?;
                 }
@@ -144,29 +143,32 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
             InstKind::Assign(i) => {
                 i.fmt_ctx(f, ctx.1)?;
             }
+
             InstKind::Param(id) => {
                 write!(f, "param {}", id)?;
             }
+
             InstKind::Phi(phi) => {
-                write!(f, "phi [")?;
+                write!(f, "phi ")?;
                 let mut first = true;
                 for (&bb, &val) in phi {
                     if !first {
-                        write!(f, ", ")?;
+                        write!(f, " ")?;
                     } else {
                         first = false;
                     }
-                    write!(f, "({}, bb{})", ctx.1.var_id(val), bb.unique_num())?;
+                    write!(f, "({} bb{})", ctx.1.var_id(val), bb.unique_num())?;
                 }
-                write!(f, "]")?;
             }
         }
+        write!(f, ")")?;
         Ok(())
     }
 }
 
 impl FormatContext<&mut TacFormatCtx> for Branch {
     fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut TacFormatCtx) -> std::fmt::Result {
+        write!(f, "(")?;
         match self {
             Branch::Return(v) => {
                 write!(f, "return ")?;
@@ -182,19 +184,15 @@ impl FormatContext<&mut TacFormatCtx> for Branch {
                 if_true,
                 if_false,
             } => {
-                write!(f, "if ")?;
+                write!(f, "brif ")?;
                 cond.fmt_ctx(f, ctx)?;
-                write!(
-                    f,
-                    " br bb{} else bb{}",
-                    if_true.unique_num(),
-                    if_false.unique_num()
-                )?;
+                write!(f, " bb{} bb{}", if_true.unique_num(), if_false.unique_num())?;
             }
             Branch::Unreachable => {
                 write!(f, "unreachable")?;
             }
         }
+        write!(f, ")")?;
         Ok(())
     }
 }
@@ -203,28 +201,24 @@ impl std::fmt::Display for TacFunc {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ty = self.ty.as_func().unwrap();
         let param_fmt = ListFormatter::new(ty.params.iter());
-        writeln!(
-            f,
-            "fn @{}({}) -> {} {{",
-            &self.name, param_fmt, &ty.return_type
-        )?;
+        write!(f, "(fn {} ({}) {}", &self.name, param_fmt, &ty.return_type)?;
         let mut ctx = TacFormatCtx {
             i_set: IndexSet::new(),
         };
 
-        // let mut reverse_dfs_path =
-        //     BiasedRevPostOrderDfs::new(&self.basic_blocks, self.starting_block);
-        // while let Some(k) = reverse_dfs_path.next(&self.basic_blocks) {
         for (k, v) in self.bb_iter() {
-            writeln!(f, "bb{}:", k.unique_num())?;
+            writeln!(f)?;
+            write!(f, "\t(bb{} (", k.unique_num())?;
             if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {
                     let i = self.instructions_arena.get(cur_idx).unwrap();
                     let cur_id = ctx.var_id(cur_idx);
-                    write!(f, "\t")?;
-                    i.fmt_ctx(f, (cur_id, &mut ctx))?;
+
                     writeln!(f)?;
+                    write!(f, "\t\t")?;
+                    i.fmt_ctx(f, (cur_id, &mut ctx))?;
+
                     match i.next {
                         Some(x) => cur_idx = x,
                         None => {
@@ -233,11 +227,12 @@ impl std::fmt::Display for TacFunc {
                     }
                 }
             }
-            write!(f, "\t")?;
+            writeln!(f, ")")?;
+            write!(f, "\t\t")?;
             v.branch.fmt_ctx(f, &mut ctx)?;
-            writeln!(f)?;
+            write!(f, ")")?;
         }
-        writeln!(f, "}}")?;
+        writeln!(f, ")")?;
         Ok(())
     }
 }

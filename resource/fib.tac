@@ -22,10 +22,3 @@
         (%0 i32 call fib (15)))
         (return %0)))
 
-(%5678 nil call @intrinsinc:putint (123))
-
-i32
-b32
-(ptr <type>)
-(fn (<param>*) <ret>)
-()

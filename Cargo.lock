@@ -61,6 +61,7 @@ name = "azuki-tac"
 version = "0.1.0"
 dependencies = [
  "anymap",
+ "azuki-tacvm",
  "bit-set",
  "enum-as-inner",
  "indexmap",

@@ -12,5 +12,4 @@ smol_str = "0.1"
 
 [dev-dependencies]
 azuki-syntax = { path = "../syntax" }
-azuki-tac = { path = "../tac" }
 azuki-tacgen = { path = "../tacgen" }

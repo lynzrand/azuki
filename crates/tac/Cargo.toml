@@ -23,3 +23,6 @@ lexpr = { version = "0.2", optional = true }
 default = ["parser"]
 parser = ["num", "thiserror", "lexpr"]
 visit = ["petgraph"]
+
+[dev-dependencies]
+azuki-tacvm = { path = "../vm" }
