@@ -384,6 +384,69 @@ fn parse_inst(val: LRef<'_>, ctx: &mut VariableNamingCtx) -> Result<(), ParseErr
     Ok(())
 }
 
+fn parse_branch(val: LRef, ctx: &mut VariableNamingCtx) -> Result<Branch, ParseError> {
+    let mut iter = val
+        .list_iter()
+        .ok_or_else(|| ParseError::expect_span("Branch instruction", val.span()))?;
+
+    let name = iter
+        .next()
+        .ok_or_else(|| ParseError::expect_pos("branch instruction name", val.span().end()))?;
+    let name_span = name.span();
+    let name = name
+        .as_name()
+        .ok_or_else(|| ParseError::expect_span("branch instruction name", name.span()))?;
+
+    Ok(match name {
+        "br" => {
+            let target = parse_bb_id(
+                iter.next().ok_or_else(|| {
+                    ParseError::expect_pos("target basic block", val.span().end())
+                })?,
+                ctx,
+            )?;
+            Branch::Jump(target)
+        }
+        "brif" => {
+            let cond = parse_value(
+                iter.next()
+                    .ok_or_else(|| ParseError::expect_pos("condition", val.span().end()))?,
+                ctx,
+            )?;
+
+            let bb_true = parse_bb_id(
+                iter.next().ok_or_else(|| {
+                    ParseError::expect_pos("target basic block", val.span().end())
+                })?,
+                ctx,
+            )?;
+            let bb_false = parse_bb_id(
+                iter.next().ok_or_else(|| {
+                    ParseError::expect_pos("target basic block", val.span().end())
+                })?,
+                ctx,
+            )?;
+            Branch::CondJump {
+                cond,
+                if_true: bb_true,
+                if_false: bb_false,
+            }
+        }
+        "return" => {
+            let val = iter.next();
+            let val = val.map(|x| parse_value(x, ctx)).transpose()?;
+            Branch::Return(val)
+        }
+        "unreachable" => Branch::Unreachable,
+        _ => {
+            return Err(ParseError::expect_span(
+                "br, brif, return or unreachable",
+                name_span,
+            ))
+        }
+    })
+}
+
 // (<bb_id> <instruction_list> <branch>)
 fn parse_bb(val: LRef<'_>, ctx: &mut VariableNamingCtx) -> Result<(), ParseError> {
     let mut list = val
@@ -405,7 +468,14 @@ fn parse_bb(val: LRef<'_>, ctx: &mut VariableNamingCtx) -> Result<(), ParseError
         .map(|x| parse_inst(x, ctx))
         .collect::<Result<Vec<_>, _>>()?;
 
-    todo!()
+    let branch = parse_branch(
+        list.next()
+            .ok_or_else(|| ParseError::expect_pos("branch instruction", val.span().end()))?,
+        ctx,
+    )?;
+
+    ctx.func.current_bb_mut().branch = branch;
+    Ok(())
 }
 
 // (fn <name> <param> <return> ...<basic-blocks>)

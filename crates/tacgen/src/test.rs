@@ -1,7 +1,6 @@
 #![cfg(test)]
 
 use azuki_syntax::parse;
-use azuki_tac::parser::EasyParser;
 use azuki_tacvm::Vm;
 
 #[test]
