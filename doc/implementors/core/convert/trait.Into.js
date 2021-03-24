@@ -1,7 +1,6 @@
 (function() {var implementors = {};
 implementors["anymap"] = [{"text":"impl&lt;A:&nbsp;?Sized + UncheckedAnyExt&gt; Into&lt;RawMap&lt;A&gt;&gt; for Map&lt;A&gt;","synthetic":false,"types":[]}];
 implementors["azuki_tac"] = [{"text":"impl Into&lt;Index&gt; for BBId","synthetic":false,"types":[]},{"text":"impl Into&lt;u32&gt; for BBId","synthetic":false,"types":[]}];
-implementors["combine"] = [{"text":"impl&lt;T, E&gt; Into&lt;Result&lt;Commit&lt;T&gt;, Commit&lt;Tracked&lt;E&gt;&gt;&gt;&gt; for ParseResult&lt;T, E&gt;","synthetic":false,"types":[]},{"text":"impl&lt;O, E&gt; Into&lt;Result&lt;(O, Commit&lt;()&gt;), Commit&lt;Tracked&lt;E&gt;&gt;&gt;&gt; for ParseResult&lt;O, E&gt;","synthetic":false,"types":[]}];
 implementors["num_rational"] = [{"text":"impl&lt;T&gt; Into&lt;(T, T)&gt; for Ratio&lt;T&gt;","synthetic":false,"types":[]}];
 implementors["petgraph"] = [{"text":"impl&lt;T:&nbsp;Zero&gt; Into&lt;Option&lt;T&gt;&gt; for NotZero&lt;T&gt;","synthetic":false,"types":[]}];
 implementors["vec1"] = [{"text":"impl&lt;T&gt; Into&lt;Vec&lt;T, Global&gt;&gt; for Vec1&lt;T&gt;","synthetic":false,"types":[]},{"text":"impl&lt;T&gt; Into&lt;Rc&lt;[T]&gt;&gt; for Vec1&lt;T&gt;","synthetic":false,"types":[]},{"text":"impl&lt;T&gt; Into&lt;Arc&lt;[T]&gt;&gt; for Vec1&lt;T&gt;","synthetic":false,"types":[]},{"text":"impl&lt;T&gt; Into&lt;Box&lt;[T], Global&gt;&gt; for Vec1&lt;T&gt;","synthetic":false,"types":[]},{"text":"impl&lt;T&gt; Into&lt;VecDeque&lt;T&gt;&gt; for Vec1&lt;T&gt;","synthetic":false,"types":[]}];

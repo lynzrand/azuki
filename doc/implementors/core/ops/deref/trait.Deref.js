@@ -2,7 +2,7 @@
 implementors["azuki_syntax"] = [{"text":"impl&lt;T&gt; Deref for Mut&lt;T&gt;","synthetic":false,"types":[]},{"text":"impl&lt;T&gt; Deref for MutWeak&lt;T&gt;","synthetic":false,"types":[]}];
 implementors["azuki_tac"] = [{"text":"impl&lt;'a, TVar&gt; Deref for FuncBuilder&lt;'a, TVar&gt;","synthetic":false,"types":[]}];
 implementors["beef"] = [{"text":"impl&lt;T:&nbsp;?Sized, U&gt; Deref for Cow&lt;'_, T, U&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Beef,<br>&nbsp;&nbsp;&nbsp;&nbsp;U: Capacity,&nbsp;</span>","synthetic":false,"types":[]}];
-implementors["bytes"] = [{"text":"impl Deref for Bytes","synthetic":false,"types":[]},{"text":"impl Deref for BytesMut","synthetic":false,"types":[]}];
+implementors["lexpr"] = [{"text":"impl&lt;'a&gt; Deref for Ref&lt;'a&gt;","synthetic":false,"types":[]}];
 implementors["petgraph"] = [{"text":"impl&lt;'a, G&gt; Deref for Frozen&lt;'a, G&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'b, T&gt; Deref for Ptr&lt;'b, T&gt;","synthetic":false,"types":[]}];
 implementors["regex_syntax"] = [{"text":"impl Deref for Literal","synthetic":false,"types":[]}];
 implementors["smol_str"] = [{"text":"impl Deref for SmolStr","synthetic":false,"types":[]}];

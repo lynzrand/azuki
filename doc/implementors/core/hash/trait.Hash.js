@@ -3,8 +3,8 @@ implementors["azuki_tac"] = [{"text":"impl Hash for BBId","synthetic":false,"typ
 implementors["beef"] = [{"text":"impl&lt;T:&nbsp;?Sized, U&gt; Hash for Cow&lt;'_, T, U&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Hash + Beef,<br>&nbsp;&nbsp;&nbsp;&nbsp;U: Capacity,&nbsp;</span>","synthetic":false,"types":[]}];
 implementors["bit_set"] = [{"text":"impl&lt;B:&nbsp;BitBlock&gt; Hash for BitSet&lt;B&gt;","synthetic":false,"types":[]}];
 implementors["bit_vec"] = [{"text":"impl&lt;B:&nbsp;BitBlock&gt; Hash for BitVec&lt;B&gt;","synthetic":false,"types":[]}];
-implementors["bytes"] = [{"text":"impl Hash for Bytes","synthetic":false,"types":[]},{"text":"impl Hash for BytesMut","synthetic":false,"types":[]}];
 implementors["fixedbitset"] = [{"text":"impl Hash for FixedBitSet","synthetic":false,"types":[]}];
+implementors["lexpr"] = [{"text":"impl Hash for Span","synthetic":false,"types":[]},{"text":"impl Hash for Position","synthetic":false,"types":[]}];
 implementors["num_bigint"] = [{"text":"impl Hash for Sign","synthetic":false,"types":[]},{"text":"impl Hash for BigInt","synthetic":false,"types":[]},{"text":"impl Hash for BigUint","synthetic":false,"types":[]}];
 implementors["num_complex"] = [{"text":"impl&lt;T:&nbsp;Hash&gt; Hash for Complex&lt;T&gt;","synthetic":false,"types":[]}];
 implementors["num_rational"] = [{"text":"impl&lt;T:&nbsp;Clone + Integer + Hash&gt; Hash for Ratio&lt;T&gt;","synthetic":false,"types":[]}];

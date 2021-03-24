@@ -543,59 +543,6 @@
 <span id="540">540</span>
 <span id="541">541</span>
 <span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#![<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parser&quot;</span>)]</span>
 <span class="doccomment">//! Module for parsing the text representation of Azuki TAC into real code.</span>
@@ -603,28 +550,25 @@
 <span class="doccomment">//! An ANTLR specification of Azuki TAC&#39;s text representation can be found in</span>
 <span class="doccomment">//! `/docs/src/tac/AzukiTac.g4`.</span>
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">combine</span>::<span class="ident">easy</span> <span class="kw">as</span> <span class="ident">easy_parse</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">combine</span>::<span class="ident">stream</span> <span class="kw">as</span> <span class="ident">parse_stream</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">combine</span>::{<span class="ident">EasyParser</span>, <span class="ident">Parser</span>, <span class="ident">Stream</span>};
-
-<span class="kw">use</span> <span class="ident">combine</span>::{
-    <span class="ident">attempt</span>, <span class="ident">between</span>, <span class="ident">choice</span>, <span class="ident">eof</span>,
-    <span class="ident">error</span>::<span class="ident">StreamError</span>,
-    <span class="ident">many</span>, <span class="ident">many1</span>, <span class="ident">one_of</span>, <span class="ident">optional</span>, <span class="ident">parser</span>,
-    <span class="ident">parser</span>::{
-        <span class="ident">char</span>::{<span class="ident">alpha_num</span>, <span class="ident">char</span>, <span class="ident">digit</span>, <span class="ident">hex_digit</span>, <span class="ident">newline</span>, <span class="ident">spaces</span> <span class="kw">as</span> <span class="ident">nl_spaces</span>, <span class="ident">string</span>},
-        <span class="ident">combinator</span>::<span class="ident">ignore</span>,
-    },
-    <span class="ident">stream</span>::<span class="ident">StreamErrorFor</span>,
-    <span class="ident">ParseError</span>,
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">borrow</span>::{<span class="ident">Borrow</span>, <span class="ident">Cow</span>},
+    <span class="ident">collections</span>::<span class="ident">BTreeMap</span>,
+    <span class="ident">fs</span>::<span class="ident">Permissions</span>,
+    <span class="ident">io</span>::<span class="ident">stderr</span>,
+    <span class="ident">str</span>::<span class="ident">FromStr</span>,
 };
-<span class="kw">use</span> <span class="ident">smol_str</span>::<span class="ident">SmolStr</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cell</span>::<span class="ident">RefCell</span>, <span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">fmt</span>::<span class="ident">Display</span>, <span class="ident">ops</span>::<span class="ident">Neg</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">BBId</span>, <span class="ident">BinaryInst</span>, <span class="ident">BinaryOp</span>, <span class="ident">Branch</span>, <span class="ident">FunctionCall</span>, <span class="ident">Inst</span>, <span class="ident">InstId</span>, <span class="ident">InstKind</span>,
-    <span class="ident">NumericTy</span>, <span class="ident">Program</span>, <span class="ident">TacFunc</span>, <span class="ident">Ty</span>, <span class="ident">TyKind</span>, <span class="ident">Value</span>,
+    <span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">BBId</span>, <span class="ident">BasicBlock</span>, <span class="ident">BinaryInst</span>, <span class="ident">BinaryOp</span>, <span class="ident">Branch</span>, <span class="ident">FunctionCall</span>, <span class="ident">Inst</span>,
+    <span class="ident">InstId</span>, <span class="ident">InstKind</span>, <span class="ident">NumericTy</span>, <span class="ident">Program</span>, <span class="ident">Tac</span>, <span class="ident">TacFunc</span>, <span class="ident">Ty</span>, <span class="ident">TyKind</span>, <span class="ident">Value</span>,
 };
+
+<span class="kw">use</span> <span class="ident">lexpr</span>::{
+    <span class="ident">datum</span>::<span class="ident">Ref</span> <span class="kw">as</span> <span class="ident">LRef</span>,
+    <span class="ident">datum</span>::{<span class="ident">ListIter</span>, <span class="ident">Span</span>},
+    <span class="ident">Datum</span>, <span class="ident">Printer</span>, <span class="ident">Value</span> <span class="kw">as</span> <span class="ident">LexprVal</span>,
+};
+<span class="kw">use</span> <span class="ident">ParseErrorKind</span>::<span class="kw-2">*</span>;
 
 <span class="kw">struct</span> <span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;f</span><span class="op">&gt;</span> {
     <span class="ident">func</span>: <span class="ident">FuncEditor</span><span class="op">&lt;</span><span class="lifetime">&#39;f</span><span class="op">&gt;</span>,
@@ -668,529 +612,479 @@
     }
 }
 
-<span class="doccomment">/// Matches zero or more non-newline space characters</span>
-<span class="kw">fn</span> <span class="ident">spaces0</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    <span class="ident">many</span>(<span class="ident">one_of</span>(<span class="string">&quot; \t&quot;</span>.<span class="ident">chars</span>()).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()))
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ParseErrorKind</span> {
+    <span class="ident">ExpressionErr</span>(<span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">Error</span>),
+    <span class="ident">ExpectFunctionDef</span>,
+    <span class="ident">ExpectName</span>(<span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span>),
+    <span class="ident">Expect</span>(<span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span>),
 }
 
-<span class="doccomment">/// Matches one or more non-newline space characters, or the end of a line</span>
-<span class="kw">fn</span> <span class="ident">spaces1</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    <span class="ident">many1</span>(<span class="ident">one_of</span>(<span class="string">&quot; \t&quot;</span>.<span class="ident">chars</span>()).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()))
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Position</span> {
+    <span class="prelude-val">None</span>,
+    <span class="ident">Span</span>(<span class="ident">lexpr</span>::<span class="ident">datum</span>::<span class="ident">Span</span>),
+    <span class="ident">Position</span>(<span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">Position</span>),
+    <span class="ident">Location</span>(<span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">error</span>::<span class="ident">Location</span>),
 }
 
-<span class="doccomment">/// Matches some spaces, a new line, and some other spaces or newlines</span>
-<span class="kw">fn</span> <span class="ident">nl1</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    (
-        <span class="ident">spaces0</span>(),
-        <span class="ident">choice</span>((
-            <span class="ident">string</span>(<span class="string">&quot;\r\n&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()),
-            <span class="ident">char</span>(<span class="string">&#39;\n&#39;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()),
-            <span class="ident">char</span>(<span class="string">&#39;\r&#39;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()),
-        )),
-        <span class="ident">nl_spaces</span>(),
-    )
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ParseError</span> {
+    <span class="ident">kind</span>: <span class="ident">ParseErrorKind</span>,
+    <span class="ident">at</span>: <span class="ident">Position</span>,
 }
 
-<span class="doccomment">/// Parse a comma-separated list. The internal parser should skip spaces.</span>
-<span class="kw">fn</span> <span class="ident">comma_sep_list</span><span class="op">&lt;</span><span class="ident">TOut</span>, <span class="ident">TList</span>, <span class="ident">I</span>, <span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">parse_internal</span>: <span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">TList</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">P</span>: <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">TOut</span><span class="op">&gt;</span>,
-    <span class="ident">I</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-    <span class="ident">I</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">I</span>::<span class="ident">Token</span>, <span class="ident">I</span>::<span class="ident">Range</span>, <span class="ident">I</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-    <span class="ident">TList</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">TOut</span><span class="op">&gt;</span>,
-{
-    <span class="ident">combine</span>::<span class="ident">sep_by</span>(<span class="ident">parse_internal</span>, <span class="ident">char</span>(<span class="string">&#39;,&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()))
-}
-
-<span class="kw">fn</span> <span class="ident">ident</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    (<span class="ident">char</span>(<span class="string">&#39;@&#39;</span>), <span class="ident">many1</span>(<span class="ident">alpha_num</span>())).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="number">1</span>)
-}
-
-<span class="kw">fn</span> <span class="ident">unsigned_dec_number</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">N</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-    <span class="ident">I</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">I</span>::<span class="ident">Token</span>, <span class="ident">I</span>::<span class="ident">Range</span>, <span class="ident">I</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-    <span class="ident">N</span>: <span class="ident">num</span>::<span class="ident">Num</span>,
-    <span class="ident">N</span>::<span class="ident">FromStrRadixErr</span>: <span class="ident">Display</span>,
-{
-    <span class="ident">many1</span>(<span class="ident">digit</span>()).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">digits</span>: <span class="ident">String</span><span class="op">|</span> {
-        <span class="ident">N</span>::<span class="ident">from_str_radix</span>(<span class="kw-2">&amp;</span><span class="ident">digits</span>, <span class="number">10</span>).<span class="ident">map_err</span>(<span class="ident">StreamErrorFor</span>::<span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>::<span class="ident">message_format</span>)
-    })
-}
-
-<span class="kw">fn</span> <span class="ident">dec_number</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">N</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-    <span class="ident">I</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">I</span>::<span class="ident">Token</span>, <span class="ident">I</span>::<span class="ident">Range</span>, <span class="ident">I</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-    <span class="ident">N</span>: <span class="ident">num</span>::<span class="ident">Num</span> <span class="op">+</span> <span class="ident">Neg</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">N</span><span class="op">&gt;</span>,
-    <span class="ident">N</span>::<span class="ident">FromStrRadixErr</span>: <span class="ident">Display</span>,
-{
-    (
-        <span class="ident">optional</span>(<span class="ident">choice</span>((<span class="ident">char</span>(<span class="string">&#39;-&#39;</span>), <span class="ident">char</span>(<span class="string">&#39;+&#39;</span>)))),
-        <span class="ident">unsigned_dec_number</span>(),
-    )
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">neg</span>, <span class="ident">x</span>): (<span class="kw">_</span>, <span class="ident">N</span>)<span class="op">|</span> <span class="kw">if</span> <span class="ident">neg</span> <span class="op">=</span><span class="op">=</span> <span class="prelude-val">Some</span>(<span class="string">&#39;-&#39;</span>) { <span class="op">-</span><span class="ident">x</span> } <span class="kw">else</span> { <span class="ident">x</span> })
-}
-
-<span class="kw">fn</span> <span class="ident">hex_number</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">N</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-    <span class="ident">I</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">I</span>::<span class="ident">Token</span>, <span class="ident">I</span>::<span class="ident">Range</span>, <span class="ident">I</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-    <span class="ident">N</span>: <span class="ident">num</span>::<span class="ident">Num</span>,
-    <span class="ident">N</span>::<span class="ident">FromStrRadixErr</span>: <span class="ident">Display</span>,
-{
-    (<span class="ident">string</span>(<span class="string">&quot;0x&quot;</span>), <span class="ident">many1</span>(<span class="ident">hex_digit</span>())).<span class="ident">and_then</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">digits</span>)<span class="op">|</span> {
-        <span class="kw">let</span> <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="ident">String</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">digits</span>;
-        <span class="ident">N</span>::<span class="ident">from_str_radix</span>(<span class="kw-2">&amp;</span><span class="ident">digits</span>, <span class="number">16</span>).<span class="ident">map_err</span>(<span class="ident">StreamErrorFor</span>::<span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>::<span class="ident">message_format</span>)
-    })
-}
-
-<span class="kw">fn</span> <span class="ident">number</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">i64</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-    <span class="ident">Input</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">Input</span>::<span class="ident">Token</span>, <span class="ident">Input</span>::<span class="ident">Range</span>, <span class="ident">Input</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-{
-    (<span class="ident">char</span>(<span class="string">&#39;#&#39;</span>), <span class="ident">choice</span>((<span class="ident">hex_number</span>(), <span class="ident">dec_number</span>()))).<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">num</span>)<span class="op">|</span> <span class="ident">num</span>)
-}
-
-<span class="kw">fn</span> <span class="ident">variable</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">usize</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-    <span class="ident">Input</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">Input</span>::<span class="ident">Token</span>, <span class="ident">Input</span>::<span class="ident">Range</span>, <span class="ident">Input</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-{
-    (<span class="ident">char</span>(<span class="string">&#39;%&#39;</span>), <span class="ident">unsigned_dec_number</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">usize</span><span class="op">&gt;</span>()).<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">digits</span>)<span class="op">|</span> <span class="ident">digits</span>)
-}
-
-<span class="kw">fn</span> <span class="ident">value</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-    <span class="ident">Input</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">Input</span>::<span class="ident">Token</span>, <span class="ident">Input</span>::<span class="ident">Range</span>, <span class="ident">Input</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-{
-    <span class="ident">choice</span>((
-        <span class="ident">number</span>().<span class="ident">map</span>(<span class="ident">Value</span>::<span class="ident">Imm</span>),
-        <span class="ident">variable</span>().<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="ident">ctx</span>.<span class="ident">borrow_mut</span>().<span class="ident">declared_var</span>(<span class="ident">v</span>))),
-    ))
-}
-
-<span class="kw">fn</span> <span class="ident">bb_id</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">u32</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-    <span class="ident">Input</span>::<span class="ident">Error</span>: <span class="ident">ParseError</span><span class="op">&lt;</span><span class="ident">Input</span>::<span class="ident">Token</span>, <span class="ident">Input</span>::<span class="ident">Range</span>, <span class="ident">Input</span>::<span class="ident">Position</span><span class="op">&gt;</span>,
-{
-    (<span class="ident">string</span>(<span class="string">&quot;bb&quot;</span>), <span class="ident">unsigned_dec_number</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">u32</span><span class="op">&gt;</span>()).<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">bb_id</span>)<span class="op">|</span> <span class="ident">bb_id</span>)
-}
-<span class="comment">// ========= Types ==========</span>
-
-<span class="kw">fn</span> <span class="ident">int_ty</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ty</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    (<span class="ident">char</span>(<span class="string">&#39;i&#39;</span>), <span class="ident">unsigned_dec_number</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">u8</span><span class="op">&gt;</span>()).<span class="ident">and_then</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">size</span>)<span class="op">|</span> {
-        <span class="kw">if</span> <span class="ident">size</span> <span class="op">&gt;</span> <span class="number">64</span> <span class="op">|</span><span class="op">|</span> (<span class="ident">size</span> <span class="op">&amp;</span> <span class="ident">size</span>.<span class="ident">wrapping_sub</span>(<span class="number">1</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">StreamErrorFor</span>::<span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>::<span class="ident">message_format</span>(<span class="macro">format_args</span><span class="macro">!</span>(
-                <span class="string">&quot;size {} must be smaller than 64 and is a power of 2&quot;</span>,
-                <span class="ident">size</span>
-            )));
+<span class="kw">impl</span> <span class="ident">ParseError</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">kind</span>: <span class="ident">ParseErrorKind</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseError</span> {
+        <span class="ident">ParseError</span> {
+            <span class="ident">kind</span>,
+            <span class="ident">at</span>: <span class="ident">Position</span>::<span class="prelude-val">None</span>,
         }
-        <span class="prelude-val">Ok</span>(<span class="ident">Ty</span>::<span class="ident">Numeric</span>(<span class="ident">NumericTy</span> {
-            <span class="ident">kind</span>: <span class="ident">TyKind</span>::<span class="ident">Int</span>,
-            <span class="ident">size</span>: <span class="ident">size</span> <span class="kw">as</span> <span class="ident">u8</span>,
-        }))
-    })
-}
+    }
 
-<span class="kw">fn</span> <span class="ident">bool_ty</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ty</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    (<span class="ident">char</span>(<span class="string">&#39;b&#39;</span>), <span class="ident">unsigned_dec_number</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">u8</span><span class="op">&gt;</span>()).<span class="ident">and_then</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">size</span>)<span class="op">|</span> {
-        <span class="kw">if</span> <span class="ident">size</span> <span class="op">&gt;</span> <span class="number">64</span> <span class="op">|</span><span class="op">|</span> (<span class="ident">size</span> <span class="op">&amp;</span> <span class="ident">size</span>.<span class="ident">wrapping_sub</span>(<span class="number">1</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">StreamErrorFor</span>::<span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>::<span class="ident">message_format</span>(<span class="macro">format_args</span><span class="macro">!</span>(
-                <span class="string">&quot;size {} must be smaller than 64 and is a power of 2&quot;</span>,
-                <span class="ident">size</span>
-            )));
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">spanned</span>(<span class="ident">kind</span>: <span class="ident">ParseErrorKind</span>, <span class="ident">span</span>: <span class="ident">lexpr</span>::<span class="ident">datum</span>::<span class="ident">Span</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseError</span> {
+        <span class="ident">ParseError</span> {
+            <span class="ident">kind</span>,
+            <span class="ident">at</span>: <span class="ident">Position</span>::<span class="ident">Span</span>(<span class="ident">span</span>),
         }
-        <span class="prelude-val">Ok</span>(<span class="ident">Ty</span>::<span class="ident">Numeric</span>(<span class="ident">NumericTy</span> {
-            <span class="ident">kind</span>: <span class="ident">TyKind</span>::<span class="ident">Bool</span>,
-            <span class="ident">size</span>: <span class="ident">size</span> <span class="kw">as</span> <span class="ident">u8</span>,
-        }))
-    })
-}
+    }
 
-<span class="kw">fn</span> <span class="ident">unit_ty</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ty</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    <span class="ident">string</span>(<span class="string">&quot;unit&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Ty</span>::<span class="ident">unit</span>())
-}
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">position</span>(<span class="ident">kind</span>: <span class="ident">ParseErrorKind</span>, <span class="ident">pos</span>: <span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParseError</span> {
+        <span class="ident">ParseError</span> {
+            <span class="ident">kind</span>,
+            <span class="ident">at</span>: <span class="ident">Position</span>::<span class="ident">Position</span>(<span class="ident">pos</span>),
+        }
+    }
 
-<span class="kw">fn</span> <span class="ident">func_ty</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ty</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    (
-        <span class="ident">string</span>(<span class="string">&quot;fn&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        <span class="ident">between</span>(
-            <span class="ident">char</span>(<span class="string">&#39;(&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">char</span>(<span class="string">&#39;)&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">comma_sep_list</span>(<span class="ident">ty</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>())).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        ),
-        <span class="ident">string</span>(<span class="string">&quot;-&gt;&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        <span class="ident">ty</span>(),
-    )
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">params</span>, <span class="kw">_</span>, <span class="ident">ret_ty</span>)<span class="op">|</span> <span class="ident">Ty</span>::<span class="ident">func_of</span>(<span class="ident">ret_ty</span>, <span class="ident">params</span>))
-}
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect_span</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">span</span>: <span class="ident">lexpr</span>::<span class="ident">datum</span>::<span class="ident">Span</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">spanned</span>(<span class="ident">Expect</span>(<span class="ident">reason</span>.<span class="ident">into</span>()), <span class="ident">span</span>)
+    }
 
-<span class="kw">fn</span> <span class="ident">_ty</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ty</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    <span class="ident">choice</span>((<span class="ident">int_ty</span>(), <span class="ident">bool_ty</span>(), <span class="ident">unit_ty</span>(), <span class="ident">func_ty</span>()))
-}
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect_pos</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">pos</span>: <span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">position</span>(<span class="ident">Expect</span>(<span class="ident">reason</span>.<span class="ident">into</span>()), <span class="ident">pos</span>)
+    }
 
-<span class="macro">parser</span><span class="macro">!</span> {
-    <span class="kw">fn</span> <span class="ident">ty</span> [<span class="ident">Input</span>]()(<span class="ident">Input</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Ty</span>
-    <span class="kw">where</span> [<span class="ident">Input</span>:<span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span><span class="op">=</span><span class="ident">char</span><span class="op">&gt;</span>] {
-        <span class="ident">_ty</span>()
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">Expect</span>(<span class="ident">reason</span>.<span class="ident">into</span>()))
     }
 }
 
-<span class="kw">fn</span> <span class="ident">binary_op</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">BinaryOp</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    <span class="ident">choice</span>([
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;add&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;sub&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;mul&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;div&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;gt&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;lt&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;ge&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;le&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;eq&quot;</span>)),
-        <span class="ident">attempt</span>(<span class="ident">string</span>(<span class="string">&quot;ne&quot;</span>)),
-    ])
-    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">i</span> {
-        <span class="string">&quot;add&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Add</span>,
-        <span class="string">&quot;sub&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Sub</span>,
-        <span class="string">&quot;mul&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Mul</span>,
-        <span class="string">&quot;div&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Div</span>,
-        <span class="string">&quot;gt&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Gt</span>,
-        <span class="string">&quot;lt&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Lt</span>,
-        <span class="string">&quot;ge&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Ge</span>,
-        <span class="string">&quot;le&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Le</span>,
-        <span class="string">&quot;eq&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Eq</span>,
-        <span class="string">&quot;ne&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BinaryOp</span>::<span class="ident">Ne</span>,
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
-    })
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ParseError</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">e</span>.<span class="ident">location</span>().<span class="ident">map_or</span>(<span class="ident">Position</span>::<span class="prelude-val">None</span>, <span class="ident">Position</span>::<span class="ident">Location</span>);
+        <span class="ident">ParseError</span> {
+            <span class="ident">kind</span>: <span class="ident">ExpressionErr</span>(<span class="ident">e</span>),
+            <span class="ident">at</span>: <span class="ident">loc</span>,
+        }
+    }
 }
 
-<span class="kw">fn</span> <span class="ident">binary_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">BinaryInst</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (
-        <span class="ident">binary_op</span>().<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">value</span>(<span class="ident">ctx</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">value</span>(<span class="ident">ctx</span>),
-    )
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">op</span>, <span class="ident">lhs</span>, <span class="ident">rhs</span>)<span class="op">|</span> <span class="ident">BinaryInst</span> { <span class="ident">op</span>, <span class="ident">lhs</span>, <span class="ident">rhs</span> })
+<span class="kw">trait</span> <span class="ident">WithPosition</span> {
+    <span class="kw">fn</span> <span class="ident">with_position</span>(<span class="self">self</span>, <span class="ident">at</span>: <span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>;
+    <span class="kw">fn</span> <span class="ident">with_position_if_none</span>(<span class="self">self</span>, <span class="ident">at</span>: <span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>;
 }
 
-<span class="kw">fn</span> <span class="ident">value_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    <span class="ident">value</span>(<span class="ident">ctx</span>)
+<span class="kw">impl</span> <span class="ident">WithPosition</span> <span class="kw">for</span> <span class="ident">ParseError</span> {
+    <span class="kw">fn</span> <span class="ident">with_position</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">at</span>: <span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">at</span> <span class="op">=</span> <span class="ident">at</span>;
+        <span class="self">self</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">with_position_if_none</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">at</span>: <span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Position</span>::<span class="prelude-val">None</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">at</span> {
+            <span class="self">self</span>.<span class="ident">at</span> <span class="op">=</span> <span class="ident">at</span>
+        }
+        <span class="self">self</span>
+    }
+}
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">WithPosition</span> <span class="kw">for</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">with_position</span>(<span class="self">self</span>, <span class="ident">at</span>: <span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">with_position</span>(<span class="ident">at</span>))
+    }
+
+    <span class="kw">fn</span> <span class="ident">with_position_if_none</span>(<span class="self">self</span>, <span class="ident">at</span>: <span class="ident">Position</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">with_position_if_none</span>(<span class="ident">at</span>))
+    }
 }
 
-<span class="kw">fn</span> <span class="ident">func_call_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">FunctionCall</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (
-        <span class="ident">string</span>(<span class="string">&quot;call&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">ident</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        <span class="ident">between</span>(
-            <span class="ident">string</span>(<span class="string">&quot;(&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">string</span>(<span class="string">&quot;)&quot;</span>),
-            <span class="ident">comma_sep_list</span>(<span class="ident">value</span>(<span class="ident">ctx</span>)).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        ),
-    )
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">func</span>, <span class="ident">params</span>)<span class="op">|</span> <span class="ident">FunctionCall</span> {
-            <span class="ident">name</span>: <span class="ident">func</span>.<span class="ident">into</span>(),
-            <span class="ident">params</span>,
-        })
+<span class="kw">fn</span> <span class="ident">expect_name</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">name</span>: <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="ident">val</span>.<span class="ident">value</span>().<span class="ident">as_name</span>().<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span> <span class="op">=</span><span class="op">=</span> <span class="ident">name</span>) {
+        <span class="prelude-val">Ok</span>(())
+    } <span class="kw">else</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">spanned</span>(
+            <span class="ident">ParseErrorKind</span>::<span class="ident">ExpectName</span>(<span class="ident">name</span>),
+            <span class="ident">val</span>.<span class="ident">span</span>(),
+        ))
+    }
 }
 
-<span class="kw">fn</span> <span class="ident">phi_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">BBId</span>, <span class="ident">InstId</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (
-        <span class="ident">string</span>(<span class="string">&quot;phi&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        <span class="ident">between</span>(
-            <span class="ident">char</span>(<span class="string">&#39;[&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">char</span>(<span class="string">&#39;]&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">comma_sep_list</span>(<span class="ident">between</span>(
-                <span class="ident">char</span>(<span class="string">&#39;(&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-                <span class="ident">char</span>(<span class="string">&#39;)&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-                (
-                    <span class="ident">variable</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-                    <span class="ident">char</span>(<span class="string">&#39;,&#39;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-                    <span class="ident">bb_id</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-                )
-                    .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">var</span>, <span class="kw">_</span>, <span class="ident">bb</span>)<span class="op">|</span> {
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
-                        <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_var</span>(<span class="ident">var</span>);
-                        <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">bb</span>);
-                        (<span class="ident">bb</span>, <span class="ident">val</span>)
-                    }),
-            )),
-        ),
-    )
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">list</span>)<span class="op">|</span> <span class="ident">list</span>)
-}
-
-<span class="kw">fn</span> <span class="ident">param_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">usize</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (<span class="ident">string</span>(<span class="string">&quot;param&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()), <span class="ident">unsigned_dec_number</span>()).<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">i</span>)<span class="op">|</span> <span class="ident">i</span>)
-}
-
-<span class="kw">fn</span> <span class="ident">instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (
-        <span class="ident">variable</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()).<span class="ident">skip</span>(<span class="ident">string</span>(<span class="string">&quot;=&quot;</span>)).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        <span class="ident">ty</span>().<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">choice</span>((
-            <span class="ident">attempt</span>(<span class="ident">param_instruction</span>().<span class="ident">map</span>(<span class="ident">InstKind</span>::<span class="ident">Param</span>)),
-            <span class="ident">attempt</span>(<span class="ident">binary_instruction</span>(<span class="ident">ctx</span>).<span class="ident">map</span>(<span class="ident">InstKind</span>::<span class="ident">Binary</span>)),
-            <span class="ident">attempt</span>(<span class="ident">value_instruction</span>(<span class="ident">ctx</span>).<span class="ident">map</span>(<span class="ident">InstKind</span>::<span class="ident">Assign</span>)),
-            <span class="ident">attempt</span>(<span class="ident">func_call_instruction</span>(<span class="ident">ctx</span>).<span class="ident">map</span>(<span class="ident">InstKind</span>::<span class="ident">FunctionCall</span>)),
-            <span class="ident">attempt</span>(<span class="ident">phi_instruction</span>(<span class="ident">ctx</span>).<span class="ident">map</span>(<span class="ident">InstKind</span>::<span class="ident">Phi</span>)),
+<span class="kw">fn</span> <span class="ident">expect_opt_name</span>(
+    <span class="ident">val</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">name</span>: <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span>,
+    <span class="ident">parent_pos</span>: <span class="ident">lexpr</span>::<span class="ident">parse</span>::<span class="ident">Position</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">match</span> <span class="ident">val</span> {
+        <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">expect_name</span>(<span class="ident">v</span>, <span class="ident">name</span>),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">position</span>(
+            <span class="ident">ParseErrorKind</span>::<span class="ident">ExpectName</span>(<span class="ident">name</span>),
+            <span class="ident">parent_pos</span>,
         )),
-    )
-        .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">v</span>, <span class="ident">ty</span>, <span class="ident">kind</span>)<span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">inst</span> <span class="op">=</span> <span class="ident">Inst</span> { <span class="ident">kind</span>, <span class="ident">ty</span> };
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
-            <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_var</span>(<span class="ident">v</span>);
-            <span class="ident">ctx</span>.<span class="ident">set_var</span>(<span class="ident">idx</span>, <span class="ident">inst</span>);
-            <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">put_inst_after_current_place</span>(<span class="ident">idx</span>);
-        })
+    }
 }
 
-<span class="kw">fn</span> <span class="ident">branch_if_jump_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (
-        <span class="ident">string</span>(<span class="string">&quot;if&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">value</span>(<span class="ident">ctx</span>),
-        <span class="ident">string</span>(<span class="string">&quot;br&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">bb_id</span>(),
-        <span class="ident">string</span>(<span class="string">&quot;else&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">bb_id</span>(),
-    )
-        .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="kw">_</span>, <span class="ident">cond</span>, <span class="kw">_</span>, <span class="ident">if_true</span>, <span class="kw">_</span>, <span class="ident">if_false</span>)<span class="op">|</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
+<span class="kw">fn</span> <span class="ident">parsed_named_type</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ty</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">val</span>
+        .<span class="ident">as_name</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">spanned</span>(<span class="ident">Expect</span>(<span class="string">&quot;Type name&quot;</span>.<span class="ident">into</span>()), <span class="ident">val</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">ty_kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">name</span>.<span class="ident">chars</span>().<span class="ident">next</span>().<span class="ident">unwrap</span>() {
+        <span class="string">&#39;i&#39;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">TyKind</span>::<span class="ident">Int</span>,
+        <span class="string">&#39;b&#39;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">TyKind</span>::<span class="ident">Bool</span>,
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">spanned</span>(
+                <span class="ident">Expect</span>(<span class="string">&quot;Type starting with &#39;i&#39; or &#39;b&#39;&quot;</span>.<span class="ident">into</span>()),
+                <span class="ident">val</span>.<span class="ident">span</span>(),
+            ))
+        }
+    };
+    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">name</span>[<span class="number">1</span>..];
+    <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">u8</span>::<span class="ident">from_str</span>(<span class="ident">len</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+        <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;a valid number width, got {}&quot;</span>, <span class="ident">e</span>), <span class="ident">val</span>.<span class="ident">span</span>())
+    })<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">Ty</span>::<span class="ident">Numeric</span>(<span class="ident">NumericTy</span> {
+        <span class="ident">kind</span>: <span class="ident">ty_kind</span>,
+        <span class="ident">size</span>,
+    }))
+}
 
-            <span class="kw">let</span> <span class="ident">if_true</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">if_true</span>);
-            <span class="kw">let</span> <span class="ident">if_false</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">if_false</span>);
+<span class="kw">fn</span> <span class="ident">parse_type</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ty</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="ident">val</span>.<span class="ident">is_null</span>() {
+        <span class="prelude-val">Ok</span>(<span class="ident">Ty</span>::<span class="ident">unit</span>())
+    } <span class="kw">else</span> {
+        <span class="ident">parsed_named_type</span>(<span class="ident">val</span>)
+    }
+}
 
+<span class="kw">fn</span> <span class="ident">parse_bb_id</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BBId</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">val</span>
+        .<span class="ident">as_name</span>()
+        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">n</span>.<span class="ident">starts_with</span>(<span class="string">&quot;bb&quot;</span>).<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">u32</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>[<span class="number">2</span>..])))
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;a basic block ID number&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+            <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;basic block ID number, got {}&quot;</span>, <span class="ident">e</span>), <span class="ident">val</span>.<span class="ident">span</span>())
+        })<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">val</span>))
+}
+
+<span class="kw">fn</span> <span class="ident">parse_inst_id</span>(<span class="ident">val</span>: <span class="ident">LRef</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">InstId</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">val</span>
+        .<span class="ident">as_name</span>()
+        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">starts_with</span>(<span class="string">&#39;%&#39;</span>).<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">usize</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">x</span>[<span class="number">1</span>..])))
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;instruction ID number&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+            <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;instruction ID number, got {}&quot;</span>, <span class="ident">e</span>), <span class="ident">val</span>.<span class="ident">span</span>())
+        })<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">ctx</span>.<span class="ident">declared_var</span>(<span class="ident">id</span>))
+}
+
+<span class="kw">fn</span> <span class="ident">parse_value</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">val</span>.<span class="ident">as_i64</span>() {
+        <span class="prelude-val">Ok</span>(<span class="ident">Value</span>::<span class="ident">Imm</span>(<span class="ident">v</span>))
+    } <span class="kw">else</span> {
+        <span class="ident">parse_inst_id</span>(<span class="ident">val</span>, <span class="ident">ctx</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into</span>())
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">parse_binary_inst_rest</span>(
+    <span class="kw-2">mut</span> <span class="ident">val_iter</span>: <span class="ident">ListIter</span>,
+    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>,
+    <span class="ident">op</span>: <span class="ident">BinaryOp</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">InstKind</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">lhs</span> <span class="op">=</span> <span class="ident">val_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;left hand side value of binary op&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">lhs</span> <span class="op">=</span> <span class="ident">parse_value</span>(<span class="ident">lhs</span>, <span class="ident">ctx</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">rhs</span> <span class="op">=</span> <span class="ident">val_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;right hand side value of binary op&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">rhs</span> <span class="op">=</span> <span class="ident">parse_value</span>(<span class="ident">rhs</span>, <span class="ident">ctx</span>)<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">InstKind</span>::<span class="ident">Binary</span>(<span class="ident">BinaryInst</span> { <span class="ident">op</span>, <span class="ident">lhs</span>, <span class="ident">rhs</span> }))
+}
+
+<span class="kw">fn</span> <span class="ident">parse_param_rest</span>(<span class="kw-2">mut</span> <span class="ident">val_iter</span>: <span class="ident">ListIter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">InstKind</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="ident">val_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;an integer&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="ident">next</span>
+        .<span class="ident">as_u64</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;an integer&quot;</span>, <span class="ident">next</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">InstKind</span>::<span class="ident">Param</span>(<span class="ident">next</span> <span class="kw">as</span> <span class="ident">usize</span>))
+}
+
+<span class="kw">fn</span> <span class="ident">parse_call_rest</span>(
+    <span class="kw-2">mut</span> <span class="ident">val_iter</span>: <span class="ident">ListIter</span>,
+    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">InstKind</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">val_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;Function name&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">as_name</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;Function name should be a symbol or string&quot;</span>)
+            .<span class="ident">with_position</span>(<span class="ident">Position</span>::<span class="ident">Span</span>(<span class="ident">name</span>.<span class="ident">span</span>()))
+    })<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">param_list</span> <span class="op">=</span> <span class="ident">val_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;Function param list&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">param_list</span> <span class="op">=</span> <span class="ident">param_list</span>.<span class="ident">list_iter</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;Function param list should be a list&quot;</span>, <span class="ident">param_list</span>.<span class="ident">span</span>())
+    })<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">param_list</span>
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">parse_value</span>(<span class="ident">x</span>, <span class="ident">ctx</span>))
+        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">InstKind</span>::<span class="ident">FunctionCall</span>(<span class="ident">FunctionCall</span> {
+        <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">into</span>(),
+        <span class="ident">params</span>,
+    }))
+}
+
+<span class="kw">fn</span> <span class="ident">parse_phi_rest</span>(<span class="ident">val_iter</span>: <span class="ident">ListIter</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">InstKind</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">phi</span> <span class="op">=</span> <span class="ident">val_iter</span>
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">it</span> <span class="op">=</span> <span class="ident">x</span>
+                .<span class="ident">list_iter</span>()
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;phi item&quot;</span>, <span class="ident">x</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>;
+
+            <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="ident">it</span>
+                .<span class="ident">next</span>()
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;bb id&quot;</span>, <span class="ident">x</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="ident">parse_bb_id</span>(<span class="ident">bb</span>, <span class="ident">ctx</span>)<span class="question-mark">?</span>;
+
+            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">it</span>
+                .<span class="ident">next</span>()
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;inst id&quot;</span>, <span class="ident">x</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">parse_inst_id</span>(<span class="ident">id</span>, <span class="ident">ctx</span>)<span class="question-mark">?</span>;
+
+            <span class="prelude-val">Ok</span>((<span class="ident">bb</span>, <span class="ident">id</span>))
+        })
+        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">ParseError</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">InstKind</span>::<span class="ident">Phi</span>(<span class="ident">phi</span>))
+}
+
+<span class="kw">fn</span> <span class="ident">parse_inst_kind</span>(
+    <span class="kw-2">mut</span> <span class="ident">val_iter</span>: <span class="ident">ListIter</span>,
+    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">InstKind</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">val_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;instruction name or immediate&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">name_span</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">span</span>();
+
+    <span class="comment">// Early return - number case</span>
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="op">=</span> <span class="ident">name</span>.<span class="ident">as_i64</span>() {
+        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">InstKind</span>::<span class="ident">Assign</span>(<span class="ident">Value</span>::<span class="ident">Imm</span>(<span class="ident">n</span>)));
+    }
+
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>
+        .<span class="ident">as_name</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect</span>(<span class="string">&quot;instruction name&quot;</span>))<span class="question-mark">?</span>;
+
+    <span class="kw">match</span> <span class="ident">name</span> {
+        <span class="string">&quot;add&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Add</span>),
+        <span class="string">&quot;sub&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Sub</span>),
+        <span class="string">&quot;mul&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Mul</span>),
+        <span class="string">&quot;div&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Div</span>),
+        <span class="string">&quot;eq&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Eq</span>),
+        <span class="string">&quot;ne&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Ne</span>),
+        <span class="string">&quot;lt&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Lt</span>),
+        <span class="string">&quot;gt&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Gt</span>),
+        <span class="string">&quot;le&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Le</span>),
+        <span class="string">&quot;ge&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_binary_inst_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>, <span class="ident">BinaryOp</span>::<span class="ident">Ge</span>),
+
+        <span class="string">&quot;param&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_param_rest</span>(<span class="ident">val_iter</span>),
+
+        <span class="string">&quot;call&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_call_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>),
+
+        <span class="string">&quot;phi&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_phi_rest</span>(<span class="ident">val_iter</span>, <span class="ident">ctx</span>),
+
+        <span class="ident">n</span> <span class="kw">if</span> <span class="ident">n</span>.<span class="ident">starts_with</span>(<span class="string">&#39;%&#39;</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">usize</span>::<span class="ident">from_str</span>(<span class="ident">n</span>)
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;var id, got {}&quot;</span>, <span class="ident">e</span>), <span class="ident">name_span</span>))<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_var</span>(<span class="ident">id</span>);
+            <span class="prelude-val">Ok</span>(<span class="ident">InstKind</span>::<span class="ident">Assign</span>(<span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="ident">id</span>)))
+        }
+
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">expect_span</span>(
+            <span class="string">&quot;A valid instruction name&quot;</span>,
+            <span class="ident">name_span</span>,
+        )),
+    }
+}
+
+<span class="comment">// (&lt;dest&gt; &lt;ty&gt; &lt;opcode&gt; ...&lt;params&gt;)</span>
+<span class="kw">fn</span> <span class="ident">parse_inst</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">inst_iter</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">list_iter</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;An instruction represented as a list&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>())
+    })<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">inst_id</span> <span class="op">=</span> <span class="ident">inst_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;instruction ID number&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">inst_id</span> <span class="op">=</span> <span class="ident">parse_inst_id</span>(<span class="ident">inst_id</span>, <span class="ident">ctx</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">inst_iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;instruction value type&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">parse_type</span>(<span class="ident">ty</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="ident">parse_inst_kind</span>(<span class="ident">inst_iter</span>, <span class="ident">ctx</span>)
+        .<span class="ident">with_position_if_none</span>(<span class="ident">Position</span>::<span class="ident">Position</span>(<span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">inst</span> <span class="op">=</span> <span class="ident">Inst</span> { <span class="ident">kind</span>, <span class="ident">ty</span> };
+    <span class="kw-2">*</span><span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">inst_get_mut</span>(<span class="ident">inst_id</span>) <span class="op">=</span> <span class="ident">inst</span>;
+    <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">put_inst_after_current_place</span>(<span class="ident">inst_id</span>);
+
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">fn</span> <span class="ident">parse_branch</span>(<span class="ident">val</span>: <span class="ident">LRef</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Branch</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="ident">val</span>
+        .<span class="ident">list_iter</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;Branch instruction&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">iter</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;branch instruction name&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">name_span</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">span</span>();
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>
+        .<span class="ident">as_name</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;branch instruction name&quot;</span>, <span class="ident">name</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">name</span> {
+        <span class="string">&quot;br&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">target</span> <span class="op">=</span> <span class="ident">parse_bb_id</span>(
+                <span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+                    <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;target basic block&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>())
+                })<span class="question-mark">?</span>,
+                <span class="ident">ctx</span>,
+            )<span class="question-mark">?</span>;
+            <span class="ident">Branch</span>::<span class="ident">Jump</span>(<span class="ident">target</span>)
+        }
+        <span class="string">&quot;brif&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">cond</span> <span class="op">=</span> <span class="ident">parse_value</span>(
+                <span class="ident">iter</span>.<span class="ident">next</span>()
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;condition&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>,
+                <span class="ident">ctx</span>,
+            )<span class="question-mark">?</span>;
+
+            <span class="kw">let</span> <span class="ident">bb_true</span> <span class="op">=</span> <span class="ident">parse_bb_id</span>(
+                <span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+                    <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;target basic block&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>())
+                })<span class="question-mark">?</span>,
+                <span class="ident">ctx</span>,
+            )<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">bb_false</span> <span class="op">=</span> <span class="ident">parse_bb_id</span>(
+                <span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+                    <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;target basic block&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>())
+                })<span class="question-mark">?</span>,
+                <span class="ident">ctx</span>,
+            )<span class="question-mark">?</span>;
             <span class="ident">Branch</span>::<span class="ident">CondJump</span> {
                 <span class="ident">cond</span>,
-                <span class="ident">if_true</span>,
-                <span class="ident">if_false</span>,
+                <span class="ident">if_true</span>: <span class="ident">bb_true</span>,
+                <span class="ident">if_false</span>: <span class="ident">bb_false</span>,
             }
-        })
-}
-
-<span class="kw">fn</span> <span class="ident">branch_jump_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (<span class="ident">string</span>(<span class="string">&quot;br&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()), <span class="ident">bb_id</span>()).<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="kw">_</span>, <span class="ident">target</span>)<span class="op">|</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
-        <span class="kw">let</span> <span class="ident">target</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">target</span>);
-        <span class="ident">Branch</span>::<span class="ident">Jump</span>(<span class="ident">target</span>)
+        }
+        <span class="string">&quot;return&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">iter</span>.<span class="ident">next</span>();
+            <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">parse_value</span>(<span class="ident">x</span>, <span class="ident">ctx</span>)).<span class="ident">transpose</span>()<span class="question-mark">?</span>;
+            <span class="ident">Branch</span>::<span class="ident">Return</span>(<span class="ident">val</span>)
+        }
+        <span class="string">&quot;unreachable&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Branch</span>::<span class="ident">Unreachable</span>,
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">expect_span</span>(
+                <span class="string">&quot;br, brif, return or unreachable&quot;</span>,
+                <span class="ident">name_span</span>,
+            ))
+        }
     })
 }
 
-<span class="kw">fn</span> <span class="ident">unreachable_jump_instruction</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    <span class="ident">string</span>(<span class="string">&quot;unreachable&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Branch</span>::<span class="ident">Unreachable</span>)
+<span class="comment">// (&lt;bb_id&gt; &lt;instruction_list&gt; &lt;branch&gt;)</span>
+<span class="kw">fn</span> <span class="ident">parse_bb</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VariableNamingCtx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">list</span> <span class="op">=</span> <span class="ident">val</span>
+        .<span class="ident">list_iter</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_span</span>(<span class="string">&quot;Basic block definition&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">list</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;the ID of a basic block&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">parse_bb_id</span>(<span class="ident">id</span>, <span class="ident">ctx</span>)<span class="question-mark">?</span>;
+    <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">set_current_bb</span>(<span class="ident">id</span>);
+
+    <span class="comment">// parse instruction list</span>
+    <span class="kw">let</span> <span class="ident">instructions</span> <span class="op">=</span> <span class="ident">list</span>
+        .<span class="ident">next</span>()
+        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">list_iter</span>())
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;a list of instructions&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>;
+    <span class="ident">instructions</span>
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">parse_inst</span>(<span class="ident">x</span>, <span class="ident">ctx</span>))
+        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">branch</span> <span class="op">=</span> <span class="ident">parse_branch</span>(
+        <span class="ident">list</span>.<span class="ident">next</span>()
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">expect_pos</span>(<span class="string">&quot;branch instruction&quot;</span>, <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>()))<span class="question-mark">?</span>,
+        <span class="ident">ctx</span>,
+    )<span class="question-mark">?</span>;
+
+    <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">current_bb_mut</span>().<span class="ident">branch</span> <span class="op">=</span> <span class="ident">branch</span>;
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">last</span>) <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">last_bb</span> {
+        <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">bb_set_after</span>(<span class="ident">last</span>, <span class="ident">id</span>);
+    } <span class="kw">else</span> {
+        <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">first_block</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">id</span>);
+    }
+    <span class="ident">ctx</span>.<span class="ident">last_bb</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">id</span>);
+    <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn</span> <span class="ident">return_jump_instruction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    (<span class="ident">string</span>(<span class="string">&quot;return&quot;</span>), <span class="ident">optional</span>(<span class="ident">attempt</span>((<span class="ident">spaces1</span>(), <span class="ident">value</span>(<span class="ident">ctx</span>))))).<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="kw">_</span>, <span class="ident">val</span>)<span class="op">|</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
-        <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>);
-        <span class="ident">Branch</span>::<span class="ident">Return</span>(<span class="ident">val</span>)
-    })
-}
+<span class="comment">// (fn &lt;name&gt; &lt;param&gt; &lt;return&gt; ...&lt;basic-blocks&gt;)</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_function</span>(<span class="ident">val</span>: <span class="ident">LRef</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TacFunc</span>, <span class="ident">ParseError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">list</span> <span class="op">=</span> <span class="ident">val</span>
+        .<span class="ident">list_iter</span>()
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ParseError</span>::<span class="ident">spanned</span>(<span class="ident">ExpectFunctionDef</span>, <span class="ident">val</span>.<span class="ident">span</span>()))<span class="question-mark">?</span>;
 
-<span class="kw">fn</span> <span class="ident">jump_instructions</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    <span class="ident">choice</span>((
-        <span class="ident">attempt</span>(<span class="ident">unreachable_jump_instruction</span>().<span class="ident">skip</span>(<span class="ident">nl1</span>())),
-        <span class="ident">attempt</span>(<span class="ident">return_jump_instruction</span>(<span class="ident">ctx</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>())),
-        <span class="ident">attempt</span>(<span class="ident">branch_jump_instruction</span>(<span class="ident">ctx</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>())),
-        <span class="ident">attempt</span>(<span class="ident">branch_if_jump_instruction</span>(<span class="ident">ctx</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>())),
-    ))
-}
+    <span class="ident">expect_opt_name</span>(<span class="ident">list</span>.<span class="ident">next</span>(), <span class="string">&quot;fn&quot;</span>.<span class="ident">into</span>(), <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>())<span class="question-mark">?</span>;
 
-<span class="kw">fn</span> <span class="ident">single_basic_block</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    <span class="comment">// all parsers commit to the result</span>
-    (<span class="ident">bb_id</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()), <span class="ident">string</span>(<span class="string">&quot;:&quot;</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>()))
-        .<span class="ident">message</span>(<span class="string">&quot;When parsing BB label&quot;</span>)
-        .<span class="ident">then</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">id</span>, <span class="kw">_</span>)<span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">bb_id</span>;
-            {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>();
-                <span class="ident">bb_id</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">declared_bb</span>(<span class="ident">id</span>);
-                <span class="comment">// ctx.func.func.bb_seq.push(bb_id);</span>
-                <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">set_current_bb</span>(<span class="ident">bb_id</span>);
-                <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">last_bb</span> {
-                    <span class="prelude-val">Some</span>(<span class="ident">last_bb</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">bb_set_after</span>(<span class="ident">last_bb</span>, <span class="ident">bb_id</span>);
-                    }
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="ident">ctx</span>.<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">bb_set_first</span>(<span class="ident">bb_id</span>);
-                    }
-                }
-                <span class="ident">ctx</span>.<span class="ident">last_bb</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">bb_id</span>);
-            }
-            <span class="ident">many</span>(<span class="ident">attempt</span>(
-                <span class="ident">instruction</span>(<span class="ident">ctx</span>)
-                    .<span class="ident">message</span>(<span class="string">&quot;When parsing instruction&quot;</span>)
-                    .<span class="ident">skip</span>(<span class="ident">nl1</span>()),
-            ))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span>: ()<span class="op">|</span> ())
-            .<span class="ident">and</span>(<span class="ident">attempt</span>(
-                <span class="ident">jump_instructions</span>(<span class="ident">ctx</span>)
-                    .<span class="ident">message</span>(<span class="string">&quot;When parsing jump instructions&quot;</span>)
-                    .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">branch</span><span class="op">|</span> {
-                        <span class="ident">ctx</span>.<span class="ident">borrow_mut</span>().<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">bb_get_mut</span>(<span class="ident">bb_id</span>).<span class="ident">branch</span> <span class="op">=</span> <span class="ident">branch</span>;
-                    }),
-            ))
-        })
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
-}
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">list</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">as_name</span>().<span class="ident">unwrap</span>();
 
-<span class="kw">fn</span> <span class="ident">basic_blocks</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">Input</span><span class="op">&gt;</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">Input</span>, <span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>
-<span class="kw">where</span>
-    <span class="ident">Input</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
-{
-    <span class="comment">// this parser edits the internal states of `ctx`, thus returns `()`</span>
-    <span class="ident">many1</span>(<span class="ident">attempt</span>(<span class="ident">single_basic_block</span>(<span class="ident">ctx</span>)))
-}
-
-<span class="kw">fn</span> <span class="ident">func_header</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> (<span class="ident">SmolStr</span>, <span class="ident">Ty</span>)<span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span>,
-{
-    (
-        <span class="ident">string</span>(<span class="string">&quot;fn&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces1</span>()),
-        <span class="ident">ident</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        <span class="ident">between</span>(
-            <span class="ident">string</span>(<span class="string">&quot;(&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">string</span>(<span class="string">&quot;)&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">comma_sep_list</span>(<span class="ident">ty</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>())).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        ),
-        <span class="ident">string</span>(<span class="string">&quot;-&gt;&quot;</span>).<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-        <span class="ident">ty</span>(),
-    )
-        .<span class="ident">message</span>(<span class="string">&quot;When parsing function header&quot;</span>)
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">name</span>, <span class="ident">params</span>, <span class="kw">_</span>, <span class="ident">ret_ty</span>)<span class="op">|</span> (<span class="ident">name</span>.<span class="ident">into</span>(), <span class="ident">Ty</span>::<span class="ident">func_of</span>(<span class="ident">ret_ty</span>, <span class="ident">params</span>)))
-}
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_func</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">TacFunc</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    <span class="ident">combine</span>::<span class="ident">parser</span>::<span class="ident">function</span>::<span class="ident">parser</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">func</span> <span class="op">=</span> <span class="ident">TacFunc</span>::<span class="ident">default</span>();
-        <span class="kw">let</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="ident">VariableNamingCtx</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">func</span>));
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> (
-            <span class="ident">func_header</span>().<span class="ident">skip</span>(<span class="ident">spaces0</span>()),
-            <span class="ident">between</span>(
-                <span class="ident">string</span>(<span class="string">&quot;{&quot;</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>()),
-                <span class="ident">string</span>(<span class="string">&quot;}&quot;</span>).<span class="ident">skip</span>(<span class="ident">nl1</span>()),
-                <span class="ident">basic_blocks</span>(<span class="kw-2">&amp;</span><span class="ident">ctx</span>),
-            ),
+    <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">list</span>.<span class="ident">next</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">list_iter</span>()).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="ident">ParseError</span>::<span class="ident">position</span>(
+            <span class="ident">ParseErrorKind</span>::<span class="ident">Expect</span>(<span class="string">&quot;&#39;()&#39; or list of params&quot;</span>.<span class="ident">into</span>()),
+            <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>(),
         )
-            .<span class="ident">message</span>(<span class="string">&quot;When parsing function&quot;</span>)
-            .<span class="ident">parse_stream</span>(<span class="ident">i</span>);
-        <span class="ident">res</span>.<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">name</span>, <span class="ident">ty</span>), <span class="kw">_</span>)<span class="op">|</span> {
-            <span class="ident">func</span>.<span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>;
-            <span class="ident">func</span>.<span class="ident">ty</span> <span class="op">=</span> <span class="ident">ty</span>;
-            <span class="ident">func</span>
-        })
-        .<span class="ident">into_result</span>()
-    })
-}
+    })<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">map</span>(<span class="ident">parse_type</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_program</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Parser</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Program</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Token</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-{
-    <span class="ident">ignore</span>(<span class="ident">nl_spaces</span>())
-        .<span class="ident">and</span>(<span class="ident">many</span>(<span class="ident">parse_func</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> (<span class="ident">f</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">f</span>))))
-        .<span class="ident">skip</span>(<span class="ident">nl_spaces</span>())
-        .<span class="ident">skip</span>(<span class="ident">eof</span>())
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">functions</span>)<span class="op">|</span> <span class="ident">Program</span> { <span class="ident">functions</span> })
+    <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">list</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="ident">parse_type</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="ident">ParseError</span>::<span class="ident">position</span>(
+            <span class="ident">ParseErrorKind</span>::<span class="ident">Expect</span>(<span class="string">&quot;&#39;()&#39; or return type&quot;</span>.<span class="ident">into</span>()),
+            <span class="ident">val</span>.<span class="ident">span</span>().<span class="ident">end</span>(),
+        )
+    })<span class="question-mark">?</span><span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">func_ty</span> <span class="op">=</span> <span class="ident">Ty</span>::<span class="ident">func_of</span>(<span class="ident">ret</span>, <span class="ident">params</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">func</span> <span class="op">=</span> <span class="ident">TacFunc</span>::<span class="ident">new</span>(<span class="ident">name</span>.<span class="ident">into</span>(), <span class="ident">func_ty</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">VariableNamingCtx</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">func</span>);
+
+    <span class="ident">list</span>.<span class="ident">try_for_each</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">parse_bb</span>(<span class="ident">x</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ctx</span>))<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">func</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "azuki_tac";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

@@ -1,6 +1,6 @@
 (function() {var implementors = {};
 implementors["clap"] = [{"text":"impl Error for Error","synthetic":false,"types":[]}];
-implementors["combine"] = [{"text":"impl Error for UnexpectedParse","synthetic":false,"types":[]},{"text":"impl Error for StringStreamError","synthetic":false,"types":[]},{"text":"impl&lt;T, R, P&gt; Error for Errors&lt;T, R, P&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;P: Display + Debug,<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Display + Debug,<br>&nbsp;&nbsp;&nbsp;&nbsp;R: Display + Debug,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;E, P&gt; Error for Error&lt;E, P&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;E: Error,<br>&nbsp;&nbsp;&nbsp;&nbsp;P: Display + Debug,&nbsp;</span>","synthetic":false,"types":[]}];
+implementors["lexpr"] = [{"text":"impl Error for Error","synthetic":false,"types":[]}];
 implementors["num_bigint"] = [{"text":"impl Error for ParseBigIntError","synthetic":false,"types":[]},{"text":"impl&lt;T&gt; Error for TryFromBigIntError&lt;T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Debug,&nbsp;</span>","synthetic":false,"types":[]}];
 implementors["num_complex"] = [{"text":"impl&lt;E:&nbsp;Error&gt; Error for ParseComplexError&lt;E&gt;","synthetic":false,"types":[]}];
 implementors["num_rational"] = [{"text":"impl Error for ParseRatioError","synthetic":false,"types":[]}];
