@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]],"mod":[["opt",""]]});
+initSidebarItems({"fn":[["default_opts",""],["main",""]],"mod":[["opt",""]]});

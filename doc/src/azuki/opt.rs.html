@@ -84,7 +84,7 @@
 
     <span class="doccomment">/// The optimization passes to perform.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;opt&quot;</span>, <span class="ident">env</span> <span class="op">=</span> <span class="string">&quot;AZUKI_OPT&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">optimization</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">optimization</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
     <span class="kw">pub</span> <span class="ident">entry_point</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
