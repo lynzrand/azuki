@@ -156,7 +156,7 @@
     <span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">optimizer</span>::<span class="ident">FunctionOptimizer</span>, <span class="ident">BinaryInst</span>, <span class="ident">BinaryOp</span>, <span class="ident">Inst</span>, <span class="ident">InstId</span>,
     <span class="ident">InstKind</span>, <span class="ident">TacFunc</span>, <span class="ident">Value</span>,
 };
-<span class="kw">use</span> <span class="ident">tracing</span>::{<span class="ident">debug</span>, <span class="ident">info_span</span>, <span class="ident">trace</span>, <span class="ident">trace_span</span>};
+<span class="kw">use</span> <span class="ident">tracing</span>::{<span class="ident">debug</span>, <span class="ident">debug_span</span>, <span class="ident">info_span</span>, <span class="ident">trace</span>, <span class="ident">trace_span</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConstFolding</span> {}
 
@@ -180,7 +180,7 @@
         <span class="ident">_env</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">azuki_tac</span>::<span class="ident">optimizer</span>::<span class="ident">OptimizeEnvironment</span>,
         <span class="ident">func</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">azuki_tac</span>::<span class="ident">TacFunc</span>,
     ) {
-        <span class="kw">let</span> <span class="ident">_span</span> <span class="op">=</span> <span class="macro">info_span</span><span class="macro">!</span>(<span class="string">&quot;const_folding&quot;</span>, <span class="op">%</span><span class="ident">func</span>.<span class="ident">name</span>).<span class="ident">entered</span>();
+        <span class="kw">let</span> <span class="ident">_span</span> <span class="op">=</span> <span class="macro">debug_span</span><span class="macro">!</span>(<span class="string">&quot;const_folding&quot;</span>, <span class="op">%</span><span class="ident">func</span>.<span class="ident">name</span>).<span class="ident">entered</span>();
 
         <span class="kw">if</span> <span class="ident">func</span>.<span class="ident">first_block</span>.<span class="ident">is_none</span>() {
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Empty function&quot;</span>);
