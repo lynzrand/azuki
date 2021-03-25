@@ -621,6 +621,21 @@
 <span id="618">618</span>
 <span id="619">619</span>
 <span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! TAC (Three-Address Code) is the intermediate representation for Azuki programs.</span>
 <span class="doccomment">//! This code type is similar to [Cranelift IR][cranelift] and [LLVM IR][llvm].</span>
@@ -814,14 +829,29 @@
             <span class="ident">bb</span>.<span class="ident">tail</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">inst</span>);
         }
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">old_head</span>) <span class="op">=</span> <span class="ident">old_head</span> {
-            <span class="self">self</span>.<span class="ident">inst_set_before</span>(<span class="ident">old_head</span>, <span class="ident">inst</span>);
+            <span class="self">self</span>.<span class="ident">instructions_arena</span>.<span class="ident">attach_before</span>(<span class="ident">old_head</span>, <span class="ident">inst</span>);
         }
     }
 
     <span class="doccomment">/// Detaches this instruction from the instruction chain.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">inst_detach</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">InstId</span>) {
+        <span class="kw">let</span> <span class="ident">inst</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tac_get_mut</span>(<span class="ident">idx</span>);
+        <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">next</span>;
+        <span class="kw">let</span> <span class="ident">prev</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">prev</span>;
+        <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">bb</span>;
+
         <span class="self">self</span>.<span class="ident">instructions_arena</span>.<span class="ident">detach</span>(<span class="ident">idx</span>);
-        <span class="self">self</span>.<span class="ident">tac_get_mut</span>(<span class="ident">idx</span>).<span class="ident">bb</span> <span class="op">=</span> <span class="ident">BBId</span>::<span class="ident">default</span>();
+
+        <span class="kw">let</span> <span class="ident">inst</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tac_get_mut</span>(<span class="ident">idx</span>);
+        <span class="ident">inst</span>.<span class="ident">bb</span> <span class="op">=</span> <span class="ident">BBId</span>::<span class="ident">default</span>();
+
+        <span class="kw">let</span> <span class="ident">bb</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">bb_get_mut</span>(<span class="ident">bb</span>);
+        <span class="kw">if</span> <span class="ident">bb</span>.<span class="ident">head</span> <span class="op">=</span><span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) {
+            <span class="ident">bb</span>.<span class="ident">head</span> <span class="op">=</span> <span class="ident">next</span>;
+        }
+        <span class="kw">if</span> <span class="ident">bb</span>.<span class="ident">tail</span> <span class="op">=</span><span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) {
+            <span class="ident">bb</span>.<span class="ident">tail</span> <span class="op">=</span> <span class="ident">prev</span>;
+        }
     }
 
     <span class="doccomment">/// Remove the given instruction</span>
