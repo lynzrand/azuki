@@ -57,6 +57,9 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">str</span>::<span class="ident">FromStr</span>};
 
@@ -91,6 +94,9 @@
 
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
     <span class="kw">pub</span> <span class="ident">params</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
+
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;log&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;warn&quot;</span>, <span class="ident">env</span> <span class="op">=</span> <span class="string">&quot;AZUKI_LOG&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">log_level</span>: <span class="ident">tracing_subscriber</span>::<span class="ident">filter</span>::<span class="ident">LevelFilter</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>

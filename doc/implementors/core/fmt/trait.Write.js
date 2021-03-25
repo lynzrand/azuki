@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["matchers"] = [{"text":"impl&lt;'a, S, A&gt; Write for Matcher&lt;'a, S, A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;S: StateID,<br>&nbsp;&nbsp;&nbsp;&nbsp;A: DFA&lt;ID = S&gt;,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

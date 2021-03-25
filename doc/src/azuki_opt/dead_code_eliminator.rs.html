@@ -94,23 +94,30 @@
 <span id="91">91</span>
 <span id="92">92</span>
 <span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">HashSet</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">HashSet</span>, <span class="ident">VecDeque</span>};
 
 <span class="kw">use</span> <span class="ident">azuki_tac</span>::{<span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">optimizer</span>::<span class="ident">FunctionOptimizer</span>, <span class="ident">BBId</span>, <span class="ident">Branch</span>, <span class="ident">InstId</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">petgraph</span>::{<span class="ident">graphmap</span>::<span class="ident">DiGraphMap</span>, <span class="ident">visit</span>};
+<span class="kw">use</span> <span class="ident">tracing</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">info_span</span>};
 <span class="kw">use</span> <span class="ident">visit</span>::{<span class="ident">FilterNode</span>, <span class="ident">Walker</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DeadCodeEliminator</span> {
     <span class="ident">graph</span>: <span class="ident">DiGraphMap</span><span class="op">&lt;</span><span class="ident">InstId</span>, ()<span class="op">&gt;</span>,
-    <span class="ident">find_roots</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">InstId</span><span class="op">&gt;</span>,
+    <span class="ident">find_roots</span>: <span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">InstId</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">DeadCodeEliminator</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DeadCodeEliminator</span> {
         <span class="ident">DeadCodeEliminator</span> {
             <span class="ident">graph</span>: <span class="ident">DiGraphMap</span>::<span class="ident">new</span>(),
-            <span class="ident">find_roots</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(),
+            <span class="ident">find_roots</span>: <span class="ident">VecDeque</span>::<span class="ident">new</span>(),
         }
     }
 }
@@ -131,6 +138,9 @@
         <span class="ident">_env</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">azuki_tac</span>::<span class="ident">optimizer</span>::<span class="ident">OptimizeEnvironment</span>,
         <span class="ident">func</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">azuki_tac</span>::<span class="ident">TacFunc</span>,
     ) {
+        <span class="kw">let</span> <span class="ident">_span</span> <span class="op">=</span> <span class="macro">info_span</span><span class="macro">!</span>(<span class="string">&quot;dead-code-eliminator&quot;</span>, <span class="op">%</span><span class="ident">func</span>.<span class="ident">name</span>).<span class="ident">entered</span>();
+
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Constructing reference map&quot;</span>);
         <span class="comment">// Construct instruction reference map</span>
         <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">_bb</span>, <span class="ident">inst</span>) <span class="kw">in</span> <span class="ident">func</span>.<span class="ident">all_inst_unordered</span>() {
             <span class="kw">for</span> <span class="ident">source</span> <span class="kw">in</span> <span class="ident">inst</span>.<span class="ident">kind</span>.<span class="ident">param_op_iter</span>() {
@@ -139,20 +149,22 @@
         }
         <span class="kw">for</span> (<span class="kw">_</span>, <span class="ident">bb</span>) <span class="kw">in</span> <span class="ident">func</span>.<span class="ident">all_bb_unordered</span>() {
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Branch</span>::<span class="ident">Return</span>(<span class="prelude-val">Some</span>(<span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="ident">idx</span>))) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">bb</span>.<span class="ident">branch</span> {
-                <span class="self">self</span>.<span class="ident">find_roots</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
+                <span class="self">self</span>.<span class="ident">find_roots</span>.<span class="ident">push_back</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
             } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Branch</span>::<span class="ident">CondJump</span> {
                 <span class="ident">cond</span>: <span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="ident">x</span>),
                 ..
             } <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">bb</span>.<span class="ident">branch</span>
             {
-                <span class="self">self</span>.<span class="ident">find_roots</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">x</span>);
+                <span class="comment">// TODO: Add condition to find root only if it contributes to return value</span>
+                <span class="self">self</span>.<span class="ident">find_roots</span>.<span class="ident">push_back</span>(<span class="kw-2">*</span><span class="ident">x</span>);
             }
         }
 
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Finding reachable variables&quot;</span>);
         <span class="comment">// calculate spanning tree</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">retained</span> <span class="op">=</span> <span class="ident">HashSet</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dfs</span> <span class="op">=</span> <span class="ident">petgraph</span>::<span class="ident">visit</span>::<span class="ident">Dfs</span>::<span class="ident">empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">graph</span>);
-        <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">root</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">find_roots</span> {
+        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">root</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">find_roots</span>.<span class="ident">pop_front</span>() {
             <span class="ident">dfs</span>.<span class="ident">move_to</span>(<span class="ident">root</span>);
             <span class="ident">retained</span>.<span class="ident">insert</span>(<span class="ident">root</span>);
             <span class="kw">for</span> <span class="ident">point</span> <span class="kw">in</span> (<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dfs</span>).<span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">graph</span>) {
