@@ -24,7 +24,7 @@ pub struct Opt {
 
     /// The optimization passes to perform.
     #[clap(long = "opt", env = "AZUKI_OPT")]
-    pub optimization: Vec<String>,
+    pub optimization: Option<Vec<String>>,
 
     #[clap(long)]
     pub entry_point: Option<String>,

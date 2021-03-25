@@ -37,12 +37,18 @@ impl FunctionOptimizer for DeadCodeEliminator {
         // Construct instruction reference map
         for (idx, _bb, inst) in func.all_inst_unordered() {
             for source in inst.kind.param_op_iter() {
-                self.graph.add_edge(source, idx, ());
+                self.graph.add_edge(idx, source, ());
             }
         }
         for (_, bb) in func.all_bb_unordered() {
             if let Branch::Return(Some(Value::Dest(idx))) = &bb.branch {
-                self.find_roots.include_node(*idx);
+                self.find_roots.insert(*idx);
+            } else if let Branch::CondJump {
+                cond: Value::Dest(x),
+                ..
+            } = &bb.branch
+            {
+                self.find_roots.insert(*x);
             }
         }
 
@@ -51,6 +57,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
         let mut dfs = petgraph::visit::Dfs::empty(&self.graph);
         for &root in &self.find_roots {
             dfs.move_to(root);
+            retained.insert(root);
             for point in (&mut dfs).iter(&self.graph) {
                 retained.insert(point);
             }
@@ -64,9 +71,12 @@ impl FunctionOptimizer for DeadCodeEliminator {
             .collect::<Vec<_>>();
         for bb in bbs {
             editor.set_current_bb(bb);
-            while editor.move_forward() {
+            let mut has_next = editor.move_forward();
+            while has_next {
                 if !retained.contains(&editor.current_idx().unwrap()) {
-                    editor.remove_current();
+                    has_next = editor.remove_current().0;
+                } else {
+                    has_next = editor.move_forward();
                 }
             }
         }

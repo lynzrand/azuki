@@ -1,0 +1,87 @@
+(fn main () i32
+	(bb0 ()
+		(return %0))
+	(bb1 ()
+		(unreachable)))
+
+
+(fn fib (i32) i32
+	(bb0 (
+		(%0 i32 param 0)
+		(%1 i32 1))
+		(brif %2 bb1 bb2))
+	(bb1 (
+		(%3 i32 1))
+		(br bb3))
+	(bb2 (
+		(%5 i32 sub %0 1)
+		(%6 i32 call fib (%5))
+		(%7 i32 sub %0 2)
+		(%8 i32 call fib (%7))
+		(%9 i32 add %6 %8))
+		(br bb3))
+	(bb3 (
+		(%12 i32 phi (%3 bb1) (%9 bb2)))
+		(return %12))
+	(bb4 ()
+		(unreachable)))
+
+
+(fn fib (i32) i32
+	(bb0 (
+		(%0 i32 param 0)
+		(%1 i32 1))
+		(brif %2 bb1 bb2))
+	(bb1 (
+		(%3 i32 1))
+		(br bb3))
+	(bb2 (
+		(%5 i32 sub %0 1)
+		(%6 i32 call fib (%5))
+		(%7 i32 sub %0 2)
+		(%8 i32 call fib (%7))
+		(%9 i32 add %6 %8))
+		(br bb3))
+	(bb3 (
+		(%12 i32 phi (%3 bb1) (%9 bb2)))
+		(return %12))
+	(bb4 ()
+		(unreachable)))
+
+
+(fn main () i32
+	(bb0 ()
+		(return %0))
+	(bb1 ()
+		(unreachable)))
+
+
+(fn fib (i32) i32
+	(bb0 (
+		(%0 i32 param 0)
+		(%1 i32 1))
+		(brif %2 bb1 bb2))
+	(bb1 (
+		(%3 i32 1))
+		(br bb3))
+	(bb2 (
+		(%5 i32 sub %0 1)
+		(%6 i32 call fib (%5))
+		(%7 i32 sub %0 2)
+		(%8 i32 call fib (%7))
+		(%9 i32 add %6 %8))
+		(br bb3))
+	(bb3 (
+		(%12 i32 phi (%3 bb1) (%9 bb2)))
+		(return %12))
+	(bb4 ()
+		(unreachable)))
+
+
+(fn main () i32
+	(bb0 ()
+		(return %0))
+	(bb1 ()
+		(unreachable)))
+
+

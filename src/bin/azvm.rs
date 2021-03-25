@@ -21,6 +21,8 @@ struct Opt {
     instruction_count: bool,
 }
 
+
+
 fn main() {
     let opt = Opt::parse();
     let program = match std::fs::read_to_string(&opt.file) {
@@ -35,7 +37,7 @@ fn main() {
         Err(e) => {
             eprintln!("Input is not a valid Azuki TAC file.");
             eprintln!();
-            eprintln!("{}", e);
+            eprintln!("{:?}", e);
             exit(2);
         }
     };

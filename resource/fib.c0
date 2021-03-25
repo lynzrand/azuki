@@ -1,13 +1,18 @@
 fn fib(n: int) -> int {
     let r: int;
+    let j: int = 1;
     if n <= 1 {
         r = 1;
+        j = 12345;
     } else {
         r = fib(n - 1) + fib(n - 2);
+        j = r + 3;
     }
+    j = 5;
     return r;
 }
 
 fn main() -> int {
-    return fib(15);
+    let k: int = 15;
+    return fib(k);
 }

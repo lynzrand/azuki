@@ -518,7 +518,7 @@ impl InstKind {
             }
             InstKind::Assign(v) => VarIter::One(*v),
             InstKind::Phi(source) => {
-                if source.len() == 0 {
+                if source.is_empty() {
                     VarIter::None
                 } else {
                     VarIter::Iter(Box::new(source.iter().map(|(_, &val)| val.into()))
