@@ -6,11 +6,20 @@ use azuki_tac::optimizer::sanity_checker::SanityChecker;
 use azuki_tacvm::Vm;
 use clap::Clap;
 use opt::Action;
+use tracing::{info, trace};
+use tracing_subscriber::fmt::format::FmtSpan;
 
 mod opt;
 
 fn main() {
     let opt = opt::Opt::parse();
+
+    tracing_subscriber::FmtSubscriber::builder()
+        .with_target(true)
+        .with_max_level(opt.log_level)
+        .with_writer(std::io::stderr)
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .init();
 
     let file = opt.file;
     let input = std::fs::read_to_string(file).expect("Unable to read input file");
@@ -48,6 +57,7 @@ fn main() {
         return;
     }
 
+    info!("Generating IR");
     let mut program = match azuki_tacgen::compile(&program) {
         Ok(p) => p,
         Err(e) => {
@@ -68,21 +78,25 @@ fn main() {
         .unwrap_or_else(|| default_opts().iter().map(|x| x.to_string()).collect());
 
     for optimization in optimizations {
-        eprintln!("Running optimization: {}", optimization);
+        info!("Running optimization: {}", optimization);
         pipeline.run_pass(&mut program, optimization);
     }
 
     if opt.action == Action::Compile {
+        info!("Writing IR into desired output");
+
         let func_list = program
             .functions
             .drain()
             .map(|(_, x)| x)
             .collect::<Vec<_>>();
+
         func_list.iter().for_each(|function| {
             writeln!(output, "{}", function).expect("Failed to write to output file");
             writeln!(output).unwrap();
         });
     } else if opt.action == Action::Run {
+        info!("Running program in VM");
         let mut vm = Vm::new(&program);
         let entry = opt.entry_point.as_deref().unwrap_or("main");
         let params = opt.params.clone();

@@ -1,19 +1,20 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 
 use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, BBId, Branch, InstId, Value};
 use petgraph::{graphmap::DiGraphMap, visit};
+use tracing::{debug, info, info_span};
 use visit::{FilterNode, Walker};
 
 pub struct DeadCodeEliminator {
     graph: DiGraphMap<InstId, ()>,
-    find_roots: HashSet<InstId>,
+    find_roots: VecDeque<InstId>,
 }
 
 impl DeadCodeEliminator {
     pub fn new() -> DeadCodeEliminator {
         DeadCodeEliminator {
             graph: DiGraphMap::new(),
-            find_roots: HashSet::new(),
+            find_roots: VecDeque::new(),
         }
     }
 }
@@ -34,6 +35,9 @@ impl FunctionOptimizer for DeadCodeEliminator {
         _env: &mut azuki_tac::optimizer::OptimizeEnvironment,
         func: &mut azuki_tac::TacFunc,
     ) {
+        let _span = info_span!("dead-code-eliminator", %func.name).entered();
+
+        debug!("Constructing reference map");
         // Construct instruction reference map
         for (idx, _bb, inst) in func.all_inst_unordered() {
             for source in inst.kind.param_op_iter() {
@@ -42,20 +46,22 @@ impl FunctionOptimizer for DeadCodeEliminator {
         }
         for (_, bb) in func.all_bb_unordered() {
             if let Branch::Return(Some(Value::Dest(idx))) = &bb.branch {
-                self.find_roots.insert(*idx);
+                self.find_roots.push_back(*idx);
             } else if let Branch::CondJump {
                 cond: Value::Dest(x),
                 ..
             } = &bb.branch
             {
-                self.find_roots.insert(*x);
+                // TODO: Add condition to find root only if it contributes to return value
+                self.find_roots.push_back(*x);
             }
         }
 
+        debug!("Finding reachable variables");
         // calculate spanning tree
         let mut retained = HashSet::new();
         let mut dfs = petgraph::visit::Dfs::empty(&self.graph);
-        for &root in &self.find_roots {
+        while let Some(root) = self.find_roots.pop_front() {
             dfs.move_to(root);
             retained.insert(root);
             for point in (&mut dfs).iter(&self.graph) {

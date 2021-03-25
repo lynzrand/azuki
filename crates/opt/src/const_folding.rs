@@ -2,6 +2,7 @@ use azuki_tac::{
     builder::FuncEditor, optimizer::FunctionOptimizer, BinaryInst, BinaryOp, Inst, InstId,
     InstKind, TacFunc, Value,
 };
+use tracing::{debug, info_span, trace, trace_span};
 
 pub struct ConstFolding {}
 
@@ -13,7 +14,7 @@ impl ConstFolding {
 
 impl FunctionOptimizer for ConstFolding {
     fn name(&self) -> std::borrow::Cow<str> {
-        "const_propagation".into()
+        "const-folding".into()
     }
 
     fn edits_program(&self) -> bool {
@@ -25,9 +26,14 @@ impl FunctionOptimizer for ConstFolding {
         _env: &mut azuki_tac::optimizer::OptimizeEnvironment,
         func: &mut azuki_tac::TacFunc,
     ) {
+        let _span = info_span!("const_folding", %func.name).entered();
+
         if func.first_block.is_none() {
+            debug!("Empty function");
             return;
         }
+        debug!("Parsing function");
+
         // In most cases, applying constant folding for one time is enough.
         let mut cursor = FuncEditor::new(func);
         cursor.set_current_bb(cursor.func.first_block.unwrap());
@@ -41,6 +47,11 @@ impl FunctionOptimizer for ConstFolding {
                     _ => None,
                 };
                 if let Some(r) = replaced {
+                    trace!(
+                        "replaced %{} with {:?}",
+                        cursor.current_idx().unwrap().slot(),
+                        r
+                    );
                     cursor.current_inst_mut().unwrap().kind = InstKind::Assign(r);
                 }
             }
@@ -127,11 +138,13 @@ mod test {
     #[test]
     fn test_const_folding() {
         let input = r"
-        fn return_three() -> i32 {
-        bb0:
-            %0 = i32 #1
-            %1 = i32 mul
-        }
+        (fn return_three () i32 
+        (bb0 (
+            (%0 i32 1)
+            (%1 i32 mul 2 %0))
+            (%2 i32 add %1 1)
+            (return %2))
+        )
         ";
     }
 }

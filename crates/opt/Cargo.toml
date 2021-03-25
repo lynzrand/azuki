@@ -11,3 +11,4 @@ anymap = "0.12"
 azuki-tac = { path = "../tac" }
 petgraph = "0.5"
 bit-set = "0.5.2"
+tracing = "0.1.25"

@@ -31,6 +31,9 @@ pub struct Opt {
 
     #[clap(long)]
     pub params: Vec<i64>,
+
+    #[clap(long = "log", default_value = "warn", env = "AZUKI_LOG")]
+    pub log_level: tracing_subscriber::filter::LevelFilter,
 }
 
 #[derive(Debug, PartialEq, Eq)]
