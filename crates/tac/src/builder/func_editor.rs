@@ -245,13 +245,13 @@ impl<'a> FuncEditor<'a> {
         self.current_idx.is_some()
     }
 
-    pub fn remove_current(&mut self) -> Option<Inst> {
+    pub fn remove_current(&mut self) -> (bool, Option<Inst>) {
         if let Some(idx) = self.current_idx {
-            self.move_forward();
+            let has_next = self.move_forward();
             self.func.inst_detach(idx);
-            Some(self.func.inst_remove(idx))
+            (has_next, Some(self.func.inst_remove(idx)))
         } else {
-            None
+            (false, None)
         }
     }
 }

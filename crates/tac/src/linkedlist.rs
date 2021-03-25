@@ -1,6 +1,8 @@
 //! Some random linked list traits, may or may not be used in actual program.
 
 mod implementation;
+#[cfg(test)]
+mod test;
 
 /// An implicitly linked list, allowing freestanding items and multiple links
 /// inside itself.
@@ -53,7 +55,7 @@ where
 
         let before_item = self.get_item_mut(before);
         let prev = before_item.prev();
-        before_item.set_next(Some(this));
+        before_item.set_prev(Some(this));
 
         let current = self.get_item_mut(this);
         current.set_next(Some(before));

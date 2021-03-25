@@ -190,14 +190,29 @@ impl TacFunc {
             bb.tail = Some(inst);
         }
         if let Some(old_head) = old_head {
-            self.inst_set_before(old_head, inst);
+            self.instructions_arena.attach_before(old_head, inst);
         }
     }
 
     /// Detaches this instruction from the instruction chain.
     pub fn inst_detach(&mut self, idx: InstId) {
+        let inst = self.tac_get_mut(idx);
+        let next = inst.next;
+        let prev = inst.prev;
+        let bb = inst.bb;
+
         self.instructions_arena.detach(idx);
-        self.tac_get_mut(idx).bb = BBId::default();
+
+        let inst = self.tac_get_mut(idx);
+        inst.bb = BBId::default();
+
+        let bb = self.bb_get_mut(bb);
+        if bb.head == Some(idx) {
+            bb.head = next;
+        }
+        if bb.tail == Some(idx) {
+            bb.tail = prev;
+        }
     }
 
     /// Remove the given instruction
