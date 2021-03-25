@@ -6,7 +6,7 @@ use azuki_tac::optimizer::sanity_checker::SanityChecker;
 use azuki_tacvm::Vm;
 use clap::Clap;
 use opt::Action;
-use tracing::{info, trace};
+use tracing::{info, trace, warn};
 use tracing_subscriber::fmt::format::FmtSpan;
 
 mod opt;
@@ -18,7 +18,7 @@ fn main() {
         .with_target(true)
         .with_max_level(opt.log_level)
         .with_writer(std::io::stderr)
-        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .without_time()
         .init();
 
     let file = opt.file;
@@ -78,8 +78,10 @@ fn main() {
         .unwrap_or_else(|| default_opts().iter().map(|x| x.to_string()).collect());
 
     for optimization in optimizations {
-        info!("Running optimization: {}", optimization);
-        pipeline.run_pass(&mut program, optimization);
+        info!("Running pass `{}`", optimization);
+        if !pipeline.run_pass(&mut program, &optimization) {
+            warn!("Cannot find pass `{}`", optimization);
+        }
     }
 
     if opt.action == Action::Compile {

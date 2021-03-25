@@ -2,7 +2,7 @@ use azuki_tac::{
     builder::FuncEditor, optimizer::FunctionOptimizer, BinaryInst, BinaryOp, Inst, InstId,
     InstKind, TacFunc, Value,
 };
-use tracing::{debug, info_span, trace, trace_span};
+use tracing::{debug, debug_span, info_span, trace, trace_span};
 
 pub struct ConstFolding {}
 
@@ -26,7 +26,7 @@ impl FunctionOptimizer for ConstFolding {
         _env: &mut azuki_tac::optimizer::OptimizeEnvironment,
         func: &mut azuki_tac::TacFunc,
     ) {
-        let _span = info_span!("const_folding", %func.name).entered();
+        let _span = debug_span!("const_folding", %func.name).entered();
 
         if func.first_block.is_none() {
             debug!("Empty function");

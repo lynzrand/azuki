@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashSet, VecDeque};
 
 use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, BBId, Branch, InstId, Value};
 use petgraph::{graphmap::DiGraphMap, visit};
-use tracing::{debug, info, info_span};
+use tracing::{debug, debug_span, info, info_span, trace};
 use visit::{FilterNode, Walker};
 
 pub struct DeadCodeEliminator {
@@ -35,7 +35,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
         _env: &mut azuki_tac::optimizer::OptimizeEnvironment,
         func: &mut azuki_tac::TacFunc,
     ) {
-        let _span = info_span!("dead-code-eliminator", %func.name).entered();
+        let _span = debug_span!("dead-code-eliminator", %func.name).entered();
 
         debug!("Constructing reference map");
         // Construct instruction reference map
@@ -80,6 +80,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
             let mut has_next = editor.move_forward();
             while has_next {
                 if !retained.contains(&editor.current_idx().unwrap()) {
+                    trace!("removed %{}", editor.current_idx().unwrap().slot(),);
                     has_next = editor.remove_current().0;
                 } else {
                     has_next = editor.move_forward();
