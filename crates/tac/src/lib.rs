@@ -529,6 +529,26 @@ impl InstKind {
         }
     }
 
+    pub fn replace_dest(&mut self, matches: InstId, replace_to: InstId) {
+        match self {
+            InstKind::Binary(b) => {
+                b.lhs.replace_dest(matches, replace_to);
+                b.rhs.replace_dest(matches, replace_to);
+            }
+            InstKind::FunctionCall(f) => f
+                .params
+                .iter_mut()
+                .for_each(|x| x.replace_dest(matches, replace_to)),
+            InstKind::Assign(v) => v.replace_dest(matches, replace_to),
+            InstKind::Phi(source) => source.iter_mut().for_each(|(_, v)| {
+                if *v == matches {
+                    *v = replace_to
+                }
+            }),
+            InstKind::Param(_) => {}
+        }
+    }
+
     pub fn param_op_iter(&self) -> impl Iterator<Item = InstId> + '_ {
         self.params_iter().filter_map(|x| x.get_inst())
     }
@@ -623,6 +643,12 @@ impl Value {
     /// Returns `true` if the value is [`Imm`].
     pub fn is_imm(&self) -> bool {
         matches!(self, Self::Imm(..))
+    }
+
+    pub fn replace_dest(&mut self, matches: InstId, replace_to: InstId) {
+        if *self == Self::Dest(matches) {
+            *self = Self::Dest(replace_to)
+        }
     }
 }
 

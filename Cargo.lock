@@ -54,6 +54,7 @@ dependencies = [
  "azuki-tac",
  "bit-set",
  "petgraph",
+ "smallvec",
  "tracing",
 ]
 

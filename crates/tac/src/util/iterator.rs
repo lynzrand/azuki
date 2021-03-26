@@ -5,10 +5,7 @@ pub enum OptionIter<T> {
     // Iter(I),
 }
 
-impl<T> Iterator for OptionIter<T>
-where
-    T: Clone,
-{
+impl<T> Iterator for OptionIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -33,7 +30,6 @@ pub enum VarIter<T, I> {
 
 impl<T, I> Iterator for VarIter<T, I>
 where
-    T: Clone,
     I: Iterator<Item = T>,
 {
     type Item = T;

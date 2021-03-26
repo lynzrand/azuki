@@ -12,3 +12,4 @@ azuki-tac = { path = "../tac" }
 petgraph = "0.5"
 bit-set = "0.5.2"
 tracing = "0.1.25"
+smallvec = "1.6"
