@@ -52,14 +52,12 @@ impl FunctionOptimizer for ConstFolding {
                                 let ty = inst.ty.clone();
                                 let v = eval_binary_deep(b, cursor.func);
                                 match v {
-                                    Some((i, n)) => {
+                                    Some((mut i, n)) => {
                                         if let Some(n) = n {
                                             let idx = cursor
                                                 .insert_before_current_place(Inst { kind: n, ty });
-                                            cursor.func.inst_set_before(
-                                                cursor.current_idx().unwrap(),
-                                                idx,
-                                            );
+                                            cursor.move_forward();
+                                            i.replace_dest(InstId::from_bits(u64::MAX), idx);
                                         }
                                         Some(i)
                                     }
@@ -182,6 +180,11 @@ fn eval_binary_deep(binary: &BinaryInst, f: &TacFunc) -> Option<(InstKind, Optio
         i @ Value::Imm(_) => operands.push((is_sub, i)),
     };
 
+    if operands.iter().all(|x| matches!(x, &(_, Value::Dest(_)))) {
+        // No way to reduce operands
+        return None;
+    }
+
     let constant = operands
         .iter()
         .filter_map(|(is_neg, v)| v.get_imm().map(|x| (*is_neg, x)))
@@ -212,8 +215,8 @@ fn eval_binary_deep(binary: &BinaryInst, f: &TacFunc) -> Option<(InstKind, Optio
         if constant == 0 && first_positive_term.is_some() {
             let (_, pos_term) = variables.remove(first_positive_term.unwrap());
             let op = ((variables[0].0) ^ (variables[1].0))
-                .then(|| BinaryOp::Add)
-                .unwrap_or(BinaryOp::Sub);
+                .then(|| BinaryOp::Sub)
+                .unwrap_or(BinaryOp::Add);
 
             let second_inst = InstKind::Binary(BinaryInst {
                 op,
@@ -239,8 +242,8 @@ fn eval_binary_deep(binary: &BinaryInst, f: &TacFunc) -> Option<(InstKind, Optio
         // "(a + b) + constant" type
         if constant == 0 && variables.iter().any(|x| !x.0) {
             let op = ((variables[0].0) ^ (variables[1].0))
-                .then(|| BinaryOp::Add)
-                .unwrap_or(BinaryOp::Sub);
+                .then(|| BinaryOp::Sub)
+                .unwrap_or(BinaryOp::Add);
             let inst = InstKind::Binary(BinaryInst {
                 op,
                 lhs: variables[0].1.into(),
@@ -250,8 +253,11 @@ fn eval_binary_deep(binary: &BinaryInst, f: &TacFunc) -> Option<(InstKind, Optio
             Some((inst, None))
         } else {
             let op = ((variables[0].0) ^ (variables[1].0))
-                .then(|| BinaryOp::Add)
-                .unwrap_or(BinaryOp::Sub);
+                .then(|| BinaryOp::Sub)
+                .unwrap_or(BinaryOp::Add);
+            if !variables[0].0 {
+                variables.swap(0, 1);
+            }
             let second_inst = InstKind::Binary(BinaryInst {
                 op,
                 lhs: variables[0].1.into(),
@@ -260,8 +266,8 @@ fn eval_binary_deep(binary: &BinaryInst, f: &TacFunc) -> Option<(InstKind, Optio
 
             let op = variables[0]
                 .0
-                .then(|| BinaryOp::Add)
-                .unwrap_or(BinaryOp::Sub);
+                .then(|| BinaryOp::Sub)
+                .unwrap_or(BinaryOp::Add);
             let first_inst = InstKind::Binary(BinaryInst {
                 op,
                 lhs: Value::Imm(constant),
@@ -278,12 +284,12 @@ fn eval_binary_deep(binary: &BinaryInst, f: &TacFunc) -> Option<(InstKind, Optio
         } else {
             let op = variables[0]
                 .0
-                .then(|| BinaryOp::Add)
-                .unwrap_or(BinaryOp::Sub);
+                .then(|| BinaryOp::Sub)
+                .unwrap_or(BinaryOp::Add);
             let first_inst = InstKind::Binary(BinaryInst {
                 op,
                 lhs: Value::Imm(constant),
-                rhs: variables[1].1.into(),
+                rhs: variables[0].1.into(),
             });
 
             Some((first_inst, None))
