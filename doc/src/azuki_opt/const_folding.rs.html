@@ -351,6 +351,12 @@
 <span id="348">348</span>
 <span id="349">349</span>
 <span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">azuki_tac</span>::{
     <span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">optimizer</span>::<span class="ident">FunctionOptimizer</span>, <span class="ident">BinaryInst</span>, <span class="ident">BinaryOp</span>, <span class="ident">Inst</span>, <span class="ident">InstId</span>,
@@ -406,14 +412,12 @@
                                 <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">inst</span>.<span class="ident">ty</span>.<span class="ident">clone</span>();
                                 <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">eval_binary_deep</span>(<span class="ident">b</span>, <span class="ident">cursor</span>.<span class="ident">func</span>);
                                 <span class="kw">match</span> <span class="ident">v</span> {
-                                    <span class="prelude-val">Some</span>((<span class="ident">i</span>, <span class="ident">n</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                                    <span class="prelude-val">Some</span>((<span class="kw-2">mut</span> <span class="ident">i</span>, <span class="ident">n</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="op">=</span> <span class="ident">n</span> {
                                             <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">cursor</span>
                                                 .<span class="ident">insert_before_current_place</span>(<span class="ident">Inst</span> { <span class="ident">kind</span>: <span class="ident">n</span>, <span class="ident">ty</span> });
-                                            <span class="ident">cursor</span>.<span class="ident">func</span>.<span class="ident">inst_set_before</span>(
-                                                <span class="ident">cursor</span>.<span class="ident">current_idx</span>().<span class="ident">unwrap</span>(),
-                                                <span class="ident">idx</span>,
-                                            );
+                                            <span class="ident">cursor</span>.<span class="ident">move_forward</span>();
+                                            <span class="ident">i</span>.<span class="ident">replace_dest</span>(<span class="ident">InstId</span>::<span class="ident">from_bits</span>(<span class="ident">u64</span>::<span class="ident">MAX</span>), <span class="ident">idx</span>);
                                         }
                                         <span class="prelude-val">Some</span>(<span class="ident">i</span>)
                                     }
@@ -536,6 +540,11 @@
         <span class="ident">i</span> @ <span class="ident">Value</span>::<span class="ident">Imm</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">operands</span>.<span class="ident">push</span>((<span class="ident">is_sub</span>, <span class="ident">i</span>)),
     };
 
+    <span class="kw">if</span> <span class="ident">operands</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="kw-2">&amp;</span>(<span class="kw">_</span>, <span class="ident">Value</span>::<span class="ident">Dest</span>(<span class="kw">_</span>)))) {
+        <span class="comment">// No way to reduce operands</span>
+        <span class="kw">return</span> <span class="prelude-val">None</span>;
+    }
+
     <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">operands</span>
         .<span class="ident">iter</span>()
         .<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">is_neg</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>.<span class="ident">get_imm</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="kw-2">*</span><span class="ident">is_neg</span>, <span class="ident">x</span>)))
@@ -566,8 +575,8 @@
         <span class="kw">if</span> <span class="ident">constant</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> <span class="op">&amp;&amp;</span> <span class="ident">first_positive_term</span>.<span class="ident">is_some</span>() {
             <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">pos_term</span>) <span class="op">=</span> <span class="ident">variables</span>.<span class="ident">remove</span>(<span class="ident">first_positive_term</span>.<span class="ident">unwrap</span>());
             <span class="kw">let</span> <span class="ident">op</span> <span class="op">=</span> ((<span class="ident">variables</span>[<span class="number">0</span>].<span class="number">0</span>) <span class="op">^</span> (<span class="ident">variables</span>[<span class="number">1</span>].<span class="number">0</span>))
-                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Add</span>)
-                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Sub</span>);
+                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Sub</span>)
+                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Add</span>);
 
             <span class="kw">let</span> <span class="ident">second_inst</span> <span class="op">=</span> <span class="ident">InstKind</span>::<span class="ident">Binary</span>(<span class="ident">BinaryInst</span> {
                 <span class="ident">op</span>,
@@ -593,8 +602,8 @@
         <span class="comment">// &quot;(a + b) + constant&quot; type</span>
         <span class="kw">if</span> <span class="ident">constant</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> <span class="op">&amp;&amp;</span> <span class="ident">variables</span>.<span class="ident">iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="op">!</span><span class="ident">x</span>.<span class="number">0</span>) {
             <span class="kw">let</span> <span class="ident">op</span> <span class="op">=</span> ((<span class="ident">variables</span>[<span class="number">0</span>].<span class="number">0</span>) <span class="op">^</span> (<span class="ident">variables</span>[<span class="number">1</span>].<span class="number">0</span>))
-                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Add</span>)
-                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Sub</span>);
+                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Sub</span>)
+                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Add</span>);
             <span class="kw">let</span> <span class="ident">inst</span> <span class="op">=</span> <span class="ident">InstKind</span>::<span class="ident">Binary</span>(<span class="ident">BinaryInst</span> {
                 <span class="ident">op</span>,
                 <span class="ident">lhs</span>: <span class="ident">variables</span>[<span class="number">0</span>].<span class="number">1</span>.<span class="ident">into</span>(),
@@ -604,8 +613,11 @@
             <span class="prelude-val">Some</span>((<span class="ident">inst</span>, <span class="prelude-val">None</span>))
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="ident">op</span> <span class="op">=</span> ((<span class="ident">variables</span>[<span class="number">0</span>].<span class="number">0</span>) <span class="op">^</span> (<span class="ident">variables</span>[<span class="number">1</span>].<span class="number">0</span>))
-                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Add</span>)
-                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Sub</span>);
+                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Sub</span>)
+                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Add</span>);
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">variables</span>[<span class="number">0</span>].<span class="number">0</span> {
+                <span class="ident">variables</span>.<span class="ident">swap</span>(<span class="number">0</span>, <span class="number">1</span>);
+            }
             <span class="kw">let</span> <span class="ident">second_inst</span> <span class="op">=</span> <span class="ident">InstKind</span>::<span class="ident">Binary</span>(<span class="ident">BinaryInst</span> {
                 <span class="ident">op</span>,
                 <span class="ident">lhs</span>: <span class="ident">variables</span>[<span class="number">0</span>].<span class="number">1</span>.<span class="ident">into</span>(),
@@ -614,8 +626,8 @@
 
             <span class="kw">let</span> <span class="ident">op</span> <span class="op">=</span> <span class="ident">variables</span>[<span class="number">0</span>]
                 .<span class="number">0</span>
-                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Add</span>)
-                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Sub</span>);
+                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Sub</span>)
+                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Add</span>);
             <span class="kw">let</span> <span class="ident">first_inst</span> <span class="op">=</span> <span class="ident">InstKind</span>::<span class="ident">Binary</span>(<span class="ident">BinaryInst</span> {
                 <span class="ident">op</span>,
                 <span class="ident">lhs</span>: <span class="ident">Value</span>::<span class="ident">Imm</span>(<span class="ident">constant</span>),
@@ -632,12 +644,12 @@
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="ident">op</span> <span class="op">=</span> <span class="ident">variables</span>[<span class="number">0</span>]
                 .<span class="number">0</span>
-                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Add</span>)
-                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Sub</span>);
+                .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">BinaryOp</span>::<span class="ident">Sub</span>)
+                .<span class="ident">unwrap_or</span>(<span class="ident">BinaryOp</span>::<span class="ident">Add</span>);
             <span class="kw">let</span> <span class="ident">first_inst</span> <span class="op">=</span> <span class="ident">InstKind</span>::<span class="ident">Binary</span>(<span class="ident">BinaryInst</span> {
                 <span class="ident">op</span>,
                 <span class="ident">lhs</span>: <span class="ident">Value</span>::<span class="ident">Imm</span>(<span class="ident">constant</span>),
-                <span class="ident">rhs</span>: <span class="ident">variables</span>[<span class="number">1</span>].<span class="number">1</span>.<span class="ident">into</span>(),
+                <span class="ident">rhs</span>: <span class="ident">variables</span>[<span class="number">0</span>].<span class="number">1</span>.<span class="ident">into</span>(),
             });
 
             <span class="prelude-val">Some</span>((<span class="ident">first_inst</span>, <span class="prelude-val">None</span>))
