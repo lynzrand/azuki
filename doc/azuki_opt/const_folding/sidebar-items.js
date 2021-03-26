@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["eval_binary",""],["eval_binary_inst",""],["eval_inst",""],["eval_val",""]],"struct":[["ConstFolding",""]]});
+initSidebarItems({"fn":[["eval_binary",""],["eval_binary_deep","Evaluate binary instructions that may reduce into simpler forms."],["eval_binary_inst","Evaluates a binary instruction to a simple value, if possible. Returns `Some(Value)` if this instruction can be reduced into an assignment, else return `None`."],["eval_inst",""],["eval_val",""],["is_additive",""]],"struct":[["ConstFolding",""]]});
