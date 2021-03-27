@@ -1,7 +1,13 @@
 use std::collections::{BTreeSet, HashSet, VecDeque};
 
 use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, BBId, Branch, InstId, Value};
-use petgraph::{graphmap::DiGraphMap, visit};
+use petgraph::{
+    algo::dominators,
+    graphmap::{DiGraphMap, GraphMap},
+    visit::{self, GraphBase, GraphRef},
+    Directed,
+    EdgeDirection::Incoming,
+};
 use tracing::{debug, debug_span, info, info_span, trace};
 use visit::{FilterNode, Walker};
 
@@ -37,6 +43,13 @@ impl FunctionOptimizer for DeadCodeEliminator {
     ) {
         let _span = debug_span!("dead-code-eliminator", %func.name).entered();
 
+        if func.starting_block().is_none() {
+            debug!("Function does not have a starting block");
+            return;
+        }
+
+        let mut bb_graph = DiGraphMap::new();
+
         debug!("Constructing reference map");
         // Construct instruction reference map
         for (idx, _bb, inst) in func.all_inst_unordered() {
@@ -44,30 +57,58 @@ impl FunctionOptimizer for DeadCodeEliminator {
                 self.graph.add_edge(idx, source, ());
             }
         }
-        for (_, bb) in func.all_bb_unordered() {
+        for (id, bb) in func.all_bb_unordered() {
+            for next in bb.branch.target_iter() {
+                bb_graph.add_edge(id, next, ());
+            }
             if let Branch::Return(Some(Value::Dest(idx))) = &bb.branch {
                 self.find_roots.push_back(*idx);
-            } else if let Branch::CondJump {
-                cond: Value::Dest(x),
-                ..
-            } = &bb.branch
-            {
-                // TODO: Add condition to find root only if it contributes to return value
-                self.find_roots.push_back(*x);
             }
         }
 
-        debug!("Finding reachable variables");
-        // calculate spanning tree
+        debug!("Constructing dominator information");
+
+        let dominators = dominators::simple_fast(&bb_graph, func.starting_block().unwrap());
+
+        debug!("Finding variables that can be reached from root");
+
         let mut retained = HashSet::new();
+        let mut vis_bb = HashSet::new();
         let mut dfs = petgraph::visit::Dfs::empty(&self.graph);
         while let Some(root) = self.find_roots.pop_front() {
             dfs.move_to(root);
             retained.insert(root);
             for point in (&mut dfs).iter(&self.graph) {
                 retained.insert(point);
+
+                // Add basic block to root if it affects return code.
+                let bb_id = func.tac_get(point).bb;
+                if vis_bb.insert(bb_id) {
+                    let dom = dominators.strict_dominators(bb_id);
+                    for dom in dom.into_iter().flatten() {
+                        trace!(
+                            "Adding bb{} into root set since it dominates bb{}",
+                            dom.unique_num(),
+                            bb_id.unique_num()
+                        );
+                        for pred in bb_graph.neighbors_directed(dom, Incoming) {
+                            let bb = func.bb_get(pred);
+                            if let Branch::CondJump {
+                                cond: Value::Dest(x),
+                                ..
+                            } = &bb.branch
+                            {
+                                self.find_roots.push_back(*x);
+                            }
+                        }
+                    }
+                }
             }
         }
+
+        // Remove unused instruction
+        // Note: this part may remove the condition variable of some basic block.
+        // This is intended, and the basic blocks having invalid conditions
 
         let mut editor = FuncEditor::new(func);
         let bbs = editor
@@ -87,6 +128,8 @@ impl FunctionOptimizer for DeadCodeEliminator {
                 }
             }
         }
+
+        // Compact bas
     }
 
     fn reset(&mut self) {
