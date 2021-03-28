@@ -1,15 +1,13 @@
-use std::collections::{BTreeSet, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 
-use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, BBId, Branch, InstId, Value};
+use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, Branch, InstId, Value};
 use petgraph::{
     algo::dominators,
-    graphmap::{DiGraphMap, GraphMap},
-    visit::{self, GraphBase, GraphRef},
-    Directed,
-    EdgeDirection::Incoming,
+    graphmap::DiGraphMap,
+    visit,
 };
-use tracing::{debug, debug_span, info, info_span, trace};
-use visit::{FilterNode, Walker};
+use tracing::{debug, debug_span, trace};
+use visit::Walker;
 
 pub struct DeadCodeEliminator {
     graph: DiGraphMap<InstId, ()>,
@@ -107,16 +105,6 @@ impl FunctionOptimizer for DeadCodeEliminator {
         }
 
         // Remove unused instruction.
-        //
-        // # Note
-        //
-        // This part may remove the condition variable of some basic block.
-        // This is intended, and the basic blocks having invalid conditions will
-        // be later removed.
-        //
-        // This is because, if the condition variable is not inserted into the
-        // root set, then the basic block it lies in does not strictly dominate
-        // any active block.
 
         let mut editor = FuncEditor::new(func);
         let bbs = editor

@@ -1,15 +1,27 @@
+//! Performs constant folding.
+//!
+//! # Optimizations
+//!
+//! This pass calculates constant instructions whenever possible.
+
 use azuki_tac::{
     builder::FuncEditor, optimizer::FunctionOptimizer, BinaryInst, BinaryOp, Inst, InstId,
-    InstKind, TacFunc, Ty, Value,
+    InstKind, TacFunc, Value,
 };
 use smallvec::SmallVec;
-use tracing::{debug, debug_span, info_span, trace, trace_span};
+use tracing::{debug, debug_span, trace};
 
-pub struct ConstFolding {}
+pub struct ConstFolding;
 
 impl ConstFolding {
     pub fn new() -> Self {
-        Self {}
+        Self
+    }
+}
+
+impl Default for ConstFolding {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
