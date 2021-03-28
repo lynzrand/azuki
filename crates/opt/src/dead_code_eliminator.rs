@@ -1,9 +1,9 @@
-use std::collections::{BTreeSet, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 
-use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, BBId, Branch, InstId, Value};
-use petgraph::{graphmap::DiGraphMap, visit};
-use tracing::{debug, debug_span, info, info_span, trace};
-use visit::{FilterNode, Walker};
+use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, Branch, InstId, Value};
+use petgraph::{algo::dominators, graphmap::DiGraphMap, visit};
+use tracing::{debug, debug_span, trace};
+use visit::Walker;
 
 pub struct DeadCodeEliminator {
     graph: DiGraphMap<InstId, ()>,
@@ -68,6 +68,8 @@ impl FunctionOptimizer for DeadCodeEliminator {
                 retained.insert(point);
             }
         }
+
+        // Remove unused instruction.
 
         let mut editor = FuncEditor::new(func);
         let bbs = editor
