@@ -76,39 +76,47 @@ impl FunctionOptimizer for DeadCodeEliminator {
         let mut vis_bb = HashSet::new();
         let mut dfs = petgraph::visit::Dfs::empty(&self.graph);
         while let Some(root) = self.find_roots.pop_front() {
+            trace!("Searching from root %{}", root.slot());
             dfs.move_to(root);
             retained.insert(root);
             for point in (&mut dfs).iter(&self.graph) {
                 retained.insert(point);
 
-                // Add basic block to root if it affects return code.
+                // Add all dominator basic blocks into root set
                 let bb_id = func.tac_get(point).bb;
                 if vis_bb.insert(bb_id) {
                     let dom = dominators.strict_dominators(bb_id);
                     for dom in dom.into_iter().flatten() {
-                        trace!(
-                            "Adding bb{} into root set since it dominates bb{}",
-                            dom.unique_num(),
-                            bb_id.unique_num()
-                        );
-                        for pred in bb_graph.neighbors_directed(dom, Incoming) {
-                            let bb = func.bb_get(pred);
-                            if let Branch::CondJump {
-                                cond: Value::Dest(x),
-                                ..
-                            } = &bb.branch
-                            {
-                                self.find_roots.push_back(*x);
-                            }
+                        let bb = func.bb_get(dom);
+                        if let Branch::CondJump {
+                            cond: Value::Dest(x),
+                            ..
+                        } = &bb.branch
+                        {
+                            trace!(
+                                "Adding %{} into root set since its block bb{} dominates bb{}",
+                                x.slot(),
+                                dom.unique_num(),
+                                bb_id.unique_num()
+                            );
+                            self.find_roots.push_back(*x);
                         }
                     }
                 }
             }
         }
 
-        // Remove unused instruction
-        // Note: this part may remove the condition variable of some basic block.
-        // This is intended, and the basic blocks having invalid conditions
+        // Remove unused instruction.
+        //
+        // # Note
+        //
+        // This part may remove the condition variable of some basic block.
+        // This is intended, and the basic blocks having invalid conditions will
+        // be later removed.
+        //
+        // This is because, if the condition variable is not inserted into the
+        // root set, then the basic block it lies in does not strictly dominate
+        // any active block.
 
         let mut editor = FuncEditor::new(func);
         let bbs = editor
@@ -116,7 +124,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
             .all_bb_unordered()
             .map(|(id, _)| id)
             .collect::<Vec<_>>();
-        for bb in bbs {
+        for bb in bbs.iter().cloned() {
             editor.set_current_bb(bb);
             let mut has_next = editor.move_forward();
             while has_next {
@@ -129,7 +137,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
             }
         }
 
-        // Compact bas
+        // Remove empty basic blocks
     }
 
     fn reset(&mut self) {
