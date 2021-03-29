@@ -1,25 +1,16 @@
 use std::collections::{HashSet, VecDeque};
 
+use crate::util::graphs::{cfg, dfg};
 use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, Branch, InstId, Value};
-use petgraph::{
-    algo::dominators,
-    graphmap::DiGraphMap,
-    visit,
-};
+use petgraph::{algo::dominators, graphmap::DiGraphMap, visit};
 use tracing::{debug, debug_span, trace};
 use visit::Walker;
 
-pub struct DeadCodeEliminator {
-    graph: DiGraphMap<InstId, ()>,
-    find_roots: VecDeque<InstId>,
-}
+pub struct DeadCodeEliminator;
 
 impl DeadCodeEliminator {
     pub fn new() -> DeadCodeEliminator {
-        DeadCodeEliminator {
-            graph: DiGraphMap::new(),
-            find_roots: VecDeque::new(),
-        }
+        DeadCodeEliminator
     }
 }
 
@@ -46,21 +37,20 @@ impl FunctionOptimizer for DeadCodeEliminator {
             return;
         }
 
-        let mut bb_graph = DiGraphMap::new();
+        let mut graph = dfg(func);
+        let bb_graph = cfg(func);
+        let mut find_roots = VecDeque::new();
 
         debug!("Constructing reference map");
         // Construct instruction reference map
-        for (idx, _bb, inst) in func.all_inst_unordered() {
+        for (idx, _, inst) in func.all_inst_unordered() {
             for source in inst.kind.param_op_iter() {
-                self.graph.add_edge(idx, source, ());
+                graph.add_edge(idx, source, ());
             }
         }
-        for (id, bb) in func.all_bb_unordered() {
-            for next in bb.branch.target_iter() {
-                bb_graph.add_edge(id, next, ());
-            }
+        for (_, bb) in func.all_bb_unordered() {
             if let Branch::Return(Some(Value::Dest(idx))) = &bb.branch {
-                self.find_roots.push_back(*idx);
+                find_roots.push_back(*idx);
             }
         }
 
@@ -72,12 +62,12 @@ impl FunctionOptimizer for DeadCodeEliminator {
 
         let mut retained = HashSet::new();
         let mut vis_bb = HashSet::new();
-        let mut dfs = petgraph::visit::Dfs::empty(&self.graph);
-        while let Some(root) = self.find_roots.pop_front() {
+        let mut dfs = petgraph::visit::Dfs::empty(&graph);
+        while let Some(root) = find_roots.pop_front() {
             trace!("Searching from root %{}", root.slot());
             dfs.move_to(root);
             retained.insert(root);
-            for point in (&mut dfs).iter(&self.graph) {
+            for point in (&mut dfs).iter(&graph) {
                 retained.insert(point);
 
                 // Add all dominator basic blocks into root set
@@ -97,7 +87,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
                                 dom.unique_num(),
                                 bb_id.unique_num()
                             );
-                            self.find_roots.push_back(*x);
+                            find_roots.push_back(*x);
                         }
                     }
                 }
@@ -124,13 +114,6 @@ impl FunctionOptimizer for DeadCodeEliminator {
                 }
             }
         }
-
-        // Remove empty basic blocks
-    }
-
-    fn reset(&mut self) {
-        self.graph.clear();
-        self.find_roots.clear();
     }
 
     fn edits_program(&self) -> bool {
