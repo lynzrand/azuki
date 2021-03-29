@@ -1,5 +1,5 @@
-use std::ops::Index as IndexOp;
 use std::ops::IndexMut as IndexMutOp;
+use std::{fmt::Display, ops::Index as IndexOp};
 
 use thunderdome::{Arena, Index};
 
@@ -22,6 +22,12 @@ impl BBId {
 
     pub fn unique_num(self) -> u32 {
         self.0.slot()
+    }
+}
+
+impl Display for BBId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "bb{}", self.unique_num())
     }
 }
 

@@ -1,6 +1,9 @@
 use std::io::{stdout, Write};
 
-use azuki_opt::{const_folding::ConstFolding, dead_code_eliminator::DeadCodeEliminator};
+use azuki_opt::{
+    branching_simplify::BranchingSimplify, const_folding::ConstFolding,
+    dead_code_eliminator::DeadCodeEliminator,
+};
 use azuki_syntax::{lexer::lexer, parse};
 use azuki_tac::optimizer::sanity_checker::SanityChecker;
 use azuki_tacvm::Vm;
@@ -70,6 +73,7 @@ fn main() {
 
     pipeline.add_func_optimizer(SanityChecker::default());
     pipeline.add_func_optimizer(DeadCodeEliminator::default());
+    pipeline.add_func_optimizer(BranchingSimplify);
     pipeline.add_func_optimizer(ConstFolding::new());
 
     let optimizations = opt
@@ -110,5 +114,12 @@ fn main() {
 }
 
 fn default_opts() -> &'static [&'static str] {
-    &["sanity-check", "const-folding", "dead-code-eliminator"]
+    &[
+        "sanity-check",
+        "const-folding",
+        "branching-simplify",
+        "dead-code-eliminator",
+        "branching-simplify",
+        "dead-code-eliminator",
+    ]
 }
