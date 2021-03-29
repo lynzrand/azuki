@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["const_folding",""],["dead_code_eliminator",""],["loop_unroll","Performs loop unrolling to every loop with <=7 instructions per loop."]]});
+initSidebarItems({"mod":[["branching_simplify","Simplifies branches and removes empty basic blocks."],["const_folding","Performs constant folding."],["dead_code_eliminator",""],["loop_unroll","Performs loop unrolling to every loop with <=7 instructions per loop."],["util","Common utilities used by multiple optimizations."]]});

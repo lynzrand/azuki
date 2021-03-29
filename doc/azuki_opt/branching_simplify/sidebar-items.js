@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["BranchingSimplify","Performs branching simplify. See module documents."]]});

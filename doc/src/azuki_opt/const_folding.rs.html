@@ -357,19 +357,43 @@
 <span id="354">354</span>
 <span id="355">355</span>
 <span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
 </pre><div class="example-wrap"><pre class="rust ">
+<span class="doccomment">//! Performs constant folding.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Optimizations</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! This pass calculates constant instructions whenever possible.</span>
+
 <span class="kw">use</span> <span class="ident">azuki_tac</span>::{
     <span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">optimizer</span>::<span class="ident">FunctionOptimizer</span>, <span class="ident">BinaryInst</span>, <span class="ident">BinaryOp</span>, <span class="ident">Inst</span>, <span class="ident">InstId</span>,
-    <span class="ident">InstKind</span>, <span class="ident">TacFunc</span>, <span class="ident">Ty</span>, <span class="ident">Value</span>,
+    <span class="ident">InstKind</span>, <span class="ident">TacFunc</span>, <span class="ident">Value</span>,
 };
 <span class="kw">use</span> <span class="ident">smallvec</span>::<span class="ident">SmallVec</span>;
-<span class="kw">use</span> <span class="ident">tracing</span>::{<span class="ident">debug</span>, <span class="ident">debug_span</span>, <span class="ident">info_span</span>, <span class="ident">trace</span>, <span class="ident">trace_span</span>};
+<span class="kw">use</span> <span class="ident">tracing</span>::{<span class="ident">debug</span>, <span class="ident">debug_span</span>, <span class="ident">trace</span>};
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConstFolding</span> {}
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConstFolding</span>;
 
 <span class="kw">impl</span> <span class="ident">ConstFolding</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {}
+        <span class="self">Self</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ConstFolding</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">new</span>()
     }
 }
 

@@ -1,7 +1,7 @@
 (function() {var implementors = {};
 implementors["ansi_term"] = [{"text":"impl Default for Style","synthetic":false,"types":[]}];
 implementors["anymap"] = [{"text":"impl&lt;A:&nbsp;?Sized + UncheckedAnyExt&gt; Default for RawMap&lt;A&gt;","synthetic":false,"types":[]}];
-implementors["azuki_opt"] = [{"text":"impl Default for DeadCodeEliminator","synthetic":false,"types":[]}];
+implementors["azuki_opt"] = [{"text":"impl Default for ConstFolding","synthetic":false,"types":[]},{"text":"impl Default for DeadCodeEliminator","synthetic":false,"types":[]}];
 implementors["azuki_syntax"] = [{"text":"impl Default for Span","synthetic":false,"types":[]}];
 implementors["azuki_tac"] = [{"text":"impl Default for BBId","synthetic":false,"types":[]},{"text":"impl Default for SanityChecker","synthetic":false,"types":[]},{"text":"impl Default for Pipeline","synthetic":false,"types":[]},{"text":"impl Default for Ty","synthetic":false,"types":[]},{"text":"impl Default for TacFunc","synthetic":false,"types":[]},{"text":"impl Default for BasicBlock","synthetic":false,"types":[]},{"text":"impl Default for Branch","synthetic":false,"types":[]}];
 implementors["azuki_tacgen"] = [{"text":"impl Default for StringInterner","synthetic":false,"types":[]},{"text":"impl Default for Scope","synthetic":false,"types":[]}];
