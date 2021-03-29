@@ -432,6 +432,13 @@ pub struct BasicBlock {
     pub branch: Branch,
 }
 
+impl BasicBlock {
+    pub fn is_empty(&self) -> bool {
+        assert_eq!(self.head.is_none(), self.tail.is_none());
+        self.head.is_none()
+    }
+}
+
 /// Represents a single TAC instruction inside an indirect doubly linked list of instructions.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Tac {
@@ -529,23 +536,31 @@ impl InstKind {
         }
     }
 
-    pub fn replace_dest(&mut self, matches: InstId, replace_to: InstId) {
+    pub fn replace_dest(&mut self, replace: InstId, with: InstId) {
         match self {
             InstKind::Binary(b) => {
-                b.lhs.replace_dest(matches, replace_to);
-                b.rhs.replace_dest(matches, replace_to);
+                b.lhs.replace_dest(replace, with);
+                b.rhs.replace_dest(replace, with);
             }
             InstKind::FunctionCall(f) => f
                 .params
                 .iter_mut()
-                .for_each(|x| x.replace_dest(matches, replace_to)),
-            InstKind::Assign(v) => v.replace_dest(matches, replace_to),
+                .for_each(|x| x.replace_dest(replace, with)),
+            InstKind::Assign(v) => v.replace_dest(replace, with),
             InstKind::Phi(source) => source.iter_mut().for_each(|(_, v)| {
-                if *v == matches {
-                    *v = replace_to
+                if *v == replace {
+                    *v = with
                 }
             }),
             InstKind::Param(_) => {}
+        }
+    }
+
+    pub fn replace_phi_source(&mut self, replace: BBId, with: BBId) {
+        if let InstKind::Phi(s) = self {
+            if let Some(t) = s.remove(&replace) {
+                s.insert(with, t);
+            }
         }
     }
 
@@ -598,6 +613,29 @@ impl Branch {
             Branch::Unreachable => util::OptionIter::None,
         }
     }
+
+    pub fn replace_target(&mut self, replace: BBId, with: BBId) {
+        match self {
+            Branch::Jump(t) => {
+                if *t == replace {
+                    *t = with
+                }
+            }
+            Branch::CondJump {
+                cond: _,
+                if_true,
+                if_false,
+            } => {
+                if *if_true == replace {
+                    *if_true = with;
+                }
+                if *if_false == replace {
+                    *if_false = with;
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -645,9 +683,9 @@ impl Value {
         matches!(self, Self::Imm(..))
     }
 
-    pub fn replace_dest(&mut self, matches: InstId, replace_to: InstId) {
-        if *self == Self::Dest(matches) {
-            *self = Self::Dest(replace_to)
+    pub fn replace_dest(&mut self, replace: InstId, with: InstId) {
+        if *self == Self::Dest(replace) {
+            *self = Self::Dest(with)
         }
     }
 }

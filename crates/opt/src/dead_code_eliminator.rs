@@ -1,21 +1,16 @@
 use std::collections::{HashSet, VecDeque};
 
+use crate::util::graphs::{cfg, dfg};
 use azuki_tac::{builder::FuncEditor, optimizer::FunctionOptimizer, Branch, InstId, Value};
 use petgraph::{algo::dominators, graphmap::DiGraphMap, visit};
 use tracing::{debug, debug_span, trace};
 use visit::Walker;
 
-pub struct DeadCodeEliminator {
-    graph: DiGraphMap<InstId, ()>,
-    find_roots: VecDeque<InstId>,
-}
+pub struct DeadCodeEliminator;
 
 impl DeadCodeEliminator {
     pub fn new() -> DeadCodeEliminator {
-        DeadCodeEliminator {
-            graph: DiGraphMap::new(),
-            find_roots: VecDeque::new(),
-        }
+        DeadCodeEliminator
     }
 }
 
@@ -39,9 +34,9 @@ impl FunctionOptimizer for DeadCodeEliminator {
 
         debug!("Constructing reference map");
         // Construct instruction reference map
-        for (idx, _bb, inst) in func.all_inst_unordered() {
+        for (idx, _, inst) in func.all_inst_unordered() {
             for source in inst.kind.param_op_iter() {
-                self.graph.add_edge(idx, source, ());
+                graph.add_edge(idx, source, ());
             }
         }
         for (_, bb) in func.all_bb_unordered() {
@@ -64,7 +59,7 @@ impl FunctionOptimizer for DeadCodeEliminator {
         while let Some(root) = self.find_roots.pop_front() {
             dfs.move_to(root);
             retained.insert(root);
-            for point in (&mut dfs).iter(&self.graph) {
+            for point in (&mut dfs).iter(&graph) {
                 retained.insert(point);
             }
         }
