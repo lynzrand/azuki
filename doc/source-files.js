@@ -34,6 +34,7 @@ sourcesIndex["log"] = {"name":"","files":["lib.rs","macros.rs"]};
 sourcesIndex["logos"] = {"name":"","files":["internal.rs","lexer.rs","lib.rs","source.rs"]};
 sourcesIndex["logos_derive"] = {"name":"","dirs":[{"name":"generator","files":["context.rs","fork.rs","leaf.rs","mod.rs","rope.rs","tables.rs"]},{"name":"graph","files":["fork.rs","impls.rs","meta.rs","mod.rs","range.rs","regex.rs","rope.rs"]},{"name":"parser","files":["definition.rs","ignore_flags.rs","mod.rs","nested.rs","subpattern.rs","type_params.rs"]}],"files":["error.rs","leaf.rs","lib.rs","mir.rs","util.rs"]};
 sourcesIndex["matchers"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["multimap"] = {"name":"","files":["entry.rs","lib.rs","serde.rs"]};
 sourcesIndex["num"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["num_bigint"] = {"name":"","dirs":[{"name":"bigint","files":["addition.rs","bits.rs","convert.rs","division.rs","multiplication.rs","power.rs","shift.rs","subtraction.rs"]},{"name":"biguint","files":["addition.rs","bits.rs","convert.rs","division.rs","iter.rs","monty.rs","multiplication.rs","power.rs","shift.rs","subtraction.rs"]}],"files":["bigint.rs","biguint.rs","lib.rs","macros.rs"]};
 sourcesIndex["num_complex"] = {"name":"","files":["cast.rs","lib.rs","pow.rs"]};

@@ -1,3 +1,4 @@
 (function() {var implementors = {};
+implementors["multimap"] = [{"text":"impl&lt;'a, K, V, S&gt; Deserialize&lt;'a&gt; for MultiMap&lt;K, V, S&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;K: Deserialize&lt;'a&gt; + Eq + Hash,<br>&nbsp;&nbsp;&nbsp;&nbsp;V: Deserialize&lt;'a&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;S: BuildHasher + Default,&nbsp;</span>","synthetic":false,"types":[]}];
 implementors["serde_json"] = [{"text":"impl&lt;'de&gt; Deserialize&lt;'de&gt; for Map&lt;String, Value&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'de&gt; Deserialize&lt;'de&gt; for Value","synthetic":false,"types":[]},{"text":"impl&lt;'de&gt; Deserialize&lt;'de&gt; for Number","synthetic":false,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

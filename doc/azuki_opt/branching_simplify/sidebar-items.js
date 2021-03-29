@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["BranchingSimplify","Performs branching simplify. See module documents."]]});
+initSidebarItems({"fn":[["replace_phis",""]],"struct":[["BranchingSimplify","Performs branching simplify. See module documents."]]});
