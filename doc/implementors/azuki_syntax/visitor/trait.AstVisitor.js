@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["azuki_tacgen"] = [{"text":"impl&lt;'a&gt; AstVisitor for FuncCompiler&lt;'a&gt;","synthetic":false,"types":[]}];
+implementors["azuki_tacgen"] = [{"text":"impl&lt;'a&gt; <a class=\"trait\" href=\"azuki_syntax/visitor/trait.AstVisitor.html\" title=\"trait azuki_syntax::visitor::AstVisitor\">AstVisitor</a> for <a class=\"struct\" href=\"azuki_tacgen/struct.FuncCompiler.html\" title=\"struct azuki_tacgen::FuncCompiler\">FuncCompiler</a>&lt;'a&gt;","synthetic":false,"types":["azuki_tacgen::FuncCompiler"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

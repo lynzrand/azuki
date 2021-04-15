@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["BBId","The index of a basic block."]],"type":[["InstId",""]]});
+initSidebarItems({"fn":[["slot_num",""]],"struct":[["BBId","The index of a basic block."],["InstId","The index of an instruction."]]});

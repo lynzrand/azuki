@@ -1,4 +1,4 @@
 (function() {var implementors = {};
-implementors["azuki"] = [{"text":"impl IntoApp for Opt","synthetic":false,"types":[]}];
-implementors["azvm"] = [{"text":"impl IntoApp for Opt","synthetic":false,"types":[]}];
+implementors["azuki"] = [{"text":"impl <a class=\"trait\" href=\"clap/derive/trait.IntoApp.html\" title=\"trait clap::derive::IntoApp\">IntoApp</a> for <a class=\"struct\" href=\"azuki/opt/struct.Opt.html\" title=\"struct azuki::opt::Opt\">Opt</a>","synthetic":false,"types":["azuki::opt::Opt"]}];
+implementors["azvm"] = [{"text":"impl <a class=\"trait\" href=\"clap/derive/trait.IntoApp.html\" title=\"trait clap::derive::IntoApp\">IntoApp</a> for <a class=\"struct\" href=\"azvm/struct.Opt.html\" title=\"struct azvm::Opt\">Opt</a>","synthetic":false,"types":["azvm::Opt"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

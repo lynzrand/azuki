@@ -16,25 +16,22 @@
 <span id="13">13</span>
 <span id="14">14</span>
 <span id="15">15</span>
-<span id="16">16</span>
-<span id="17">17</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Error and Result types.</span>
 
-<span class="kw">use</span> <span class="ident">thunderdome</span>::<span class="ident">Index</span>;
-
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">BBId</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">BBId</span>, <span class="ident">InstId</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
-    <span class="ident">NoSuchTacIdx</span>(<span class="ident">Index</span>),
-    <span class="ident">NoSuchBB</span>(<span class="ident">BBId</span>),
+    <span class="ident">NoSuchTacIdx</span>(<span class="ident">InstId</span>),
+    <span class="ident">NoSuchBb</span>(<span class="ident">BBId</span>),
     <span class="ident">NoSuchVar</span>(<span class="ident">String</span>),
-    <span class="ident">NoCodeAfterInst</span>(<span class="ident">Index</span>),
+    <span class="ident">NoCodeAfterInst</span>(<span class="ident">InstId</span>),
     <span class="ident">AlreadyConnected</span>,
     <span class="ident">NotConnected</span>,
 }
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TacResult</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "azuki_tac";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="azuki_tac"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["TacFormatCtx",""],["VarId",""]],"trait":[["FormatContext",""]]});
+initSidebarItems({"struct":[["VarId",""]],"trait":[["FormatContext",""]]});

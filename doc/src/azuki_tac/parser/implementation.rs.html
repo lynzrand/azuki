@@ -534,15 +534,6 @@
 <span id="531">531</span>
 <span id="532">532</span>
 <span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#![<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parser&quot;</span>)]</span>
 <span class="doccomment">//! Module for parsing the text representation of Azuki TAC into real code.</span>
@@ -550,24 +541,14 @@
 <span class="doccomment">//! An ANTLR specification of Azuki TAC&#39;s text representation can be found in</span>
 <span class="doccomment">//! `/docs/src/tac/AzukiTac.g4`.</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">borrow</span>::{<span class="ident">Borrow</span>, <span class="ident">Cow</span>},
-    <span class="ident">collections</span>::<span class="ident">BTreeMap</span>,
-    <span class="ident">fs</span>::<span class="ident">Permissions</span>,
-    <span class="ident">io</span>::<span class="ident">stderr</span>,
-    <span class="ident">str</span>::<span class="ident">FromStr</span>,
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow</span>::<span class="ident">Cow</span>, <span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">str</span>::<span class="ident">FromStr</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">BBId</span>, <span class="ident">BasicBlock</span>, <span class="ident">BinaryInst</span>, <span class="ident">BinaryOp</span>, <span class="ident">Branch</span>, <span class="ident">FunctionCall</span>, <span class="ident">Inst</span>,
-    <span class="ident">InstId</span>, <span class="ident">InstKind</span>, <span class="ident">NumericTy</span>, <span class="ident">Program</span>, <span class="ident">Tac</span>, <span class="ident">TacFunc</span>, <span class="ident">Ty</span>, <span class="ident">TyKind</span>, <span class="ident">Value</span>,
+    <span class="ident">builder</span>::<span class="ident">FuncEditor</span>, <span class="ident">BBId</span>, <span class="ident">BinaryInst</span>, <span class="ident">BinaryOp</span>, <span class="ident">Branch</span>, <span class="ident">FunctionCall</span>, <span class="ident">Inst</span>, <span class="ident">InstId</span>, <span class="ident">InstKind</span>,
+    <span class="ident">NumericTy</span>, <span class="ident">TacFunc</span>, <span class="ident">Ty</span>, <span class="ident">TyKind</span>, <span class="ident">Value</span>,
 };
 
-<span class="kw">use</span> <span class="ident">lexpr</span>::{
-    <span class="ident">datum</span>::<span class="ident">Ref</span> <span class="kw">as</span> <span class="ident">LRef</span>,
-    <span class="ident">datum</span>::{<span class="ident">ListIter</span>, <span class="ident">Span</span>},
-    <span class="ident">Datum</span>, <span class="ident">Printer</span>, <span class="ident">Value</span> <span class="kw">as</span> <span class="ident">LexprVal</span>,
-};
+<span class="kw">use</span> <span class="ident">lexpr</span>::{<span class="ident">datum</span>::<span class="ident">ListIter</span>, <span class="ident">datum</span>::<span class="ident">Ref</span> <span class="kw">as</span> <span class="ident">LRef</span>};
 <span class="kw">use</span> <span class="ident">ParseErrorKind</span>::<span class="kw-2">*</span>;
 
 <span class="kw">struct</span> <span class="ident">VariableNamingCtx</span><span class="op">&lt;</span><span class="lifetime">&#39;f</span><span class="op">&gt;</span> {
@@ -601,7 +582,8 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_var</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">InstId</span>, <span class="ident">inst</span>: <span class="ident">Inst</span>) {
+    <span class="comment">// Until one day we use that...</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">_set_var</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">InstId</span>, <span class="ident">inst</span>: <span class="ident">Inst</span>) {
         <span class="kw">let</span> <span class="ident">inst_ref</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">func</span>.<span class="ident">func</span>.<span class="ident">tac_get_mut</span>(<span class="ident">idx</span>);
         <span class="ident">inst_ref</span>.<span class="ident">inst</span> <span class="op">=</span> <span class="ident">inst</span>;
     }
@@ -1087,4 +1069,5 @@
     <span class="prelude-val">Ok</span>(<span class="ident">func</span>)
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "azuki_tac";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="azuki_tac"></div>
+    <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
