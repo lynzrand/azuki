@@ -4,24 +4,14 @@
 //! An ANTLR specification of Azuki TAC's text representation can be found in
 //! `/docs/src/tac/AzukiTac.g4`.
 
-use std::{
-    borrow::{Borrow, Cow},
-    collections::BTreeMap,
-    fs::Permissions,
-    io::stderr,
-    str::FromStr,
-};
+use std::{borrow::Cow, collections::BTreeMap, str::FromStr};
 
 use crate::{
-    builder::FuncEditor, BBId, BasicBlock, BinaryInst, BinaryOp, Branch, FunctionCall, Inst,
-    InstId, InstKind, NumericTy, Program, Tac, TacFunc, Ty, TyKind, Value,
+    builder::FuncEditor, BBId, BinaryInst, BinaryOp, Branch, FunctionCall, Inst, InstId, InstKind,
+    NumericTy, TacFunc, Ty, TyKind, Value,
 };
 
-use lexpr::{
-    datum::Ref as LRef,
-    datum::{ListIter, Span},
-    Datum, Printer, Value as LexprVal,
-};
+use lexpr::{datum::ListIter, datum::Ref as LRef};
 use ParseErrorKind::*;
 
 struct VariableNamingCtx<'f> {
@@ -55,7 +45,8 @@ impl<'f> VariableNamingCtx<'f> {
         }
     }
 
-    pub fn set_var(&mut self, idx: InstId, inst: Inst) {
+    // Until one day we use that...
+    pub fn _set_var(&mut self, idx: InstId, inst: Inst) {
         let inst_ref = self.func.func.tac_get_mut(idx);
         inst_ref.inst = inst;
     }

@@ -10,6 +10,8 @@
 //! [cranelift]: https://github.com/bytecodealliance/wasmtime
 //! [llvm]: https://llvm.org
 
+#![allow(clippy::upper_case_acronyms)]
+
 pub mod builder;
 pub mod containers;
 pub mod err;
@@ -27,13 +29,14 @@ use err::{Error, TacResult};
 
 pub use linkedlist::*;
 
+use slotmap::SlotMap;
 use smol_str::SmolStr;
-use thunderdome::{Arena, Index};
 
 pub use ty::{NumericTy, Ty, TyKind};
 use util::VarIter;
 
-pub use containers::{BBId, InstId};
+pub use containers::BBId;
+pub use containers::InstId;
 
 #[derive(Debug, Clone)]
 pub struct Program {
@@ -57,9 +60,9 @@ pub struct TacFunc {
 
     // The followings are allocating spaces for data types
     /// An arena to allocate instructions
-    instructions_arena: Arena<Tac>,
+    instructions_arena: SlotMap<InstId, Tac>,
     /// An arena to allocate basic block info
-    basic_block_arena: Arena<BasicBlock>,
+    basic_block_arena: SlotMap<BBId, BasicBlock>,
 
     pub first_block: Option<BBId>,
 }
@@ -76,8 +79,8 @@ impl TacFunc {
         TacFunc {
             name,
             ty,
-            instructions_arena: Arena::new(),
-            basic_block_arena: Arena::new(),
+            instructions_arena: SlotMap::with_key(),
+            basic_block_arena: SlotMap::with_key(),
             first_block: None,
         }
     }
@@ -281,11 +284,11 @@ impl TacFunc {
 impl TacFunc {
     /// Insert a new basic block into this function
     pub fn bb_new(&mut self) -> BBId {
-        self.basic_block_arena.insert(BasicBlock::default()).into()
+        self.basic_block_arena.insert(BasicBlock::default())
     }
 
     pub fn bb_exists(&self, idx: BBId) -> bool {
-        self.basic_block_arena.get(idx.into()).is_some()
+        self.basic_block_arena.get(idx).is_some()
     }
 
     #[inline]
@@ -300,11 +303,11 @@ impl TacFunc {
 
     #[inline]
     pub fn bb_get2_mut(&mut self, i1: BBId, i2: BBId) -> (&mut BasicBlock, &mut BasicBlock) {
-        let (v1, v2) = self.basic_block_arena.get2_mut(i1.into(), i2.into());
-        (
-            v1.unwrap_or_else(|| panic!("No index at {:?}", i1)),
-            v2.unwrap_or_else(|| panic!("No index at {:?}", i2)),
-        )
+        let [v1, v2] = self
+            .basic_block_arena
+            .get_disjoint_mut([i1, i2])
+            .unwrap_or_else(|| panic!("Invalid indices: {} {}", i1, i2));
+        (v1, v2)
     }
 
     /// Set the given block as the first block in function.
@@ -328,9 +331,7 @@ impl TacFunc {
 
     #[inline]
     pub fn all_bb_unordered(&self) -> impl Iterator<Item = (BBId, &BasicBlock)> {
-        self.basic_block_arena
-            .iter()
-            .map(|(idx, bb)| (idx.into(), bb))
+        self.basic_block_arena.iter().map(|(idx, bb)| (idx, bb))
     }
 
     /// Split all instruction after `inst` into a new basic block. Returns the ID

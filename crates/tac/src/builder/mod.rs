@@ -42,10 +42,10 @@ pub struct FuncBuilder<'a, TVar> {
     /// Well... You see, there's a [forest][] in cranelift, right?
     ///
     /// [forest]: https://github.com/bytecodealliance/wasmtime/tree/HEAD/cranelift/bforest
-    variable_map: BTreeMap<TVar, (Ty, BTreeMap<BBId, Index>)>,
+    variable_map: BTreeMap<TVar, (Ty, BTreeMap<BBId, InstId>)>,
 
     /// Incomplete phi commands (params in our case).
-    incomplete_phi: BTreeMap<BBId, Vec<(TVar, Index)>>,
+    incomplete_phi: BTreeMap<BBId, Vec<(TVar, InstId)>>,
 
     /// Basic blocks predecessors
     pub block_pred: BTreeMap<BBId, SmallBBIdVec>,
@@ -81,7 +81,7 @@ where
     /// not _sealed_, or there is any incomplete phis lying around.
     pub fn sanity_check(self) {
         for (bb, _) in self.editor.func.all_bb_unordered() {
-            let bb = bb.unique_num() as usize;
+            let bb = bb.slot() as usize;
             assert!(
                 self.filled_bbs.contains(bb),
                 "bb{} is not yet filled!\nfunc:\n{}",
@@ -115,24 +115,24 @@ where
             }
         }
 
-        self.sealed_bbs.insert(bb_id.unique_num() as usize);
+        self.sealed_bbs.insert(bb_id.slot() as usize);
     }
 
     /// Mark the given basic block as _filled_.
     ///
     /// _Filled_ blocks have all its instructions inserted.
     pub fn mark_filled(&mut self, bb_id: BBId) {
-        self.filled_bbs.insert(bb_id.unique_num() as usize);
+        self.filled_bbs.insert(bb_id.slot() as usize);
     }
 
     /// Check if the given basic block is sealed.
     pub fn is_sealed(&self, bb_id: BBId) -> bool {
-        self.sealed_bbs.contains(bb_id.unique_num() as usize)
+        self.sealed_bbs.contains(bb_id.slot() as usize)
     }
 
     /// Check if the given basic block is filled.
     pub fn is_filled(&self, bb_id: BBId) -> bool {
-        self.filled_bbs.contains(bb_id.unique_num() as usize)
+        self.filled_bbs.contains(bb_id.slot() as usize)
     }
 
     pub fn declare_var(&mut self, var: TVar, ty: Ty) {
@@ -140,13 +140,13 @@ where
     }
 
     /// Indicate that variable `var` is written as the result of instruction `inst`.
-    pub fn write_variable_cur(&mut self, var: TVar, inst: Index) -> TacResult<()> {
+    pub fn write_variable_cur(&mut self, var: TVar, inst: InstId) -> TacResult<()> {
         self.write_variable(var, inst, self.current_bb_id())
     }
 
     /// Indicate that variable `var` is written as the result of instruction `inst`
     /// in basic block `bb_id`. If the variable does not exist, it will be created.
-    pub fn write_variable(&mut self, var: TVar, inst: Index, bb_id: BBId) -> TacResult<()> {
+    pub fn write_variable(&mut self, var: TVar, inst: InstId, bb_id: BBId) -> TacResult<()> {
         let map = &mut self
             .variable_map
             .get_mut(&var)
@@ -156,25 +156,25 @@ where
         Ok(())
     }
 
-    /// Indicate that variable `var` is read in the current basic block. Returns the index
+    /// Indicate that variable `var` is read in the current basic block. Returns the InstId
     /// to the latest definition of this variable, or `None` if it does not exist.
     ///
     /// ## Side effects
     ///
     /// According to the algorithm, this function may introduce parameters to
     /// `bb` and insert parameter passes to the block's predecessors.
-    pub fn read_variable_cur(&mut self, var: TVar) -> Option<Index> {
+    pub fn read_variable_cur(&mut self, var: TVar) -> Option<InstId> {
         self.read_variable(var, self.current_bb_id())
     }
 
-    /// Indicate that variable `var` is read in basic block `bb`. Returns the index
+    /// Indicate that variable `var` is read in basic block `bb`. Returns the InstId
     /// to the latest definition of this variable, or `None` if it does not exist.
     ///
     /// ## Side effects
     ///
     /// According to the algorithm, this function may introduce parameters to
     /// `bb` and insert parameter passes to the block's predecessors.
-    pub fn read_variable(&mut self, var: TVar, bb_id: BBId) -> Option<Index> {
+    pub fn read_variable(&mut self, var: TVar, bb_id: BBId) -> Option<InstId> {
         let subtree = &self.variable_map.get(&var)?.1;
         if let Some(idx) = subtree.get(&bb_id) {
             // local numbering works!
@@ -186,9 +186,9 @@ where
     }
 
     /// This function directly corresponds to `readVariableRecursive` in the algorithm.
-    fn read_variable_recursive(&mut self, var: TVar, bb_id: BBId) -> Option<Index> {
+    fn read_variable_recursive(&mut self, var: TVar, bb_id: BBId) -> Option<InstId> {
         let var_ty = self.variable_map.get(&var)?.0.clone();
-        let val = if !self.sealed_bbs.contains(bb_id.unique_num() as usize) {
+        let val = if !self.sealed_bbs.contains(bb_id.slot() as usize) {
             let param = self.editor.insert_phi(bb_id, var_ty).unwrap();
 
             let block = self.incomplete_phi.entry(bb_id).or_insert_with(Vec::new);
@@ -212,7 +212,7 @@ where
     }
 
     /// This function directly corresponds to `addPhiOperands` in the algorithm.
-    fn add_phi_operands(&mut self, var: TVar, phi: Index, preds: &[BBId]) {
+    fn add_phi_operands(&mut self, var: TVar, phi: InstId, preds: &[BBId]) {
         for &pred in preds {
             let source = self.read_variable(var.clone(), pred).unwrap();
             self.func
@@ -226,7 +226,7 @@ where
         self.try_remove_trivial_phi(phi);
     }
 
-    fn try_remove_trivial_phi(&mut self, phi_op: Index) {
+    fn try_remove_trivial_phi(&mut self, phi_op: InstId) {
         let mut same = None;
         let phi = self.editor.func.tac_get(phi_op);
         let phi_bb = phi.bb;

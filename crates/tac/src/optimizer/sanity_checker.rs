@@ -41,9 +41,9 @@ impl FunctionOptimizer for SanityChecker {
         }
         let is_all_vars_declared = self.use_vars.is_subset(&self.decl_vars);
 
-        let mut is_all_jumps_declared = true;
-        for (bb_id, bb) in func.basic_block_arena.iter() {
-            for target in bb.branch.target_iter() {
+        let is_all_jumps_declared = true;
+        for (_bb_id, bb) in func.basic_block_arena.iter() {
+            for _target in bb.branch.target_iter() {
                 // is_all_jumps_declared |= func.bb_get(target).is_some();
             }
         }

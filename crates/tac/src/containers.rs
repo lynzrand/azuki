@@ -1,71 +1,55 @@
-use std::ops::IndexMut as IndexMutOp;
-use std::{fmt::Display, ops::Index as IndexOp};
+use std::fmt::Display;
 
-use thunderdome::{Arena, Index};
+use slotmap::{new_key_type, Key, KeyData};
 
-use crate::BasicBlock;
+macro_rules! setup_index {
+    ($ty:ty) => {
+        impl $ty {
+            pub fn slot(self) -> u32 {
+                slot_num(self.data().as_ffi())
+            }
 
-pub type InstId = thunderdome::Index;
+            pub fn from_bits(v: u64) -> Self {
+                Self(KeyData::from_ffi(v))
+            }
 
-/// The index of a basic block.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BBId(thunderdome::Index);
+            pub fn into_bits(self) -> u64 {
+                self.data().as_ffi()
+            }
+        }
 
-impl BBId {
-    pub fn from_index(idx: thunderdome::Index) -> Self {
-        Self(idx)
-    }
-
-    pub fn as_index(self) -> thunderdome::Index {
-        self.0
-    }
-
-    pub fn unique_num(self) -> u32 {
-        self.0.slot()
-    }
+        impl From<$ty> for u32 {
+            fn from(val: $ty) -> Self {
+                val.slot()
+            }
+        }
+    };
 }
+
+new_key_type! {
+    /// The index of a basic block.
+    pub struct BBId;
+
+    /// The index of an instruction.
+    pub struct InstId;
+}
+
+fn slot_num(slotmap_index: u64) -> u32 {
+    // extract the lower 32 bits
+    slotmap_index as u32
+}
+
+setup_index!(BBId);
+setup_index!(InstId);
 
 impl Display for BBId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "bb{}", self.unique_num())
+        write!(f, "bb{}", self.slot())
     }
 }
 
-impl IndexOp<BBId> for Arena<BasicBlock> {
-    type Output = BasicBlock;
-
-    fn index(&self, index: BBId) -> &Self::Output {
-        self.index(index.0)
-    }
-}
-
-impl IndexMutOp<BBId> for Arena<BasicBlock> {
-    fn index_mut(&mut self, index: BBId) -> &mut Self::Output {
-        self.index_mut(index.0)
-    }
-}
-
-impl From<Index> for BBId {
-    fn from(i: Index) -> Self {
-        Self(i)
-    }
-}
-
-impl Into<Index> for BBId {
-    fn into(self) -> Index {
-        self.0
-    }
-}
-
-impl Into<u32> for BBId {
-    fn into(self) -> u32 {
-        self.0.slot()
-    }
-}
-
-impl Default for BBId {
-    fn default() -> Self {
-        // The default value is an unlikely value
-        BBId(thunderdome::Index::from_bits(u64::max_value()))
+impl Display for InstId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "%{}", self.slot())
     }
 }

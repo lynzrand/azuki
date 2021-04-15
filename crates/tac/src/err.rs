@@ -1,15 +1,13 @@
 //! Error and Result types.
 
-use thunderdome::Index;
-
-use crate::BBId;
+use crate::{BBId, InstId};
 
 #[derive(Debug)]
 pub enum Error {
-    NoSuchTacIdx(Index),
-    NoSuchBB(BBId),
+    NoSuchTacIdx(InstId),
+    NoSuchBb(BBId),
     NoSuchVar(String),
-    NoCodeAfterInst(Index),
+    NoCodeAfterInst(InstId),
     AlreadyConnected,
     NotConnected,
 }

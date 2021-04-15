@@ -1,6 +1,5 @@
 //! Serialization and de-serialization for TAC code.
 
-use indexmap::IndexSet;
 use std::{fmt::Display, writeln};
 use ty::FuncTy;
 use util::ListFormatter;
@@ -17,17 +16,6 @@ where
 {
     fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: C) -> std::fmt::Result {
         (*self).fmt_ctx(f, ctx)
-    }
-}
-
-struct TacFormatCtx {
-    pub i_set: IndexSet<Index>,
-}
-
-impl TacFormatCtx {
-    pub fn var_id(&mut self, var: Index) -> VarId {
-        // VarId(self.i_set.insert_full(var).0)
-        VarId(var.slot())
     }
 }
 
@@ -102,11 +90,11 @@ impl Display for VarId {
     }
 }
 
-impl FormatContext<&mut TacFormatCtx> for Value {
-    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut TacFormatCtx) -> std::fmt::Result {
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Dest(i) => {
-                write!(f, "{}", ctx.var_id(*i))
+                write!(f, "{}", i)
             }
             Value::Imm(imm) => {
                 write!(f, "{}", imm)
@@ -115,19 +103,12 @@ impl FormatContext<&mut TacFormatCtx> for Value {
     }
 }
 
-impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
-    fn fmt_ctx(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        ctx: (VarId, &mut TacFormatCtx),
-    ) -> std::fmt::Result {
+impl FormatContext<VarId> for Tac {
+    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: VarId) -> std::fmt::Result {
         write!(f, "({} {} ", ctx.0, self.inst.ty)?;
         match &self.inst.kind {
             InstKind::Binary(i) => {
-                write!(f, "{} ", i.op)?;
-                i.lhs.fmt_ctx(f, ctx.1)?;
-                write!(f, " ")?;
-                i.rhs.fmt_ctx(f, ctx.1)?;
+                write!(f, "{} {} {}", i.op, i.lhs, i.rhs)?;
             }
             InstKind::FunctionCall(call) => {
                 write!(f, "call {} (", &call.name)?;
@@ -135,13 +116,13 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                     if idx != 0 {
                         write!(f, " ")?;
                     }
-                    param.fmt_ctx(f, ctx.1)?;
+                    param.fmt(f)?;
                 }
                 write!(f, ")")?;
             }
 
             InstKind::Assign(i) => {
-                i.fmt_ctx(f, ctx.1)?;
+                i.fmt(f)?;
             }
 
             InstKind::Param(id) => {
@@ -157,7 +138,7 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
                     } else {
                         first = false;
                     }
-                    write!(f, "({} bb{})", ctx.1.var_id(val), bb.unique_num())?;
+                    write!(f, "({} {})", val, bb)?;
                 }
             }
         }
@@ -166,27 +147,31 @@ impl FormatContext<(VarId, &mut TacFormatCtx)> for Tac {
     }
 }
 
-impl FormatContext<&mut TacFormatCtx> for Branch {
-    fn fmt_ctx(&self, f: &mut std::fmt::Formatter<'_>, ctx: &mut TacFormatCtx) -> std::fmt::Result {
+impl Display for Branch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "(")?;
         match self {
             Branch::Return(v) => {
-                write!(f, "return ")?;
+                write!(f, "return")?;
                 if let Some(val) = v {
-                    val.fmt_ctx(f, ctx)?;
+                    write!(f, " {}", val)?;
                 }
             }
             Branch::Jump(target) => {
-                write!(f, "br bb{}", target.unique_num())?;
+                write!(f, "br {}", target)?;
             }
             Branch::CondJump {
                 cond,
                 if_true,
                 if_false,
             } => {
-                write!(f, "brif ")?;
-                cond.fmt_ctx(f, ctx)?;
-                write!(f, " bb{} bb{}", if_true.unique_num(), if_false.unique_num())?;
+                write!(
+                    f,
+                    "brif {} bb{} bb{}",
+                    cond,
+                    if_true.slot(),
+                    if_false.slot()
+                )?;
             }
             Branch::Unreachable => {
                 write!(f, "unreachable")?;
@@ -202,22 +187,19 @@ impl std::fmt::Display for TacFunc {
         let ty = self.ty.as_func().unwrap();
         let param_fmt = ListFormatter::new(ty.params.iter());
         write!(f, "(fn {} ({}) {}", &self.name, param_fmt, &ty.return_type)?;
-        let mut ctx = TacFormatCtx {
-            i_set: IndexSet::new(),
-        };
 
         for (k, v) in self.bb_iter() {
             writeln!(f)?;
-            write!(f, "\t(bb{} (", k.unique_num())?;
+            write!(f, "\t(bb{} (", k.slot())?;
             if let Some(x) = v.head {
                 let mut cur_idx = x;
                 loop {
                     let i = self.instructions_arena.get(cur_idx).unwrap();
-                    let cur_id = ctx.var_id(cur_idx);
+                    let cur_id = cur_idx.slot();
 
                     writeln!(f)?;
                     write!(f, "\t\t")?;
-                    i.fmt_ctx(f, (cur_id, &mut ctx))?;
+                    i.fmt_ctx(f, VarId(cur_id))?;
 
                     match i.next {
                         Some(x) => cur_idx = x,
@@ -229,7 +211,7 @@ impl std::fmt::Display for TacFunc {
             }
             writeln!(f, ")")?;
             write!(f, "\t\t")?;
-            v.branch.fmt_ctx(f, &mut ctx)?;
+            v.branch.fmt(f)?;
             write!(f, ")")?;
         }
         writeln!(f, ")")?;

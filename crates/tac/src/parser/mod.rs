@@ -1,5 +1,5 @@
 mod implementation;
-use std::{collections::HashMap, io::stderr};
+use std::{collections::HashMap};
 
 pub use implementation::*;
 

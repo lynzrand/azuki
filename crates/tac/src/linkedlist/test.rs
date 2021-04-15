@@ -1,11 +1,13 @@
-use thunderdome::{Arena, Index};
-
 use crate::{ImplicitLinkedList, ImplicitLinkedListItem};
 
-struct ExampleItem(i64, Option<Index>, Option<Index>);
+struct ExampleItem(
+    i64,
+    Option<slotmap::DefaultKey>,
+    Option<slotmap::DefaultKey>,
+);
 
 impl ImplicitLinkedListItem for ExampleItem {
-    type Key = Index;
+    type Key = slotmap::DefaultKey;
 
     fn next(&self) -> Option<Self::Key> {
         self.2
@@ -26,7 +28,7 @@ impl ImplicitLinkedListItem for ExampleItem {
 
 #[test]
 fn linked_list_connect() {
-    let mut list = Arena::new();
+    let mut list = slotmap::SlotMap::new();
     let one = list.insert(ExampleItem(1, None, None));
     let two = list.insert(ExampleItem(2, None, None));
     list.connect(one, two);

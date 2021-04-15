@@ -1,4 +1,4 @@
-use thunderdome::{Arena, Index};
+use slotmap::SlotMap;
 
 use crate::Tac;
 use crate::{BBId, BasicBlock, InstId};
@@ -33,27 +33,27 @@ impl ImplicitLinkedListItem for Tac {
     }
 }
 
-impl<T, Key> ImplicitLinkedList<Key> for Arena<T>
+impl<T, Key> ImplicitLinkedList<Key> for SlotMap<Key, T>
 where
     T: ImplicitLinkedListItem<Key = Key>,
-    Key: Copy + Into<Index> + From<Index> + Eq,
+    Key: Copy + Eq + slotmap::Key,
 {
     type Item = T;
 
     fn get_item(&self, key: Key) -> &Self::Item {
-        &self[key.into()]
+        &self[key]
     }
 
     fn get_item_mut(&mut self, key: Key) -> &mut Self::Item {
-        &mut self[key.into()]
+        &mut self[key]
     }
 
     fn insert_item(&mut self, item: Self::Item) -> Key {
-        self.insert(item).into()
+        self.insert(item)
     }
 
     fn remove_item(&mut self, idx: Key) -> Self::Item {
-        self.remove(idx.into()).unwrap()
+        self.remove(idx).unwrap()
     }
 }
 
