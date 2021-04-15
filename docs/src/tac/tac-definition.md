@@ -6,6 +6,6 @@ TAC 是一种
 
 ## 文法
 
-```c++
-{{#include AzukiTac.g4}}
+```racket
+(fn <函数名> ())
 ```

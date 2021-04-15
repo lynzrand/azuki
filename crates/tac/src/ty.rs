@@ -2,6 +2,8 @@
 use enum_as_inner::EnumAsInner;
 use std::sync::Arc;
 
+mod registry;
+
 pub const PTR_SIZE: usize = 8;
 
 /// A representation of basic type that has O(1) clone and sizes no more than
