@@ -249,6 +249,23 @@ impl<'a> AstVisitor for FuncCompiler<'a> {
                 Ok((v.into(), t))
             }
             UnaryOp::Pos => Ok((v, t)),
+            UnaryOp::Deref => {
+                let ty = t
+                    .as_ptr()
+                    .ok_or_else(|| Error::UnknownType(format!("{} is not a pointer", t).into()))?;
+                let ty = (&**ty).clone();
+                let v = v
+                    .get_inst()
+                    .ok_or_else(|| Error::UnknownVar(format!("{} is not a variable", v).into()))?;
+                let v = self.builder.insert_after_current_place(Inst {
+                    kind: InstKind::Load(v),
+                    ty: ty.clone(),
+                });
+                Ok((v.into(), ty))
+            }
+            UnaryOp::Ref => {
+                todo!()
+            }
         }
     }
 

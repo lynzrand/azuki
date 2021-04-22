@@ -57,6 +57,8 @@ pub enum Token {
     Div,
     #[token(r"=")]
     Assign,
+    #[token("&")]
+    And,
     #[token(r"==")]
     Eq,
     #[token(r"!=")]

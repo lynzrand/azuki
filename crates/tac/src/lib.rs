@@ -506,6 +506,12 @@ pub enum InstKind {
     /// An assignment from another instruction or constant
     Assign(Value),
 
+    /// Save a value into an address
+    Save(InstId, Value),
+
+    /// Load a value from the given address
+    Load(InstId),
+
     /// A phi instruction.
     ///
     /// # Note
@@ -534,6 +540,8 @@ impl InstKind {
                 }
             }
             InstKind::Param(_) => VarIter::None,
+            InstKind::Save(addr, val) => VarIter::Two((*addr).into(), *val),
+            InstKind::Load(addr) => VarIter::One((*addr).into()),
         }
     }
 
@@ -554,6 +562,17 @@ impl InstKind {
                 }
             }),
             InstKind::Param(_) => {}
+            InstKind::Save(addr, val) => {
+                if *addr == replace {
+                    *addr = with
+                }
+                val.replace_dest(replace, with);
+            }
+            InstKind::Load(addr) => {
+                if *addr == replace {
+                    *addr = with
+                }
+            }
         }
     }
 

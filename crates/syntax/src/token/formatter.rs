@@ -37,6 +37,7 @@ impl Display for Token {
             Token::Minus => {"minus"}
             Token::Mul => {"mul"}
             Token::Div => {"div"}
+            Token::And => {"and"}
             Token::Assign => {"assign"}
             Token::Eq => {"eq"}
             Token::Neq => {"neq"}

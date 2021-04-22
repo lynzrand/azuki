@@ -141,6 +141,14 @@ impl FormatContext<VarId> for Tac {
                     write!(f, "({} {})", val, bb)?;
                 }
             }
+
+            InstKind::Save(addr, val) => {
+                write!(f, "save {} {}", addr, val)?;
+            }
+
+            InstKind::Load(addr) => {
+                write!(f, "load {}", addr)?;
+            }
         }
         write!(f, ")")?;
         Ok(())

@@ -174,7 +174,8 @@ impl<'src> Vm<'src> {
                 sources.get(&last_bb).and_then(|&val| last.eval(val.into()))
             }
             azuki_tac::InstKind::Param(i) => last.params.get(*i).cloned(),
-            // azuki_tac::InstKind::Dead => None,
+            azuki_tac::InstKind::Save(_, _) => todo!("Implement save instruction"),
+            azuki_tac::InstKind::Load(_) => todo!("Implement load instruction"),
         };
 
         let last = self.stack.last_mut().unwrap();

@@ -214,6 +214,8 @@ pub struct CallExpr {
 pub enum UnaryOp {
     Neg,
     Pos,
+    Deref,
+    Ref,
 }
 
 #[derive(Debug, Copy, Clone)]

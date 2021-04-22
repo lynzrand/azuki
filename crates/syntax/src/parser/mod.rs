@@ -237,7 +237,7 @@ where
             } else {
                 Ok(Expr::Ident(ident))
             }
-        } else if is_next!(self, Token::UIntLiteral(_)|Token::CharLiteral(_)) {
+        } else if is_next!(self, Token::UIntLiteral(_) | Token::CharLiteral(_)) {
             let (num, span) = self.lexer.next().unwrap();
             Ok(Expr::Literal(LiteralExpr {
                 span,
@@ -277,10 +277,10 @@ where
 
     fn parse_unary_expr(&mut self) -> Result<Expr, ParseError> {
         // UExpr -> PreUOp* Item ProUOp*
-        // PreUOp -> '+' | '-'
+        // PreUOp -> '+' | '-' | '*' | '&'
         // ProUOp -> 'as' TypeDef
         let mut prec_ops = vec![];
-        while is_next!(self, Token::Minus) {
+        while is_next!(self, Token::Minus | Token::Plus | Token::Mul | Token::And) {
             prec_ops.push(self.lexer.next().unwrap())
         }
 
@@ -289,6 +289,8 @@ where
             let unary_op = match prec_op {
                 Token::Plus => UnaryOp::Pos,
                 Token::Minus => UnaryOp::Neg,
+                Token::Mul => UnaryOp::Deref,
+                Token::And => UnaryOp::Ref,
                 _ => unreachable!(),
             };
             item = Expr::Unary(UnaryExpr {
