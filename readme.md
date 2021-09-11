@@ -1,5 +1,7 @@
 # Azuki
 
+**Development of Azuki has been suspended. Please head over to [miniSysY](https://github.com/BUAA-SE-Compiling/miniSysY) and [miniSysY-tutorial](https://github.com/BUAA-SE-Compiling/miniSysY-tutorial) for updates on BUAA-SE's compiler course updates.**
+
 Azuki is an experimental lab experiment design & reference implementation for Compilers Design course. This project also serves as a part of Rynco Maekawa's bachelor's degree thesis.
 
 ## Features
